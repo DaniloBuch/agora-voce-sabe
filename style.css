@@ -289,7 +289,7 @@ tbody tr:hover {
   
   /* 1. Compacta o cabeçalho e reduz fontes */
   .header-container {
-    margin-top: 30px
+    margin-top: 30px;
     margin-bottom: 10px; 
   }
 
