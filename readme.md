@@ -32,7 +32,7 @@ Por ser um MVP _Serverless_, a arquitetura de dados flui da seguinte forma:
 ## 🚀 Como Rodar o Projeto
 
 **Modo Usuário (Produção):**
-Basta acessar o link do GitHub Pages: Processando..
+Basta acessar o link do GitHub Pages: [CBS - Agora você sabe](https://danilobuch.github.io/agora-voce-sabe/)
 
 **Modo Desenvolvedor (Local):**
 
