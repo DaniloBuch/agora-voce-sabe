@@ -1665,7 +1665,7 @@
     "sku": "002619",
     "descricao_tecnica": "ANUSCOPIO ABERTO KOLPLAST",
     "referencia": "ANA",
-    "tags": ""
+    "tags": "FENESTRADO"
   },
   {
     "sku": "002620",
@@ -11949,7 +11949,7 @@
     "sku": "008200",
     "descricao_tecnica": "DETERGENTE 1000ML PRONTO USO VIC PHARMA (12)",
     "referencia": 7023,
-    "tags": ""
+    "tags": "NEUTRO, LAVAGEM, INSTRUMENTAIS"
   },
   {
     "sku": "014925",
@@ -32259,31 +32259,31 @@
     "sku": "006130",
     "descricao_tecnica": "TERMOMETRO CLINICO DIGITAL +32/+42 MEDFEBRE INCOTERM",
     "referencia": "S-TER-0100.00",
-    "tags": ""
+    "tags": "AXILA, ORAL"
   },
   {
     "sku": "000952",
     "descricao_tecnica": "TERMOMETRO CLINICO DIGITAL BRANCO INCOTERM",
     "referencia": 29832,
-    "tags": ""
+    "tags": "AXILA, ORAL"
   },
   {
     "sku": "006128",
     "descricao_tecnica": "TERMOMETRO CLINICO INFRAVERM S/ CONTATO TCI1000 INCOTERM(CA)",
     "referencia": "29880.00.01",
-    "tags": ""
+    "tags": "TESTA, PISTOLA"
   },
   {
     "sku": "008519",
     "descricao_tecnica": "TERMOMETRO CLINICO INFRAVERMELHO S/ CONTATO TCI300 INCOTERM",
     "referencia": "29882.00.01",
-    "tags": ""
+    "tags": "TESTA, PISTOLA"
   },
   {
     "sku": "012415",
     "descricao_tecnica": "TERMOMETRO CLINICO INFRAVERMELHO S/CONTATO MEDFEBRE INCOTERM",
     "referencia": "S-TER-0150.00",
-    "tags": ""
+    "tags": "TESTA, PISTOLA"
   },
   {
     "sku": "002613",
@@ -32319,37 +32319,37 @@
     "sku": "002266",
     "descricao_tecnica": "TERMOMETRO DIGITAL INFRAVERM C/MIRA LASER P/OBJETOS INCOTERM",
     "referencia": "ST 600.2",
-    "tags": ""
+    "tags": "PISTOLA"
   },
   {
     "sku": "003160",
     "descricao_tecnica": "TERMOMETRO DIGITAL INFRAVERM P/OBJETOS ST-400 LASER INCOTERM",
     "referencia": "ST-400",
-    "tags": ""
+    "tags": "PISTOLA"
   },
   {
     "sku": "008514",
     "descricao_tecnica": "TERMOMETRO DIGITAL INFRAVERM P/OBJETOS ST-600 LASER INCOTERM",
     "referencia": "ST-600.00",
-    "tags": ""
+    "tags": "PISTOLA"
   },
   {
     "sku": "008156",
     "descricao_tecnica": "TERMOMETRO DIGITAL INFRAVERMELHO SEM CONTATO LEPU (CA)",
     "referencia": "LFR30B",
-    "tags": ""
+    "tags": "TESTA, PISTOLA"
   },
   {
     "sku": "001729",
     "descricao_tecnica": "TERMOMETRO DIGITAL MAX/MIN INT/EXT -10/+50 INCOTERM",
     "referencia": "7427.02.0.00",
-    "tags": ""
+    "tags": "AMBIENTE, LABORATORIO"
   },
   {
     "sku": "001568",
     "descricao_tecnica": "TERMOMETRO DIGITAL MAX/MIN INT/EXT -50+70 INCOTERM",
     "referencia": "7665.02.0.00",
-    "tags": ""
+    "tags": "AMBIENTE, LABORATORIO"
   },
   {
     "sku": "002422",
@@ -32367,7 +32367,7 @@
     "sku": "002687",
     "descricao_tecnica": "TERMOMETRO MEDFLEX FLEXIVEL  INCOTERM",
     "referencia": "29834.02.2",
-    "tags": ""
+    "tags": "AXILA, ORAL"
   },
   {
     "sku": "002145",
