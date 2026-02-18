@@ -289,6 +289,7 @@ tbody tr:hover {
   
   /* 1. Compacta o cabeçalho e reduz fontes */
   .header-container {
+    margin-top: 30px
     margin-bottom: 10px; 
   }
 
@@ -319,32 +320,9 @@ tbody tr:hover {
     padding: 10px 15px 10px 45px; 
   }
 
-  /* 3. Compacta os cards informativos (Hero Cards) */
-  .hero-cards {
-    gap: 15px;
-    margin-bottom: 20px;
-  }
+}
 
-  .card {
-    padding: 15px;
-  }
-
-  .card-icon {
-    width: 28px;
-    height: 28px;
-    margin-bottom: 8px;
-  }
-
-  .card h3 {
-    font-size: 1rem;
-    margin-bottom: 5px;
-  }
-
-  .card p {
-    font-size: 0.8rem;
-  }
-
-  /* 4. Tabela de resultados com Scroll Interno (A Mágica do Encaixe) */
+  /* 3. Tabela de resultados com Scroll Interno (A Mágica do Encaixe) */
   .results-container {
     max-height: calc(100vh - 380px); 
     overflow-y: auto; /* Rolagem apenas dentro da tabela */
