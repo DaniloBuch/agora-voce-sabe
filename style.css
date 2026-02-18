@@ -322,10 +322,10 @@ tbody tr:hover {
 
 }
 
-  /* 3. Tabela de resultados com Scroll Interno (A Mágica do Encaixe) */
+  /* 3. Tabela de resultados */
 
   .hero-cards {
-  margin-top: 64px;
+    margin-top: 40px;
   }
 
   .results-container {
