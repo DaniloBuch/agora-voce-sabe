@@ -37,7 +37,7 @@ body {
 }
 
 .logo {
-  max-width: 300px;
+  max-width: 350px;
   height: auto;
   margin-bottom: 20px;
 }
@@ -294,7 +294,7 @@ tbody tr:hover {
   }
 
   .logo {
-    height: 50px; /* Ajuste conforme o tamanho original do seu SVG */
+    height: 150px;
     margin-bottom: 10px;
   }
 
