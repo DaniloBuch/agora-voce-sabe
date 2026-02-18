@@ -289,7 +289,7 @@ tbody tr:hover {
   
   /* 1. Compacta o cabeçalho e reduz fontes */
   .header-container {
-    margin-top: 30px;
+    margin-top: 20px;
     margin-bottom: 10px; 
   }
 
@@ -323,10 +323,13 @@ tbody tr:hover {
 }
 
   /* 3. Tabela de resultados com Scroll Interno (A Mágica do Encaixe) */
+
+  .hero-cards {
+  margin-top: 64px;
+  }
+
   .results-container {
-    max-height: calc(100vh - 380px); 
-    overflow-y: auto; /* Rolagem apenas dentro da tabela */
-    margin-bottom: 20px;
+    margin-top: 20px;
   }
 
   /* Compacta as linhas da tabela */
