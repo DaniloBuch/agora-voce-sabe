@@ -284,3 +284,77 @@ tbody tr:hover {
     display: none;
   } /* Esconde tags no celular pra caber a descrição */
 }
+
+@media screen and (max-width: 1366px) {
+  
+  /* 1. Compacta o cabeçalho e reduz fontes */
+  .header-container {
+    margin-bottom: 10px; 
+  }
+
+  .logo {
+    height: 50px; /* Ajuste conforme o tamanho original do seu SVG */
+    margin-bottom: 10px;
+  }
+
+  .header-container h1 {
+    font-size: 1.5rem; 
+    margin: 2px 0;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    margin-top: 5px;
+  }
+
+  /* 2. Achata a barra de busca */
+  .search-wrapper {
+    margin: 15px auto;
+    max-width: 80%;
+  }
+
+  #searchInput {
+    height: 45px; 
+    font-size: 1rem;
+    padding: 10px 15px 10px 45px; 
+  }
+
+  /* 3. Compacta os cards informativos (Hero Cards) */
+  .hero-cards {
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  .card-icon {
+    width: 28px;
+    height: 28px;
+    margin-bottom: 8px;
+  }
+
+  .card h3 {
+    font-size: 1rem;
+    margin-bottom: 5px;
+  }
+
+  .card p {
+    font-size: 0.8rem;
+  }
+
+  /* 4. Tabela de resultados com Scroll Interno (A Mágica do Encaixe) */
+  .results-container {
+    max-height: calc(100vh - 380px); 
+    overflow-y: auto; /* Rolagem apenas dentro da tabela */
+    margin-bottom: 20px;
+  }
+
+  /* Compacta as linhas da tabela */
+  table th, 
+  table td {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+}
