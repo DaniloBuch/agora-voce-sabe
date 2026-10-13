@@ -216,6 +216,12 @@ tbody tr:hover {
   font-weight: 700;
   color: var(--cor-primaria);
 }
+.col-ref {
+  width: 110px;
+  color: var(--cor-texto-leve);
+  font-size: 12px;
+  word-break: break-all;
+}
 .col-desc {
   width: auto;
 }
@@ -238,6 +244,34 @@ tbody tr:hover {
   border: 1px solid #e5e7eb;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.tag-more {
+  background-color: #e5e7eb;
+  cursor: help;
+}
+
+/* Destaque do termo buscado */
+mark {
+  background-color: rgba(232, 170, 0, 0.35);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.results-info--alerta {
+  color: rgb(255, 1, 1);
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.msg-erro,
+.msg-vazio {
+  text-align: center;
+  padding: 30px;
+}
+.msg-erro {
+  color: rgb(255, 1, 1);
 }
 
 /* O Estilo do "Traço Vazio" */
@@ -280,9 +314,10 @@ tbody tr:hover {
     width: 100%;
     max-width: 350px;
   }
-  .col-tags {
+  .col-tags,
+  .col-ref {
     display: none;
-  } /* Esconde tags no celular pra caber a descrição */
+  } /* Esconde tags e referência no celular pra caber a descrição */
 }
 
 @media screen and (max-width: 1366px) {
@@ -320,8 +355,6 @@ tbody tr:hover {
     padding: 10px 15px 10px 45px; 
   }
 
-}
-
   /* 3. Tabela de resultados */
 
   .hero-cards {
@@ -333,7 +366,7 @@ tbody tr:hover {
   }
 
   /* Compacta as linhas da tabela */
-  table th, 
+  table th,
   table td {
     padding: 10px;
     font-size: 0.9rem;
