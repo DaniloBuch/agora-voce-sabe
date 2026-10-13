@@ -249,6 +249,9 @@ tbody tr.selecionada { background: var(--cbs-roxo-050); }
 .massa-preview { padding: var(--sp-3) var(--sp-4); border-left: var(--border-width-rule) solid var(--cbs-azul); background: var(--cbs-info-bg); border-radius: var(--radius-sm); font-size: var(--fs-xs); line-height: var(--lh-relaxed); }
 .massa-exemplo { margin-top: 4px; color: var(--text-muted); font-size: var(--fs-2xs); }
 .chips--remover .chip { background: var(--cbs-erro-bg); color: var(--cbs-erro); border-color: var(--cbs-erro); }
+.barra-historico { align-items: flex-end; margin-bottom: var(--sp-4); }
+.campo--data input { width: 170px; }
+.barra-historico .dica { align-self: center; }
 tr.grupo td { background: var(--cbs-neutro-025); }
 
 @media (prefers-reduced-motion: reduce) {

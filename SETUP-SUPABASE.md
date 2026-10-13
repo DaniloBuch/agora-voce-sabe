@@ -60,7 +60,7 @@ importação em massa e as permissões de acesso.
 | --- | --- |
 | **Produtos** | Buscar, criar, editar (inclusive tags) e excluir. O filtro **"Só sem tags"** mostra o que falta etiquetar. |
 | **Importar CSV** | Atualiza a base em massa (veja abaixo). |
-| **Histórico** | Mostra versões anteriores de qualquer edição/exclusão, com botão **Restaurar**. Alterações em massa aparecem agrupadas, com **Restaurar todos**. |
+| **Histórico** | Mostra versões anteriores de qualquer edição/exclusão, com botão **Restaurar**. Alterações em massa aparecem agrupadas, com **Restaurar todos**; dá para filtrar por data (De/Até). |
 
 ### Importação de CSV
 

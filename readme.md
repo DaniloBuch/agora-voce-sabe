@@ -1,60 +1,95 @@
-# 🔍 Busca Inteligente CBS (Middleware Cognitivo)
+# 🔍 Agora você sabe — Busca Inteligente CBS
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![Status](https://img.shields.io/badge/Status-MVP_Conclu%C3%ADdo-success?style=for-the-badge)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-222222?style=for-the-badge&logo=githubpages&logoColor=white)
 
-## 🎯 O Problema de Negócio (A Dor)
+**👉 [Acessar o site](https://danilobuch.github.io/agora-voce-sabe/)**
 
-No setor comercial de suprimentos médicos, existe um "Descompasso de Impedância" entre a linguagem do vendedor (apelidos comerciais como "Transofix") e a linguagem do sistema/estoque (descrições técnicas longas e SKUs).
-Isso gera alta dependência de funcionários seniores e lentidão na resposta de cotações, criando um gargalo operacional ("Infobesidade" em grupos de comunicação).
+Ferramenta interna da **CBS** para encontrar produtos pelo código, pela descrição técnica, pela referência do fornecedor ou pelo **apelido comercial** (as tags), em milissegundos.
 
-## 💡 A Solução
+## 🎯 O problema
 
-Esta aplicação é um **Motor de Busca Front-end (Single Page Application)** projetado para atuar como um "Filtro de Ruído". Ele consome uma base de dados JSON (derivada de planilhas de "De/Para" do time) e aplica um algoritmo de busca por partículas.
+No comercial de suprimentos médicos há um descompasso entre a linguagem de quem vende (apelidos como "Transofix") e a do sistema (SKUs e descrições técnicas longas). Resultado: dependência de pessoas seniores, cotações lentas e excesso de perguntas nos grupos de comunicação.
 
-### ⚙️ Funcionalidades Core:
+## 💡 A solução
 
-- **Busca Semântica Fuzzy:** O algoritmo tokeniza o input do usuário e verifica a intersecção em qualquer ordem. Digitar `000437 sonda` ou `sonda 04` trará o mesmo resultado.
-- **Indexação Tripla:** A pesquisa varre simultaneamente `SKU` + `Descrição Técnica` + `Tags Ocultas (Apelidos)`.
-- **Proteção de Renderização (Debounce & Slice):** Implementação de um "Freio ABS" via `setTimeout` para evitar travamento da Main Thread do navegador e limitação de nós na DOM (máx 100 resultados renderizados simultaneamente).
-- **UI/UX Corporativa:** Design responsivo, _Skeleton Loaders_ para _Empty States_ das tags e transições de estado limpas (Zero -> Buscando -> Resultado).
+Uma aplicação web estática que carrega a base de produtos e filtra tudo localmente no navegador, como um "filtro de ruído" entre o vocabulário comercial e o técnico.
 
-## 🏗️ Arquitetura de Dados
+### Busca (site público)
 
-Frontend estático (GitHub Pages) + banco **PostgreSQL no Supabase**, acessado direto pela API REST (`api.js`).
+- **Busca por partículas:** os termos podem vir em qualquer ordem. `000437 sonda` e `sonda 04` levam ao mesmo produto.
+- **Ignora acentos e maiúsculas:** `esfigmomanometro` encontra "Esfigmomanômetro".
+- **Quatro campos ao mesmo tempo:** SKU, descrição técnica, referência (Ref.) e tags.
+- **Ordenado por relevância:** código exato, referência exata e tags vêm antes de coincidências soltas na descrição.
+- **Termos destacados** nos resultados; tags que casaram com a busca aparecem primeiro.
+- **Referência legível:** referências só numéricas aparecem sem zeros à esquerda (`000000000038833014` → `38833014`); as com letras ficam como estão (`AR420`). A busca aceita as duas formas.
+- **Leve e seguro:** debounce na digitação, máximo de 100 linhas renderizadas e escape de HTML nos dados.
+- **Modo contingência:** se o banco estiver fora do ar, o site lê o `db.json` e avisa na tela.
 
-1. **Banco:** tabela `produtos` (`sku`, `descricao_tecnica`, `referencia`, `tags`, `fixo`) + `produtos_historico` (desfazer). Script em [`supabase/schema.sql`](supabase/schema.sql).
-2. **Site (`/`):** baixa a lista do banco para a memória e busca localmente (milissegundos). Se o banco estiver fora do ar, usa o `db.json` como contingência.
-3. **Admin (`/admin/`):** CRUD de produtos e tags, importação em massa de CSV (inclui novos, atualiza descrição/referência e exclui descontinuados, sem tocar nas tags), edição de tags em massa e histórico com restauração (inclusive em lote).
+### Painel de administração
 
-Configuração do banco: veja [`SETUP-SUPABASE.md`](SETUP-SUPABASE.md).
+Foi criado um painel para manter a base sem mexer em arquivos JSON, com:
+
+- **CRUD de produtos e tags**, com chips, sugestões e filtro de produtos sem tags;
+- **Edição de tags em massa**, com seleção múltipla e prévia do resultado;
+- **Importação de CSV** do sistema (inclui novos SKUs, atualiza descrição e referência e remove descontinuados, sempre preservando as tags), com resumo e confirmação antes de gravar;
+- **Histórico** de edições e exclusões, com restauração (inclusive em lote) e filtro por data.
+
+## 🏗️ Arquitetura
+
+```
+GitHub Pages (HTML + CSS + JS, sem build)
+        │  fetch (API REST do Supabase)
+        ▼
+Supabase (PostgreSQL + PostgREST)
+```
+
+| Arquivo / pasta | Função |
+| --- | --- |
+| `index.html`, `script.js`, `style.css` | Site público de busca |
+| `api.js` | Camada de acesso ao Supabase (listar, CRUD, importar, histórico, edição em massa) |
+| `config.js` | Endereço do projeto e chave pública (`anon`) do Supabase |
+| `supabase/schema.sql` | Tabelas, políticas, triggers e funções do banco |
+| `supabase/migracoes/` | Scripts incrementais para bancos já criados (ex.: `002_edicao_tags_em_massa.sql`) |
+| `supabase/produtos_seed.csv` | Carga inicial dos produtos |
+| `db.json` | Cópia estática usada como contingência |
+| `design-system/` | CBS Design System vendorizado ([detalhes](design-system/README.md)) |
+
+**Banco de dados:** tabela `produtos` (`sku`, `descricao_tecnica`, `referencia`, `tags`, `fixo`) e `produtos_historico` (preenchida por trigger a cada edição/exclusão). A importação de CSV e a edição de tags em massa são funções SQL (RPC), então rodam de forma atômica: ou tudo é gravado ou nada. Produtos marcados como **fixo** nunca são excluídos pela importação.
 
 ## 🎨 Identidade visual
 
-O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/2025). Os tokens (cores, tipografia Quicksand, espaçamento, raios, sombras, movimento), a marca (SVGs) e os ícones (Lucide) ficam vendorizados em [`design-system/`](design-system/README.md) e são carregados por `design-system/styles.css`. Regras que valem aqui: títulos em caixa alta, corpo em Quicksand Light, quadrado do logotipo laranja `#dc9c01`, foco com anel azul, hover sem mudança de tamanho.
+O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/2025): tokens de cor, tipografia Quicksand, espaçamento, raios e movimento, marca em SVG e ícones Lucide. Regras que valem aqui: títulos em caixa alta, corpo em Quicksand Light, quadrado do logotipo em laranja `#dc9c01`, foco com anel azul e hover sem mudança de tamanho.
 
-## 🚀 Como Rodar o Projeto
+## 🚀 Como rodar
 
-**Modo Usuário (Produção):**
-Basta acessar o link do GitHub Pages: [CBS - Agora você sabe](https://danilobuch.github.io/agora-voce-sabe/)
+**Produção:** acesse [danilobuch.github.io/agora-voce-sabe](https://danilobuch.github.io/agora-voce-sabe/).
 
-**Modo Desenvolvedor (Local):**
+**Local:**
 
-1. Clone este repositório: `git clone https://github.com/DaniloBuch/agora-voce-sabe.git`
-2. Abra a pasta no VS Code.
-3. Instale a extensão **Live Server**.
-4. Clique com o botão direito no arquivo `index.html` e selecione "Open with Live Server" (Necessário para não dar bloqueio de CORS na Fetch API).
+1. `git clone https://github.com/DaniloBuch/agora-voce-sabe.git`
+2. Abra a pasta no VS Code e use a extensão **Live Server** em `index.html` (necessário para a Fetch API não ser bloqueada por CORS).
+3. Para usar o banco, preencha o `config.js` com o endereço do projeto Supabase (sem `/rest/v1`) e a chave pública.
 
-## 🛣️ Roadmap & Próximos Passos (Evolução Sênior)
+**Criar o banco do zero:** siga o passo a passo em [`SETUP-SUPABASE.md`](SETUP-SUPABASE.md) (criar o projeto, rodar o SQL, carregar os produtos e conectar o site). Para bancos já existentes, rode os scripts de `supabase/migracoes/` no SQL Editor.
 
-Este projeto é a Fase 1 (MVP). O objetivo arquitetural de longo prazo é:
+## 🔐 Segurança
 
-- [ ] **Migração Backend:** Desenvolver uma API RESTful em **Java / Spring Boot**.
-- [x] **Persistência de Dados:** JSON estático substituído por PostgreSQL (Supabase) com painel `/admin`.
-- [ ] **Segurança:** Implementar Autenticação (Spring Security) para edição das Tags direto pelo sistema, eliminando a dependência do Excel.
+O painel de administração foi mantido sem autenticação por decisão do projeto. Como o site é estático, a chave pública do Supabase precisa de permissão de gravação, e a rede de segurança é o **Histórico**: tudo que for alterado ou excluído pode ser restaurado. Para proteger no futuro, o caminho natural é o Supabase Auth, trocando as políticas de `anon` para `authenticated` no `schema.sql`.
+
+## 🛣️ Roadmap
+
+- [x] Busca por partículas, sem acento, com relevância e destaque
+- [x] Banco PostgreSQL (Supabase) no lugar do JSON estático
+- [x] Painel de administração com CRUD, importação de CSV e histórico
+- [x] Edição de tags em massa
+- [x] Aplicação do CBS Design System
+- [ ] Autenticação no painel (Supabase Auth)
+- [ ] Backend próprio (ex.: Java / Spring Boot), se o projeto crescer além do MVP
 
 ---
 
-_Desenvolvido por **Danilo Buch** - Unindo a visão estratégica de Negócios com a Engenharia de Software._
+_Desenvolvido por **Danilo Buch** — unindo a visão estratégica de Negócios com a Engenharia de Software._

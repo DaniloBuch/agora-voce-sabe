@@ -112,6 +112,18 @@
           Toda edição e exclusão guarda a versão anterior. Use
           <strong>Restaurar</strong> para desfazer.
         </p>
+        <div class="barra-ferramentas barra-historico">
+          <div class="campo campo--data">
+            <label for="histDe">De</label>
+            <input type="date" id="histDe" />
+          </div>
+          <div class="campo campo--data">
+            <label for="histAte">Até</label>
+            <input type="date" id="histAte" />
+          </div>
+          <button type="button" class="btn btn--secundario" id="btnHistLimpar" hidden>Limpar datas</button>
+          <span class="dica" id="infoHistorico"></span>
+        </div>
         <div class="tabela-wrap">
           <table>
             <thead>

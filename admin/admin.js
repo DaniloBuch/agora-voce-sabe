@@ -851,19 +851,39 @@
     const corpo = $("#corpoHistorico");
     corpo.innerHTML = `<tr><td colspan="6" class="vazio">Carregando...</td></tr>`;
     try {
-      historicoCache = await api.historico(2000);
+      const de = $("#histDe").value;
+      const ate = $("#histAte").value;
+      $("#btnHistLimpar").hidden = !(de || ate);
+      if (de && ate && de > ate) {
+        corpo.innerHTML = `<tr><td colspan="6" class="vazio">A data inicial é depois da final.</td></tr>`;
+        $("#infoHistorico").textContent = "";
+        return;
+      }
+      historicoCache = await api.historico(2000, { de, ate });
       historicoGrupos = agruparHistorico(historicoCache);
       corpo.innerHTML =
         historicoCache.length === 0
-          ? `<tr><td colspan="6" class="vazio">Nenhuma alteração registrada ainda.</td></tr>`
+          ? `<tr><td colspan="6" class="vazio">${de || ate ? "Nenhuma alteração neste período." : "Nenhuma alteração registrada ainda."}</td></tr>`
           : historicoGrupos
               .slice(0, 100)
               .map((g, i) => (g.itens.length > 1 ? linhaGrupo(g, i) : linhaHistorico(g.itens[0])))
               .join("");
+      $("#infoHistorico").textContent =
+        historicoCache.length === 0
+          ? ""
+          : `${fmt.format(historicoCache.length)} registro(s)` +
+            (historicoGrupos.length > 100 ? " · mostrando as 100 alterações mais recentes; use as datas para ver as anteriores" : "");
     } catch (err) {
       corpo.innerHTML = `<tr><td colspan="6" class="vazio">${esc(err.message)}</td></tr>`;
     }
   }
+
+  ["#histDe", "#histAte"].forEach((id) => $(id).addEventListener("change", carregarHistorico));
+  $("#btnHistLimpar").addEventListener("click", () => {
+    $("#histDe").value = "";
+    $("#histAte").value = "";
+    carregarHistorico();
+  });
 
   $("#corpoHistorico").addEventListener("click", async (e) => {
     const btnGrupo = e.target.closest("button[data-grupo]");

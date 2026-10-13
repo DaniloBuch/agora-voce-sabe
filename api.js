@@ -111,9 +111,17 @@
     return resp.json();
   }
 
-  async function historico(limite = 100) {
+  // de/ate: datas "AAAA-MM-DD" (horário de Brasília, ambas inclusivas), opcionais.
+  async function historico(limite = 100, { de, ate } = {}) {
+    let filtro = "";
+    if (de) filtro += `&registrado_em=gte.${encodeURIComponent(`${de}T00:00:00-03:00`)}`;
+    if (ate) {
+      const proximo = new Date(`${ate}T12:00:00Z`);
+      proximo.setUTCDate(proximo.getUTCDate() + 1);
+      filtro += `&registrado_em=lt.${encodeURIComponent(`${proximo.toISOString().slice(0, 10)}T00:00:00-03:00`)}`;
+    }
     const resp = await requisitar(
-      `produtos_historico?select=*&order=id.desc&limit=${limite}`,
+      `produtos_historico?select=*&order=id.desc&limit=${limite}${filtro}`,
     );
     return resp.json();
   }
