@@ -1,0 +1,128 @@
+// Camada de acesso ao Supabase (REST/PostgREST) usada pelo site e pelo /admin.
+// Sem dependências: só fetch. Expõe window.CBS_API.
+(function () {
+  const cfg = window.CBS_CONFIG || {};
+  const BASE = String(cfg.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  const KEY = String(cfg.SUPABASE_ANON_KEY || "").trim();
+  const configurado = Boolean(BASE && KEY);
+
+  const PAGINA = 1000; // limite padrão de linhas por requisição no Supabase
+  const COLUNAS = "sku,descricao_tecnica,referencia,tags,fixo";
+
+  function cabecalhos(extra) {
+    const h = { apikey: KEY, "Content-Type": "application/json", ...extra };
+    // Chaves antigas (JWT) também vão em Authorization; as novas "sb_publishable_" não.
+    if (KEY.startsWith("eyJ")) h.Authorization = `Bearer ${KEY}`;
+    return h;
+  }
+
+  async function requisitar(caminho, { method = "GET", corpo, headers } = {}) {
+    if (!configurado) throw new Error("Supabase não configurado (config.js).");
+    let resp;
+    try {
+      resp = await fetch(`${BASE}/rest/v1/${caminho}`, {
+        method,
+        headers: cabecalhos(headers),
+        body: corpo === undefined ? undefined : JSON.stringify(corpo),
+      });
+    } catch (e) {
+      throw new Error("Sem conexão com o banco de dados.");
+    }
+    if (!resp.ok) {
+      let detalhe = "";
+      try {
+        const j = await resp.json();
+        detalhe = j.message || j.hint || JSON.stringify(j);
+      } catch (_) {}
+      const erro = new Error(detalhe || `Erro ${resp.status}`);
+      erro.status = resp.status;
+      throw erro;
+    }
+    return resp;
+  }
+
+  const filtroSku = (sku) => `sku=eq.${encodeURIComponent(sku)}`;
+
+  // Lê TODOS os produtos (o Supabase entrega no máx. 1000 por vez).
+  async function listarProdutos() {
+    const base = `produtos?select=${COLUNAS}&order=descricao_tecnica.asc,sku.asc`;
+    const primeira = await requisitar(`${base}&limit=${PAGINA}&offset=0`, {
+      headers: { Prefer: "count=exact" },
+    });
+    const linhas = await primeira.json();
+    if (linhas.length < PAGINA) return linhas;
+
+    const total = Number((primeira.headers.get("content-range") || "").split("/")[1]);
+    if (Number.isFinite(total)) {
+      const paginas = [];
+      for (let off = PAGINA; off < total; off += PAGINA) {
+        paginas.push(
+          requisitar(`${base}&limit=${PAGINA}&offset=${off}`).then((r) => r.json()),
+        );
+      }
+      return linhas.concat(...(await Promise.all(paginas)));
+    }
+    // Plano B: sem o total, vai buscando até a página vir incompleta.
+    let todas = linhas;
+    for (let off = PAGINA; ; off += PAGINA) {
+      const pag = await (await requisitar(`${base}&limit=${PAGINA}&offset=${off}`)).json();
+      todas = todas.concat(pag);
+      if (pag.length < PAGINA) return todas;
+    }
+  }
+
+  async function criar(produto) {
+    await requisitar("produtos", { method: "POST", corpo: produto });
+  }
+
+  async function atualizar(sku, campos) {
+    const resp = await requisitar(`produtos?${filtroSku(sku)}`, {
+      method: "PATCH",
+      corpo: campos,
+      headers: { Prefer: "return=representation" },
+    });
+    const linhas = await resp.json();
+    if (linhas.length === 0) throw new Error("Produto não encontrado (talvez já tenha sido excluído).");
+  }
+
+  async function excluir(sku) {
+    await requisitar(`produtos?${filtroSku(sku)}`, { method: "DELETE" });
+  }
+
+  // Importação em massa; roda numa transação única no banco.
+  async function importar(itens, excluirAusentes) {
+    const resp = await requisitar("rpc/importar_catalogo", {
+      method: "POST",
+      corpo: { p_itens: itens, p_excluir_ausentes: Boolean(excluirAusentes) },
+    });
+    return resp.json();
+  }
+
+  async function historico(limite = 100) {
+    const resp = await requisitar(
+      `produtos_historico?select=*&order=id.desc&limit=${limite}`,
+    );
+    return resp.json();
+  }
+
+  // Devolve ao banco a versão guardada no histórico (recria ou sobrescreve).
+  async function restaurar(dados) {
+    const { atualizado_em, ...produto } = dados;
+    await requisitar("produtos?on_conflict=sku", {
+      method: "POST",
+      corpo: produto,
+      headers: { Prefer: "resolution=merge-duplicates" },
+    });
+  }
+
+  window.CBS_API = {
+    configurado,
+    listarProdutos,
+    criar,
+    atualizar,
+    excluir,
+    importar,
+    historico,
+    restaurar,
+  };
+})();

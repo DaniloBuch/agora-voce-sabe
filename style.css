@@ -1,374 +1,393 @@
-/* --- 1. IDENTIDADE VISUAL & VARIÁVEIS --- */
-:root {
-  --cor-primaria: #312783; /* Azul CBS */
-  --cor-secundaria: #e8aa00; /* O Amarelo do logo */
-  --cor-texto: #404040; /* Cinza Escuro */
-  --cor-texto-leve: #6b7280; /* Cinza Leve para descrições */
-  --cor-fundo: #f8fafc; /* Fundo quase branco */
-  --cor-borda: #e2e8f0; /* Bordas sutis */
-  --sombra-suave: 0 4px 6px -1px rgba(0, 0, 0, 0.05),
-    0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --sombra-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-* {
-  box-sizing: border-box;
-}
+/* ==========================================================================
+   Busca de produtos CBS — usa os tokens do CBS Design System
+   (design-system/styles.css é carregado antes deste arquivo).
+   ========================================================================== */
 
 body {
-  font-family: "Quicksand", sans-serif;
-  background-color: var(--cor-fundo);
-  color: var(--cor-texto);
-  margin: 0;
-  padding: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
   min-height: 100vh;
 }
 
-/* --- 2. HEADER & LOGO --- */
-.header-container {
-  margin-top: 40px;
-  margin-bottom: 20px;
-  text-align: center;
-  animation: fadeIn 0.8s ease-out;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-.logo {
-  max-width: 350px;
-  height: auto;
-  margin-bottom: 20px;
+/* --- Header fixo com blur (DS 5.11) ---------------------------------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: var(--border-width-hairline) solid var(--border-subtle);
 }
-
-h1 {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--cor-primaria);
-  margin: 0 0 10px 0;
-}
-
-.subtitle {
-  font-size: 14px;
-  color: var(--cor-texto-leve);
-  max-width: 800px;
-  line-height: 1.5;
+.site-header__inner {
+  max-width: var(--max-content);
   margin: 0 auto;
+  padding: 0 var(--gutter-page);
+  height: 76px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+}
+.brand {
+  display: inline-flex;
+  border: none;
+  border-radius: var(--radius-xs);
+}
+.brand img {
+  display: block;
+  height: auto;
+  margin-left: -16px; /* o SVG traz a área de proteção embutida; alinha a marca visível à grade */
+}
+.site-header__label {
+  margin-left: auto;
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-label);
 }
 
-/* --- 3. A BARRA DE BUSCA (ESTILO GOOGLE/CBS) --- */
+/* --- Página ----------------------------------------------------------- */
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: var(--max-content);
+  margin: 0 auto;
+  padding: var(--sp-12) var(--gutter-page) var(--sp-16);
+}
+
+.hero {
+  max-width: none;
+  margin: 0;
+  text-align: left;
+}
+.eyebrow {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--cbs-azul-700);
+}
+.hero h1 {
+  margin-bottom: var(--sp-3);
+}
+.lead {
+  margin: 0 0 var(--sp-8);
+  max-width: var(--max-prose);
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+}
+.lead strong {
+  color: var(--text-body);
+}
+
+/* --- Campo de busca (Input do DS, tamanho lg) -------------------------- */
 .search-wrapper {
   position: relative;
   width: 100%;
-  max-width: 700px;
-  margin-top: 30px;
+  max-width: 760px;
 }
-
 .search-icon {
   position: absolute;
-  left: 20px;
+  left: var(--sp-4);
   top: 50%;
   transform: translateY(-50%);
-  color: #9ca3af;
-  width: 20px;
-  height: 20px;
+  color: var(--text-faint);
+  pointer-events: none;
 }
-
 #searchInput {
   width: 100%;
-  padding: 18px 20px 18px 55px;
-  font-size: 16px;
-  color: var(--cor-texto);
-  background: white;
-  border: 1px solid var(--cor-borda);
-  border-radius: 50px;
+  height: 52px;
+  padding: 0 var(--sp-4) 0 var(--sp-12);
+  font-family: var(--font-core);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-md);
+  color: var(--text-body);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-inset);
   outline: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: var(--sombra-suave);
-  font-family: "Quicksand", sans-serif;
+  transition: var(--transition-control);
 }
-
 #searchInput:focus {
-  border-color: var(--cor-primaria);
-  box-shadow: 0 0 0 4px rgba(49, 39, 131, 0.1);
+  border-color: var(--cbs-azul);
+  box-shadow: var(--ring-focus);
 }
-
 #searchInput::placeholder {
-  color: #9ca3af;
-  font-weight: 500;
+  color: var(--text-faint);
+  font-weight: var(--fw-regular);
 }
 
-/* --- 4. OS CARDS INFORMATIVOS (HOME STATE) --- */
+/* --- Cartões da home (Card do DS) ------------------------------------- */
 .hero-cards {
   display: flex;
-  gap: 20px;
-  margin-top: 60px;
-  width: 100%;
-  max-width: 900px;
-  justify-content: center;
+  gap: var(--sp-5);
+  margin: var(--sp-12) 0 0;
   flex-wrap: wrap;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity var(--dur-base) var(--ease-standard);
 }
-
 .card {
   flex: 1;
-  min-width: 250px;
-  background: white;
-  border: 1px dashed var(--cor-borda);
-  border-radius: 12px;
-  padding: 30px 20px;
-  text-align: center;
-  transition: all 0.3s;
+  min-width: 240px;
+  padding: var(--sp-6) var(--sp-5);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
 }
-
-.card:hover {
-  border-style: solid;
-  border-color: var(--cor-primaria);
-  transform: translateY(-5px);
-  box-shadow: var(--sombra-hover);
-}
-
 .card-icon {
-  color: #9ca3af;
-  margin-bottom: 15px;
-  width: 32px;
-  height: 32px;
+  display: block;
+  margin-bottom: var(--sp-3);
+  color: var(--cbs-azul);
 }
-
 .card h3 {
-  font-size: 16px;
-  font-weight: 700;
-  color: #6b7280;
-  margin: 0 0 5px 0;
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+  color: var(--cbs-roxo);
 }
-
 .card p {
-  font-size: 13px;
-  color: #9ca3af;
   margin: 0;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-normal);
+  color: var(--text-muted);
+}
+.card p.is-erro {
+  color: var(--cbs-erro);
+  font-weight: var(--fw-medium);
 }
 
-.hero-cards.hidden {
-  display: none;
-  opacity: 0;
-}
-
-/* --- 5. A TABELA DE RESULTADOS (RESULTS STATE) --- */
+/* --- Resultados (Table do DS) ----------------------------------------- */
 .results-container {
-  width: 100%;
-  max-width: 1000px;
-  margin-top: 40px;
-  margin-bottom: 40px;
   display: none;
-  animation: slideUp 0.4s ease-out;
+  width: 100%;
+  margin: var(--sp-8) auto 0;
+  animation: deslizar var(--dur-base) var(--ease-move);
 }
-
 .results-info {
-  font-size: 12px;
-  color: var(--cor-texto-leve);
-  margin-bottom: 10px;
-  padding-left: 5px;
+  min-height: 1.4em;
+  margin: 0 0 var(--sp-2);
+  padding-left: var(--sp-1);
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+}
+.results-info--alerta {
+  color: var(--cbs-amarelo-700);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-xs);
 }
 
+.table-wrap {
+  overflow: auto;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+}
 table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: white;
-  border: 1px solid var(--cor-borda);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: var(--sombra-suave);
+  border-collapse: collapse;
   table-layout: fixed;
 }
-
 th {
-  background-color: #f9fafb;
-  color: #6b7280;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 12px 20px;
+  padding: 13px 14px;
   text-align: left;
-  border-bottom: 1px solid var(--cor-borda);
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border-default);
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-label);
+  white-space: nowrap;
 }
-
 td {
-  padding: 12px 20px;
-  font-size: 13px;
-  color: var(--cor-texto);
-  border-bottom: 1px solid var(--cor-borda);
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-normal);
   vertical-align: middle;
 }
-
-tr:last-child td {
+tbody tr:last-child td {
   border-bottom: none;
-} /* Remove borda da última linha */
-
+}
+tbody tr {
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
 tbody tr:hover {
-  background-color: rgba(232, 170, 0, 0.15);
+  background: var(--cbs-neutro-025);
 }
 
 .col-sku {
-  width: 90px;
-  font-weight: 700;
-  color: var(--cor-primaria);
+  width: 96px;
+  font-family: var(--font-mono);
+  font-weight: var(--fw-medium);
+  color: var(--cbs-roxo);
 }
 .col-ref {
-  width: 110px;
-  color: var(--cor-texto-leve);
-  font-size: 12px;
-  word-break: break-all;
+  width: 150px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
 }
 .col-desc {
   width: auto;
+  color: var(--text-body);
 }
 .col-tags {
   width: 30%;
-  text-align: right;
-  vertical-align: middle;
 }
-
-/* Tags Estilo Pill */
-.tag-pill {
-  display: inline-block;
-  background-color: #f3f4f6;
-  color: #4b5563;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 9px;
-  font-weight: 700;
-  margin: 0 2px 2px 0;
-  border: 1px solid #e5e7eb;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.tag-more {
-  background-color: #e5e7eb;
-  cursor: help;
-}
-
-/* Destaque do termo buscado */
-mark {
-  background-color: rgba(232, 170, 0, 0.35);
-  color: inherit;
-  border-radius: 2px;
-  padding: 0 1px;
-}
-
-.results-info--alerta {
-  color: rgb(255, 1, 1);
-  font-weight: bold;
-  font-size: 14px;
+/* cabeçalho de coluna mantém o estilo de rótulo, não o da célula */
+thead th,
+thead th[class] {
+  font-family: var(--font-core);
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-label);
 }
 
 .msg-erro,
 .msg-vazio {
+  padding: var(--sp-10) var(--sp-4);
   text-align: center;
-  padding: 30px;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
 }
 .msg-erro {
-  color: rgb(255, 1, 1);
+  color: var(--cbs-erro);
 }
 
-/* O Estilo do "Traço Vazio" */
+/* Destaque do termo buscado (azul claro: o amarelo é de uso único) */
+mark {
+  background: var(--cbs-azul-100);
+  color: var(--cbs-neutro-900);
+  border-radius: var(--radius-xs);
+  padding: 0 1px;
+}
+
+/* Tags: o único lugar onde o raio pill é permitido */
+.tag-pill {
+  display: inline-block;
+  margin: 0 4px 4px 0;
+  padding: 3px 9px;
+  background: var(--cbs-neutro-050);
+  color: var(--cbs-neutro-700);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+.tag-more {
+  background: var(--cbs-roxo-050);
+  color: var(--cbs-roxo-700);
+  cursor: help;
+}
 .tag-empty {
   display: inline-block;
   width: 24px;
-  height: 6px;
-  background-color: #e5e7eb;
-  border-radius: 10px;
-  margin-top: 5px;
+  height: 4px;
+  background: var(--cbs-neutro-100);
+  border-radius: var(--radius-pill);
 }
 
-/* Animações */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+/* --- Rodapé institucional (DS: roxo + grafismo sorriso a 10%) ---------- */
+.site-footer {
+  position: relative;
+  overflow: hidden;
+  background: var(--cbs-roxo);
+  color: var(--text-on-brand-muted);
 }
-@keyframes slideUp {
+.site-footer__grafismo {
+  position: absolute;
+  right: -70px;
+  bottom: -120px;
+  height: 340px;
+  opacity: 0.1;
+  pointer-events: none;
+}
+.site-footer__inner {
+  position: relative;
+  max-width: var(--max-content);
+  margin: 0 auto;
+  padding: var(--sp-10) var(--gutter-page);
+}
+.site-footer__inner img {
+  display: block;
+  margin-left: -16px;
+}
+.site-footer__inner p {
+  margin: var(--sp-4) 0 0;
+  max-width: 340px;
+  font-size: var(--fs-xs);
+  line-height: 1.75;
+  color: var(--text-on-brand-muted);
+}
+
+/* --- Movimento: desliza, não pula (DS 5.8) ----------------------------- */
+@keyframes deslizar {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 
-/* Responsividade Mobile */
+/* --- Responsivo --------------------------------------------------------- */
+@media (max-width: 1366px) {
+  .page {
+    padding-top: var(--sp-10);
+  }
+}
 @media (max-width: 768px) {
+  .hero h1 {
+    font-size: var(--fs-xl);
+  }
+  .site-header__label {
+    display: none;
+  }
+  .page {
+    padding-top: var(--sp-8);
+  }
   .hero-cards {
     flex-direction: column;
-    align-items: center;
   }
   .card {
-    width: 100%;
-    max-width: 350px;
+    min-width: 0;
   }
   .col-tags,
   .col-ref {
     display: none;
-  } /* Esconde tags e referência no celular pra caber a descrição */
-}
-
-@media screen and (max-width: 1366px) {
-  
-  /* 1. Compacta o cabeçalho e reduz fontes */
-  .header-container {
-    margin-top: 20px;
-    margin-bottom: 10px; 
-  }
-
-  .logo {
-    height: 150px;
-    margin-bottom: 10px;
-  }
-
-  .header-container h1 {
-    font-size: 1.5rem; 
-    margin: 2px 0;
-  }
-
-  .subtitle {
-    font-size: 0.9rem;
-    margin-top: 5px;
-  }
-
-  /* 2. Achata a barra de busca */
-  .search-wrapper {
-    margin: 15px auto;
-    max-width: 80%;
-  }
-
-  #searchInput {
-    height: 45px; 
-    font-size: 1rem;
-    padding: 10px 15px 10px 45px; 
-  }
-
-  /* 3. Tabela de resultados */
-
-  .hero-cards {
-    margin-top: 40px;
-  }
-
-  .results-container {
-    margin-top: 20px;
-  }
-
-  /* Compacta as linhas da tabela */
-  table th,
-  table td {
-    padding: 10px;
-    font-size: 0.9rem;
+  } /* esconde referência e tags no celular para caber a descrição */
+  .col-sku {
+    width: 84px;
   }
 }

@@ -1,0 +1,30 @@
+/* Escala de espaçamento base 4px. A "área de proteção" da marca
+   (manual p.13) equivale ao dobro do quadrado do símbolo: --logo-clearspace. */
+:root{
+  --sp-0:0; /* @kind spacing */
+  --sp-1:4px;
+  --sp-2:8px;
+  --sp-3:12px;
+  --sp-4:16px;
+  --sp-5:20px;
+  --sp-6:24px;
+  --sp-8:32px;
+  --sp-10:40px;
+  --sp-12:48px;
+  --sp-16:64px;
+  --sp-20:80px;
+  --sp-24:96px;
+  --sp-32:128px;
+
+  --gutter-page:var(--sp-6);
+  --gutter-page-lg:var(--sp-12);
+  --max-content:1200px; /* @kind spacing */
+  --max-prose:68ch; /* @kind other */
+
+  /* marca */
+  --logo-clearspace:2em;   /* 2× o lado do quadrado, relativo ao tamanho da marca */
+  --logo-min-screen:140px; /* horizontal · manual p.16 */
+  --logo-min-print:25mm; /* @kind spacing */
+  --selo-min-screen:230px; /* selo · manual p.16 */
+  --selo-min-print:40mm; /* @kind spacing */
+}

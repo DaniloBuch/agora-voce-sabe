@@ -81,50 +81,76 @@ function destacar(texto, termos) {
 
 /* ---------- Carga dos dados ---------- */
 
+async function lerDb() {
+  // 1) Banco (Supabase), se configurado; 2) db.json como plano B.
+  if (window.CBS_API && CBS_API.configurado) {
+    try {
+      return { dados: await CBS_API.listarProdutos(), contingencia: false };
+    } catch (erro) {
+      console.warn("Supabase indisponível, usando db.json:", erro);
+      const dados = await lerDbJson();
+      return { dados, contingencia: true };
+    }
+  }
+  return { dados: await lerDbJson(), contingencia: false };
+}
+
+async function lerDbJson() {
+  const resposta = await fetch(DATA_URL);
+  if (!resposta.ok) {
+    throw new Error(`HTTP ${resposta.status} ao carregar ${DATA_URL}`);
+  }
+  const dadosBrutos = await resposta.json();
+  if (!Array.isArray(dadosBrutos)) {
+    throw new Error("Formato inesperado: o JSON deveria ser uma lista.");
+  }
+  return dadosBrutos;
+}
+
 async function carregarDados() {
   const cardInfo = document.querySelector(".hero-cards .card:first-child p");
   try {
-    const resposta = await fetch(DATA_URL);
-    if (!resposta.ok) {
-      throw new Error(`HTTP ${resposta.status} ao carregar ${DATA_URL}`);
-    }
-    const dadosBrutos = await resposta.json();
-    if (!Array.isArray(dadosBrutos)) {
-      throw new Error("Formato inesperado: o JSON deveria ser uma lista.");
-    }
+    const { dados: dadosBrutos, contingencia } = await lerDb();
 
-    database = dadosBrutos.map((item) => {
-      let tagsArray = [];
-      if (typeof item.tags === "string") {
-        tagsArray = item.tags.split(",");
-      } else if (Array.isArray(item.tags)) {
-        tagsArray = item.tags;
-      }
-      tagsArray = tagsArray.map((t) => String(t).trim()).filter(Boolean);
+    database = dadosBrutos
+      .filter((item) => String(item.sku ?? "").trim() !== "")
+      .map((item) => {
+        let tagsArray = [];
+        if (typeof item.tags === "string") {
+          tagsArray = item.tags.split(",");
+        } else if (Array.isArray(item.tags)) {
+          tagsArray = item.tags;
+        }
+        tagsArray = tagsArray.map((t) => String(t).trim()).filter(Boolean);
 
-      const sku = String(item.sku ?? "");
-      const descricao = item.descricao_tecnica || item.descricao || "";
-      const referencia = String(item.referencia ?? "");
+        const sku = String(item.sku ?? "");
+        const descricao = item.descricao_tecnica || item.descricao || "";
+        const referencia = String(item.referencia ?? "");
 
-      return {
-        sku,
-        descricao,
-        referencia,
-        tags: tagsArray,
-        _sku: normalizar(sku),
-        _desc: normalizar(descricao),
-        _ref: normalizar(referencia),
-        _tags: tagsArray.map(normalizar),
-        _buscaFull: normalizar(
-          [sku, descricao, referencia, tagsArray.join(" ")].join(" "),
-        ),
-      };
-    });
+        return {
+          sku,
+          descricao,
+          referencia,
+          tags: tagsArray,
+          _sku: normalizar(sku),
+          _desc: normalizar(descricao),
+          _ref: normalizar(referencia),
+          _tags: tagsArray.map(normalizar),
+          _buscaFull: normalizar(
+            [sku, descricao, referencia, tagsArray.join(" ")].join(" "),
+          ),
+        };
+      });
     carregado = true;
     console.log("Sistema CBS Online. Itens:", database.length);
 
     // Atualiza o card com o numero real
-    if (cardInfo) cardInfo.innerText = `${database.length} produtos carregados`;
+    if (cardInfo) {
+      cardInfo.innerText = contingencia
+        ? `Modo contingência: ${database.length} produtos do arquivo local, que pode estar desatualizado.`
+        : `${database.length} produtos carregados`;
+      cardInfo.classList.toggle("is-erro", contingencia);
+    }
 
     // Se o usuário já digitou algo enquanto carregava, busca agora
     const termo = input.value.trim();
@@ -132,7 +158,10 @@ async function carregarDados() {
   } catch (erro) {
     console.error("Erro Fatal:", erro);
     erroCarga = true;
-    if (cardInfo) cardInfo.innerText = "Erro ao carregar a base de produtos";
+    if (cardInfo) {
+      cardInfo.innerText = "Não conseguimos carregar a base de produtos. Tente novamente em instantes.";
+      cardInfo.classList.add("is-erro");
+    }
     if (input.value.trim()) executarBusca(input.value.trim());
   }
 }
@@ -204,12 +233,12 @@ function escaparRegex(texto) {
 
 function executarBusca(termoOriginal) {
   if (erroCarga) {
-    tbody.innerHTML = `<tr><td colspan="4" class="msg-erro">Não foi possível carregar a base de produtos. Recarregue a página ou avise o time responsável.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="msg-erro">Não conseguimos carregar a base de produtos. Tente novamente em instantes.</td></tr>`;
     resultsInfo.innerText = "";
     return;
   }
   if (!carregado) {
-    tbody.innerHTML = `<tr><td colspan="4" class="msg-vazio">Carregando base de produtos...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="msg-vazio">Carregando a base de produtos...</td></tr>`;
     resultsInfo.innerText = "";
     return;
   }
@@ -239,13 +268,13 @@ function executarBusca(termoOriginal) {
 
 function renderizarTabela(lista, total, termos) {
   if (lista.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="msg-erro">Nenhum produto encontrado. Tente outro termo.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="msg-erro">Não encontramos nenhum produto com esse termo. Tente o código, o nome técnico ou um apelido.</td></tr>`;
     resultsInfo.innerText = "";
     return;
   }
 
   if (total > lista.length) {
-    resultsInfo.innerHTML = `Mostrando <strong>${lista.length}</strong> de <strong>${total}</strong> resultados encontrados. Refine sua busca para ver mais resultados.`;
+    resultsInfo.innerHTML = `Mostrando <strong>${lista.length}</strong> de <strong>${total}</strong> resultados. Refine sua busca para ver os demais.`;
     resultsInfo.className = "results-info results-info--alerta";
   } else {
     resultsInfo.innerText = `Mostrando ${lista.length} de ${total} resultados encontrados.`;

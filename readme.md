@@ -21,13 +21,19 @@ Esta aplicação é um **Motor de Busca Front-end (Single Page Application)** pr
 - **Proteção de Renderização (Debounce & Slice):** Implementação de um "Freio ABS" via `setTimeout` para evitar travamento da Main Thread do navegador e limitação de nós na DOM (máx 100 resultados renderizados simultaneamente).
 - **UI/UX Corporativa:** Design responsivo, _Skeleton Loaders_ para _Empty States_ das tags e transições de estado limpas (Zero -> Buscando -> Resultado).
 
-## 🏗️ Arquitetura de Dados (ETL Simplificado)
+## 🏗️ Arquitetura de Dados
 
-Por ser um MVP _Serverless_, a arquitetura de dados flui da seguinte forma:
+Frontend estático (GitHub Pages) + banco **PostgreSQL no Supabase**, acessado direto pela API REST (`api.js`).
 
-1. **Extract:** Planilha Excel base com colunas `SKU`, `Descrição` e `Tags` (CSV).
-2. **Transform:** Conversão para formato `.json`. No frontend, o JS normaliza os dados (Tratamento de Strings para Arrays).
-3. **Load:** O Fetch API consome o JSON estático hospedado no próprio repositório, carregando-o para a memória RAM (busca em milissegundos).
+1. **Banco:** tabela `produtos` (`sku`, `descricao_tecnica`, `referencia`, `tags`, `fixo`) + `produtos_historico` (desfazer). Script em [`supabase/schema.sql`](supabase/schema.sql).
+2. **Site (`/`):** baixa a lista do banco para a memória e busca localmente (milissegundos). Se o banco estiver fora do ar, usa o `db.json` como contingência.
+3. **Admin (`/admin/`):** CRUD de produtos e tags, importação em massa de CSV (inclui novos, atualiza descrição/referência e exclui descontinuados, sem tocar nas tags) e histórico com restauração.
+
+Configuração do banco: veja [`SETUP-SUPABASE.md`](SETUP-SUPABASE.md).
+
+## 🎨 Identidade visual
+
+O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/2025). Os tokens (cores, tipografia Quicksand, espaçamento, raios, sombras, movimento), a marca (SVGs) e os ícones (Lucide) ficam vendorizados em [`design-system/`](design-system/README.md) e são carregados por `design-system/styles.css`. Regras que valem aqui: títulos em caixa alta, corpo em Quicksand Light, quadrado do logotipo laranja `#dc9c01`, foco com anel azul, hover sem mudança de tamanho.
 
 ## 🚀 Como Rodar o Projeto
 
@@ -46,7 +52,7 @@ Basta acessar o link do GitHub Pages: [CBS - Agora você sabe](https://danilobuc
 Este projeto é a Fase 1 (MVP). O objetivo arquitetural de longo prazo é:
 
 - [ ] **Migração Backend:** Desenvolver uma API RESTful em **Java / Spring Boot**.
-- [ ] **Persistência de Dados:** Substituir o JSON estático por um Banco de Dados Relacional (**PostgreSQL/MySQL**).
+- [x] **Persistência de Dados:** JSON estático substituído por PostgreSQL (Supabase) com painel `/admin`.
 - [ ] **Segurança:** Implementar Autenticação (Spring Security) para edição das Tags direto pelo sistema, eliminando a dependência do Excel.
 
 ---
