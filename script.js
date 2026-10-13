@@ -3,20 +3,20 @@ let carregado = false;
 let erroCarga = false;
 let timeoutBusca = null;
 let timeoutFade = null;
-
+ 
 const input = document.getElementById("searchInput");
 const heroCards = document.getElementById("heroCards");
 const resultsContainer = document.getElementById("resultsContainer");
 const resultsInfo = document.getElementById("resultsInfo");
 const tbody = document.getElementById("tableBody");
-
+ 
 // URL do seu JSON
 const DATA_URL = "./db.json";
 const MAX_RESULTADOS = 100;
 const MAX_TAGS_VISIVEIS = 6;
-
+ 
 /* ---------- Utilitários ---------- */
-
+ 
 // Minúsculas e sem acentos: "Esfigmomanômetro" -> "esfigmomanometro"
 function normalizar(texto) {
   return String(texto ?? "")
@@ -24,7 +24,14 @@ function normalizar(texto) {
     .replace(/\p{M}/gu, "")
     .toLowerCase();
 }
-
+ 
+// Referência: se for só número, mostra o valor sem zeros à esquerda
+// ("000000000038833014" -> "38833014"); se tiver letras, mantém o texto ("AR420").
+function formatarRef(ref) {
+  const texto = String(ref ?? "").trim();
+  return /^\d+$/.test(texto) ? texto.replace(/^0+(?=\d)/, "") : texto;
+}
+ 
 // Evita que <, >, & ou aspas nos dados quebrem (ou injetem) HTML
 function escaparHtml(texto) {
   return String(texto ?? "")
@@ -34,12 +41,12 @@ function escaparHtml(texto) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
-
+ 
 // Escapa o texto e destaca os termos buscados (ignorando acentos/maiúsculas)
 function destacar(texto, termos) {
   const original = String(texto ?? "");
   if (!original) return "";
-
+ 
   // Mapeia cada caractere normalizado de volta ao índice no texto original
   let norm = "";
   const mapa = [];
@@ -48,7 +55,7 @@ function destacar(texto, termos) {
     for (let k = 0; k < n.length; k++) mapa.push(i);
     norm += n;
   }
-
+ 
   const faixas = [];
   for (const t of termos) {
     if (!t) continue;
@@ -59,7 +66,7 @@ function destacar(texto, termos) {
     }
   }
   if (faixas.length === 0) return escaparHtml(original);
-
+ 
   // Une faixas sobrepostas
   faixas.sort((a, b) => a[0] - b[0]);
   const unidas = [faixas[0]];
@@ -68,7 +75,7 @@ function destacar(texto, termos) {
     if (ini <= ultima[1]) ultima[1] = Math.max(ultima[1], fim);
     else unidas.push([ini, fim]);
   }
-
+ 
   let html = "";
   let cursor = 0;
   for (const [ini, fim] of unidas) {
@@ -78,9 +85,9 @@ function destacar(texto, termos) {
   }
   return html + escaparHtml(original.slice(cursor));
 }
-
+ 
 /* ---------- Carga dos dados ---------- */
-
+ 
 async function lerDb() {
   // 1) Banco (Supabase), se configurado; 2) db.json como plano B.
   if (window.CBS_API && CBS_API.configurado) {
@@ -94,7 +101,7 @@ async function lerDb() {
   }
   return { dados: await lerDbJson(), contingencia: false };
 }
-
+ 
 async function lerDbJson() {
   const resposta = await fetch(DATA_URL);
   if (!resposta.ok) {
@@ -106,12 +113,12 @@ async function lerDbJson() {
   }
   return dadosBrutos;
 }
-
+ 
 async function carregarDados() {
   const cardInfo = document.querySelector(".hero-cards .card:first-child p");
   try {
     const { dados: dadosBrutos, contingencia } = await lerDb();
-
+ 
     database = dadosBrutos
       .filter((item) => String(item.sku ?? "").trim() !== "")
       .map((item) => {
@@ -122,11 +129,12 @@ async function carregarDados() {
           tagsArray = item.tags;
         }
         tagsArray = tagsArray.map((t) => String(t).trim()).filter(Boolean);
-
+ 
         const sku = String(item.sku ?? "");
         const descricao = item.descricao_tecnica || item.descricao || "";
-        const referencia = String(item.referencia ?? "");
-
+        const referenciaOriginal = String(item.referencia ?? "").trim();
+        const referencia = formatarRef(referenciaOriginal);
+ 
         return {
           sku,
           descricao,
@@ -135,15 +143,16 @@ async function carregarDados() {
           _sku: normalizar(sku),
           _desc: normalizar(descricao),
           _ref: normalizar(referencia),
+          _refOriginal: normalizar(referenciaOriginal), // a busca aceita as duas formas
           _tags: tagsArray.map(normalizar),
           _buscaFull: normalizar(
-            [sku, descricao, referencia, tagsArray.join(" ")].join(" "),
+            [sku, descricao, referencia, referenciaOriginal, tagsArray.join(" ")].join(" "),
           ),
         };
       });
     carregado = true;
     console.log("Sistema CBS Online. Itens:", database.length);
-
+ 
     // Atualiza o card com o numero real
     if (cardInfo) {
       cardInfo.innerText = contingencia
@@ -151,7 +160,7 @@ async function carregarDados() {
         : `${database.length} produtos carregados`;
       cardInfo.classList.toggle("is-erro", contingencia);
     }
-
+ 
     // Se o usuário já digitou algo enquanto carregava, busca agora
     const termo = input.value.trim();
     if (termo) executarBusca(termo);
@@ -165,11 +174,11 @@ async function carregarDados() {
     if (input.value.trim()) executarBusca(input.value.trim());
   }
 }
-
+ 
 carregarDados();
-
+ 
 /* ---------- Estado visual (Home <-> Busca) ---------- */
-
+ 
 function mostrarHome() {
   clearTimeout(timeoutFade);
   resultsContainer.style.display = "none";
@@ -177,33 +186,33 @@ function mostrarHome() {
   // pequeno atraso para a transição de opacidade acontecer
   timeoutFade = setTimeout(() => (heroCards.style.opacity = "1"), 10);
 }
-
+ 
 function mostrarBusca() {
   clearTimeout(timeoutFade);
   heroCards.style.opacity = "0";
   timeoutFade = setTimeout(() => (heroCards.style.display = "none"), 300);
   resultsContainer.style.display = "block";
 }
-
+ 
 input.addEventListener("input", function (e) {
   const termo = e.target.value.trim();
-
+ 
   clearTimeout(timeoutBusca);
-
+ 
   if (termo === "") {
     mostrarHome();
     return;
   }
   mostrarBusca();
-
+ 
   // Debounce
   timeoutBusca = setTimeout(() => {
     executarBusca(termo);
   }, 300);
 });
-
+ 
 /* ---------- Busca ---------- */
-
+ 
 // Quanto maior a pontuação, mais relevante o resultado
 function pontuar(item, termos) {
   let pontos = 0;
@@ -211,13 +220,13 @@ function pontuar(item, termos) {
     if (item._sku === t) pontos += 100;
     else if (item._sku.startsWith(t)) pontos += 60;
     else if (item._sku.includes(t)) pontos += 5;
-
-    if (item._ref === t) pontos += 80;
-    else if (item._ref.includes(t)) pontos += 15;
-
+ 
+    if (item._ref === t || item._refOriginal === t) pontos += 80;
+    else if (item._ref.includes(t) || item._refOriginal.includes(t)) pontos += 15;
+ 
     if (item._tags.some((tag) => tag === t)) pontos += 50;
     else if (item._tags.some((tag) => tag.includes(t))) pontos += 30;
-
+ 
     if (new RegExp(`(^|[^a-z0-9])${escaparRegex(t)}`).test(item._desc)) {
       pontos += 20; // começo de palavra na descrição
     } else if (item._desc.includes(t)) {
@@ -226,11 +235,11 @@ function pontuar(item, termos) {
   }
   return pontos;
 }
-
+ 
 function escaparRegex(texto) {
   return texto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-
+ 
 function executarBusca(termoOriginal) {
   if (erroCarga) {
     tbody.innerHTML = `<tr><td colspan="4" class="msg-erro">Não conseguimos carregar a base de produtos. Tente novamente em instantes.</td></tr>`;
@@ -242,11 +251,11 @@ function executarBusca(termoOriginal) {
     resultsInfo.innerText = "";
     return;
   }
-
+ 
   const termosBusca = normalizar(termoOriginal)
     .split(/\s+/)
     .filter((t) => t !== "");
-
+ 
   const resultados = database
     .filter((item) => termosBusca.every((t) => item._buscaFull.includes(t)))
     .map((item, indice) => ({
@@ -257,7 +266,7 @@ function executarBusca(termoOriginal) {
     // Mais relevante primeiro; empate mantém a ordem original da base
     .sort((a, b) => b.pontos - a.pontos || a.indice - b.indice)
     .map((r) => r.item);
-
+ 
   // Limita a 100 itens
   renderizarTabela(
     resultados.slice(0, MAX_RESULTADOS),
@@ -265,14 +274,14 @@ function executarBusca(termoOriginal) {
     termosBusca,
   );
 }
-
+ 
 function renderizarTabela(lista, total, termos) {
   if (lista.length === 0) {
     tbody.innerHTML = `<tr><td colspan="4" class="msg-erro">Não encontramos nenhum produto com esse termo. Tente o código, o nome técnico ou um apelido.</td></tr>`;
     resultsInfo.innerText = "";
     return;
   }
-
+ 
   if (total > lista.length) {
     resultsInfo.innerHTML = `Mostrando <strong>${lista.length}</strong> de <strong>${total}</strong> resultados. Refine sua busca para ver os demais.`;
     resultsInfo.className = "results-info results-info--alerta";
@@ -280,11 +289,11 @@ function renderizarTabela(lista, total, termos) {
     resultsInfo.innerText = `Mostrando ${lista.length} de ${total} resultados encontrados.`;
     resultsInfo.className = "results-info";
   }
-
+ 
   const html = lista
     .map((item) => {
       let tagsHtml = "";
-
+ 
       // LÓGICA DO EMPTY STATE
       if (item.tags.length === 0) {
         tagsHtml = `<span class="tag-empty"></span>`;
@@ -297,7 +306,7 @@ function renderizarTabela(lista, total, termos) {
         ];
         const visiveis = ordenadas.slice(0, MAX_TAGS_VISIVEIS);
         const ocultas = ordenadas.slice(MAX_TAGS_VISIVEIS);
-
+ 
         tagsHtml = visiveis
           .map((tag) => `<span class="tag-pill">${destacar(tag, termos)}</span>`)
           .join("");
@@ -305,17 +314,18 @@ function renderizarTabela(lista, total, termos) {
           tagsHtml += `<span class="tag-pill tag-more" title="${escaparHtml(ocultas.join(", "))}">+${ocultas.length}</span>`;
         }
       }
-
+ 
       return `
         <tr>
           <td class="col-sku">${destacar(item.sku, termos)}</td>
-          <td class="col-ref">${destacar(item.referencia, termos)}</td>
           <td class="col-desc">${destacar(item.descricao, termos)}</td>
           <td class="col-tags">${tagsHtml}</td>
+          <td class="col-ref">${destacar(item.referencia, termos)}</td>
         </tr>
       `;
     })
     .join("");
-
+ 
   tbody.innerHTML = html;
 }
+ 
