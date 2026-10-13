@@ -33,7 +33,7 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 
 ### Painel de administração (`/admin/`)
 
-Painel para manter a base sem mexer em arquivos JSON. O acesso é pelo botão **Login** no rodapé do site (ou direto em `/admin/`) e exige e-mail e senha. Depois de entrar, você encontra:
+Painel para manter a base sem mexer em arquivos JSON. O acesso é pelo botão **Login** no cabeçalho do site (ou direto em `/admin/`) e exige e-mail e senha. Depois de entrar, você encontra:
 
 - **Visão geral** no topo, com o total de produtos, quantos estão sem tags e quantas tags existem;
 - **Acesso com login** (Supabase Auth): só quem tem usuário e senha altera a base; o site público só lê;
@@ -73,7 +73,7 @@ O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/
 
 ## 🚀 Como rodar
 
-**Produção:** acesse [danilobuch.github.io/agora-voce-sabe](https://danilobuch.github.io/agora-voce-sabe/). Para administrar a base, use o botão **Login** no rodapé (`/admin/`).
+**Produção:** acesse [danilobuch.github.io/agora-voce-sabe](https://danilobuch.github.io/agora-voce-sabe/). Para administrar a base, use o botão **Login** no cabeçalho (`/admin/`).
 
 **Local:**
 
