@@ -315,7 +315,7 @@ body.logado .kpis { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin: va
 
 /* abas sobre fundo escuro */
 body.logado .faixa .abas {
-  display: flex; margin: var(--sp-6) 0 0; overflow-x: auto;
+  display: flex; margin: var(--sp-6) 0 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.18);
 }
 .faixa .aba { padding-bottom: 12px; color: var(--cbs-roxo-200); white-space: nowrap; }
@@ -329,6 +329,8 @@ body.logado .faixa .abas {
 .pagina { padding-top: var(--sp-8); }
 
 @media (max-width: 768px) {
+  body.logado .faixa .abas { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  body.logado .faixa .abas::-webkit-scrollbar { display: none; }
   .faixa h1 { font-size: var(--fs-xl); }
   .kpi { min-width: 0; flex: 1 1 90px; }
 }

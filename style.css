@@ -87,7 +87,7 @@ body {
   width: 100%;
   max-width: var(--max-content);
   margin: 0 auto;
-  padding: var(--sp-12) var(--gutter-page) var(--sp-16);
+  padding: var(--sp-10) var(--gutter-page) var(--sp-16);
 }
 
 .hero {
@@ -114,6 +114,47 @@ body {
 }
 .lead strong {
   color: var(--text-body);
+}
+
+.faixa-busca {
+  position: relative;
+  overflow: hidden;
+  background: var(--cbs-roxo);
+  color: var(--cbs-neutro-000);
+}
+.faixa-busca__grafismo {
+  position: absolute;
+  right: -60px;
+  bottom: -120px;
+  height: 360px;
+  opacity: 0.1;
+  pointer-events: none;
+}
+.faixa-busca__conteudo {
+  position: relative;
+  max-width: var(--max-content);
+  margin: 0 auto;
+  padding: var(--sp-12) var(--gutter-page);
+}
+.faixa-busca .eyebrow { color: var(--cbs-azul-200); }
+.faixa-busca .hero h1 {
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-2xl);
+  line-height: 1.15;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--cbs-neutro-000);
+}
+.faixa-busca .lead {
+  margin-bottom: var(--sp-6);
+  font-size: var(--fs-sm);
+  color: var(--cbs-roxo-100);
+}
+.faixa-busca .lead strong { color: var(--cbs-neutro-000); font-weight: var(--fw-semibold); }
+.search-hint {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-2xs);
+  color: var(--cbs-roxo-200);
 }
 
 /* --- Campo de busca (Input do DS, tamanho lg) -------------------------- */
@@ -158,7 +199,7 @@ body {
 .hero-cards {
   display: flex;
   gap: var(--sp-5);
-  margin: var(--sp-12) 0 0;
+  margin: 0;
   flex-wrap: wrap;
   transition: opacity var(--dur-base) var(--ease-standard);
 }
@@ -170,6 +211,10 @@ body {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-sm);
+}
+.card,
+.table-wrap {
+  border-left: var(--border-width-rule) solid var(--cbs-azul);
 }
 .card-icon {
   display: block;
@@ -197,7 +242,7 @@ body {
 .results-container {
   display: none;
   width: 100%;
-  margin: var(--sp-8) auto 0;
+  margin: 0 auto;
   animation: deslizar var(--dur-base) var(--ease-move);
 }
 .results-head {
@@ -447,8 +492,12 @@ mark {
   }
 }
 @media (max-width: 768px) {
-  .hero h1 {
+  .faixa-busca .hero h1 {
     font-size: var(--fs-xl);
+  }
+  .faixa-busca__conteudo {
+    padding-top: var(--sp-8);
+    padding-bottom: var(--sp-8);
   }
   .site-header__label {
     display: none;
