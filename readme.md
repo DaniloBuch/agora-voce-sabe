@@ -31,10 +31,11 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 - **Leve e seguro:** debounce na digitação, máximo de 100 linhas renderizadas e escape de HTML nos dados.
 - **Modo contingência:** se o banco estiver fora do ar, o site lê o `db.json` e avisa na tela.
 
-### Painel de administração
+### Painel de administração (`/admin/`)
 
-Foi criado um painel para manter a base sem mexer em arquivos JSON, com:
+Painel para manter a base sem mexer em arquivos JSON. O acesso é pelo botão **Login** no rodapé do site (ou direto em `/admin/`) e exige e-mail e senha. Depois de entrar, você encontra:
 
+- **Visão geral** no topo, com o total de produtos, quantos estão sem tags e quantas tags existem;
 - **Acesso com login** (Supabase Auth): só quem tem usuário e senha altera a base; o site público só lê;
 - **CRUD de produtos e tags**, com chips, sugestões e filtro de produtos sem tags;
 - **Gerenciamento de tags:** lista com contagem, renomear, mesclar e excluir em todos os produtos, com alerta de possíveis duplicadas;
@@ -55,6 +56,7 @@ Supabase (PostgreSQL + PostgREST)
 | Arquivo / pasta | Função |
 | --- | --- |
 | `index.html`, `script.js`, `style.css` | Site público de busca |
+| `admin/` | Painel de administração (`index.html`, `admin.js`, `admin.css`), acessado por `/admin/` |
 | `api.js` | Camada de acesso ao Supabase (login, listar, CRUD, importar, histórico, tags) |
 | `config.js` | Endereço do projeto e chave pública (`anon`) do Supabase |
 | `supabase/schema.sql` | Tabelas, políticas, triggers e funções do banco |
@@ -71,7 +73,7 @@ O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/
 
 ## 🚀 Como rodar
 
-**Produção:** acesse [danilobuch.github.io/agora-voce-sabe](https://danilobuch.github.io/agora-voce-sabe/).
+**Produção:** acesse [danilobuch.github.io/agora-voce-sabe](https://danilobuch.github.io/agora-voce-sabe/). Para administrar a base, use o botão **Login** no rodapé (`/admin/`).
 
 **Local:**
 
@@ -94,7 +96,7 @@ O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/
 - [x] Banco PostgreSQL (Supabase) no lugar do JSON estático
 - [x] Painel de administração com CRUD, importação de CSV e histórico
 - [x] Edição de tags em massa e gerenciamento de tags (renomear, mesclar, excluir)
-- [x] Login no painel (Supabase Auth) e exportação de backup em CSV
+- [x] Login no painel (Supabase Auth) e novo visual do painel e exportação de backup em CSV
 - [x] CBS Design System aplicado
 - [x] Copiar SKU, link compartilhável da busca e tolerância a erro de digitação
 - [ ] Registrar buscas sem resultado, para descobrir apelidos que faltam virar tag

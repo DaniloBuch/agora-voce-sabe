@@ -398,6 +398,24 @@ mark {
   color: var(--text-on-brand-muted);
 }
 
+.site-footer__login {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--sp-5);
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-control);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-on-brand);
+  text-decoration: none;
+  transition: var(--transition-control);
+}
+.site-footer__login:hover { color: var(--text-on-brand); background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.6); }
+.site-footer__login:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.site-footer__login svg { flex: 0 0 auto; }
+
 /* --- Movimento: desliza, não pula (DS 5.8) ----------------------------- */
 @keyframes deslizar {
   from {

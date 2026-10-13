@@ -18,12 +18,32 @@
           <img src="../design-system/assets/brand/logo-completo-gentequemove-roxo-quadrado-laranja.svg" alt="CBS · Gente que move o cuidado" width="160" />
         </a>
         <span class="selo selo--quadrado">Admin</span>
-        <span class="topo-titulo">Administração de produtos</span>
+        <span class="topo-espaco"></span>
         <span class="topo-usuario" id="topoUsuario" hidden></span>
         <button type="button" class="btn btn--secundario btn--sm" id="btnSair" hidden><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 17 5-5-5-5"></path><path d="M21 12H9"></path><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path></svg>Sair</button>
         <a class="link-voltar" href="../">Voltar à busca</a>
       </div>
     </header>
+
+    <section class="faixa">
+      <img class="faixa__grafismo" src="../design-system/assets/brand/grafismo-sorriso-branco.svg" alt="" aria-hidden="true" />
+      <div class="faixa__conteudo">
+        <p class="faixa__sobre">Área restrita</p>
+        <h1>Gerencie a base de produtos</h1>
+        <p class="faixa__sub">Produtos, tags e importações do <strong>Agora você sabe</strong>, com histórico para desfazer qualquer alteração.</p>
+        <dl class="kpis" id="kpis">
+          <div class="kpi"><dt>Produtos</dt><dd id="kpiProdutos">–</dd></div>
+          <div class="kpi"><dt>Sem tags</dt><dd id="kpiSemTags">–</dd></div>
+          <div class="kpi"><dt>Tags</dt><dd id="kpiTags">–</dd></div>
+        </dl>
+        <nav class="abas" role="tablist">
+          <button class="aba ativa" data-aba="produtos" role="tab" aria-selected="true">Produtos</button>
+          <button class="aba" data-aba="tags" role="tab" aria-selected="false">Tags</button>
+          <button class="aba" data-aba="importar" role="tab" aria-selected="false">Importar CSV</button>
+          <button class="aba" data-aba="historico" role="tab" aria-selected="false">Histórico</button>
+        </nav>
+      </div>
+    </section>
 
     <main class="pagina">
       <div id="avisoConfig" class="alerta alerta--erro" role="alert" hidden>
@@ -38,7 +58,7 @@
       <!-- ========== LOGIN ========== -->
       <section id="telaLogin" class="login" hidden>
         <form id="formLogin" class="login__cartao" novalidate>
-          <h1>Entrar</h1>
+          <h2>Entrar</h2>
           <p class="ajuda">Acesso restrito à administração da base de produtos.</p>
           <div class="campo">
             <label for="loginEmail">E-mail</label>
@@ -54,12 +74,6 @@
       </section>
 
       <div id="areaAdmin" hidden>
-      <nav class="abas" role="tablist">
-        <button class="aba ativa" data-aba="produtos" role="tab" aria-selected="true">Produtos</button>
-        <button class="aba" data-aba="tags" role="tab" aria-selected="false">Tags</button>
-        <button class="aba" data-aba="importar" role="tab" aria-selected="false">Importar CSV</button>
-        <button class="aba" data-aba="historico" role="tab" aria-selected="false">Histórico</button>
-      </nav>
 
       <!-- ========== ABA PRODUTOS ========== -->
       <section id="aba-produtos" class="painel">

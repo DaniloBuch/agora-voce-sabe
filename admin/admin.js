@@ -83,8 +83,15 @@
     estado.produtos = dados.map(prepararProduto);
     podarSelecao();
     atualizarSugestoesTags();
+    atualizarKpis();
     renderizarLista();
     if (!$("#aba-tags").hidden) renderizarTags();
+  }
+
+  function atualizarKpis() {
+    $("#kpiProdutos").textContent = fmt.format(estado.produtos.length);
+    $("#kpiSemTags").textContent = fmt.format(estado.produtos.filter((p) => p.tags.trim() === "").length);
+    $("#kpiTags").textContent = fmt.format(indiceTags().size);
   }
 
   function atualizarSugestoesTags() {
@@ -1156,6 +1163,7 @@
   /* ---------------- login ---------------- */
 
   function mostrarLogin(mensagem = "") {
+    document.body.classList.remove("logado");
     $("#areaAdmin").hidden = true;
     $("#telaLogin").hidden = false;
     $("#btnSair").hidden = true;
@@ -1169,6 +1177,7 @@
   }
 
   async function mostrarAdmin() {
+    document.body.classList.add("logado");
     $("#telaLogin").hidden = true;
     $("#areaAdmin").hidden = false;
     $("#btnSair").hidden = false;
@@ -1221,6 +1230,7 @@
     if (!api || !api.configurado) {
       $("#avisoConfig").hidden = false;
       $("#areaAdmin").hidden = false;
+      document.body.classList.add("logado");
       document.querySelectorAll("#btnNovo, #arquivoCsv, #btnExportar").forEach((el) => (el.disabled = true));
       $("#infoLista").textContent = "Supabase não configurado.";
       return;
