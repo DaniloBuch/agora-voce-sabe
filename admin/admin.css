@@ -10,6 +10,17 @@ code { background: var(--surface-sunken); padding: 1px 5px; border-radius: var(-
 
 /* --- Header fixo com blur --------------------------------------------- */
 :root { --topo-h: 77px; }
+
+/* --- Legibilidade: textos mais escuros e mais encorpados -----------------
+   Os tokens do DS passam o mínimo de contraste (4.5:1); aqui subimos um degrau
+   (≈ 8–12:1) e trocamos o peso Light (300) por Medium (500) no texto corrido. */
+:root {
+  --text-body: var(--cbs-neutro-900);
+  --text-muted: var(--cbs-neutro-700);
+  --text-faint: var(--cbs-neutro-600);
+  --text-label: var(--cbs-neutro-700);
+}
+body { font-weight: var(--fw-medium); }
 .topo {
   position: sticky; top: 0; z-index: 40;
   background: rgba(255, 255, 255, 0.86);
@@ -99,7 +110,7 @@ code { background: var(--surface-sunken); padding: 1px 5px; border-radius: var(-
 
 /* --- Campos (Input/Field do DS) ----------------------------------------- */
 input:not([type="checkbox"]):not([type="file"]) {
-  font-family: inherit; font-size: var(--fs-sm); font-weight: var(--fw-regular); color: var(--text-body);
+  font-family: inherit; font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--text-body);
 }
 .campo-busca { position: relative; flex: 1; min-width: 240px; }
 .campo-busca__icone { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-faint); pointer-events: none; }
@@ -115,10 +126,10 @@ input[readonly] { background: var(--cbs-neutro-050); color: var(--text-muted); }
 
 .campo { display: flex; flex-direction: column; gap: 6px; }
 .campo label { font-size: var(--fs-xs); font-weight: var(--fw-medium); line-height: 1.3; color: var(--cbs-neutro-700); }
-.dica { font-size: var(--fs-2xs); font-weight: var(--fw-light); line-height: 1.5; color: var(--text-muted); }
+.dica { font-size: var(--fs-2xs); font-weight: var(--fw-medium); line-height: 1.5; color: var(--text-muted); }
 .erro { margin: 0; font-size: var(--fs-2xs); font-weight: var(--fw-medium); color: var(--cbs-erro); }
 .erro:empty { display: none; }
-.check { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-xs); font-weight: var(--fw-regular); cursor: pointer; }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-xs); font-weight: var(--fw-medium); cursor: pointer; }
 .check input { accent-color: var(--cbs-roxo); width: 16px; height: 16px; margin: 0; }
 
 .barra-ferramentas { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-2); }

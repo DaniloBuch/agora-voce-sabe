@@ -44,8 +44,10 @@ function escaparHtml(texto) {
     .replace(/'/g, "&#39;");
 }
 
-// Escapa o texto e destaca os termos buscados (ignorando acentos/maiúsculas)
-function destacar(texto, termos) {
+// Escapa o texto e destaca os termos buscados (ignorando acentos/maiúsculas).
+// "deslocamento" = quantos caracteres do começo NÃO são exibidos (os zeros à esquerda
+// da Ref.): a busca é feita no texto completo, mas só a parte visível é mostrada.
+function destacar(texto, termos, deslocamento = 0) {
   const original = String(texto ?? "");
   if (!original) return "";
 
@@ -67,7 +69,7 @@ function destacar(texto, termos) {
       pos = norm.indexOf(t, pos + t.length);
     }
   }
-  if (faixas.length === 0) return escaparHtml(original);
+  if (faixas.length === 0) return escaparHtml(original.slice(deslocamento));
 
   // Une faixas sobrepostas
   faixas.sort((a, b) => a[0] - b[0]);
@@ -79,8 +81,10 @@ function destacar(texto, termos) {
   }
 
   let html = "";
-  let cursor = 0;
-  for (const [ini, fim] of unidas) {
+  let cursor = deslocamento;
+  for (const [iniBruto, fim] of unidas) {
+    const ini = Math.max(iniBruto, deslocamento); // corta o que ficou nos zeros ocultos
+    if (fim <= ini) continue;
     html += escaparHtml(original.slice(cursor, ini));
     html += `<mark>${escaparHtml(original.slice(ini, fim))}</mark>`;
     cursor = fim;
@@ -141,6 +145,7 @@ async function carregarDados() {
           sku,
           descricao,
           referencia,
+          referenciaOriginal,
           tags: tagsArray,
           _sku: normalizar(sku),
           _desc: normalizar(descricao),
@@ -410,7 +415,7 @@ function renderizarTabela(lista, total, termos, correcao = null) {
           <td class="col-sku"><button type="button" class="sku-copiar" data-sku="${escaparHtml(item.sku)}" title="Clique para copiar o código" aria-label="Copiar código ${escaparHtml(item.sku)}">${destacar(item.sku, termos)}</button></td>
           <td class="col-desc">${destacar(item.descricao, termos)}</td>
           <td class="col-tags">${tagsHtml}</td>
-          <td class="col-ref">${destacar(item.referencia, termos)}</td>
+          <td class="col-ref">${destacar(item.referenciaOriginal, termos, item.referenciaOriginal.length - item.referencia.length)}</td>
         </tr>
       `;
     })

@@ -23,6 +23,17 @@ body {
 
 /* --- Header fixo com blur (DS 5.11) ---------------------------------- */
 :root { --topo-h: 77px; } /* altura do cabeçalho fixo: o cabeçalho da tabela encosta nele */
+
+/* --- Legibilidade: textos mais escuros e mais encorpados -----------------
+   Os tokens do DS passam o mínimo de contraste (4.5:1); aqui subimos um degrau
+   (≈ 8–12:1) e trocamos o peso Light (300) por Medium (500) no texto corrido. */
+:root {
+  --text-body: var(--cbs-neutro-900);
+  --text-muted: var(--cbs-neutro-700);
+  --text-faint: var(--cbs-neutro-600);
+  --text-label: var(--cbs-neutro-700);
+}
+body { font-weight: var(--fw-medium); }
 .site-header {
   position: sticky;
   top: 0;
@@ -174,7 +185,7 @@ body {
   height: 52px;
   padding: 0 var(--sp-4) 0 var(--sp-12);
   font-family: var(--font-core);
-  font-weight: var(--fw-regular);
+  font-weight: var(--fw-medium);
   font-size: var(--fs-md);
   color: var(--text-body);
   background: var(--surface-card);
@@ -387,6 +398,7 @@ tbody tr:hover {
   width: 150px;
   font-family: var(--font-mono);
   font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
   color: var(--text-muted);
   overflow-wrap: anywhere;
 }
