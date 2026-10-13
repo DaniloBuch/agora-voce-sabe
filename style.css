@@ -22,6 +22,7 @@ body {
 }
 
 /* --- Header fixo com blur (DS 5.11) ---------------------------------- */
+:root { --topo-h: 77px; } /* altura do cabeçalho fixo: o cabeçalho da tabela encosta nele */
 .site-header {
   position: sticky;
   top: 0;
@@ -116,18 +117,19 @@ body {
   color: var(--text-body);
 }
 
+/* Faixa de abertura: base cinza + grafismo "sorriso" (pilar pessoas) como marca d'água, 8% */
 .faixa-busca {
   position: relative;
   overflow: hidden;
-  background: var(--cbs-roxo);
-  color: var(--cbs-neutro-000);
+  background: var(--cbs-neutro-050);
+  border-bottom: 1px solid var(--border-subtle);
 }
 .faixa-busca__grafismo {
   position: absolute;
-  right: -60px;
-  bottom: -120px;
-  height: 360px;
-  opacity: 0.1;
+  right: -90px;
+  bottom: -150px;
+  height: 460px;
+  opacity: 0.08;
   pointer-events: none;
 }
 .faixa-busca__conteudo {
@@ -136,25 +138,21 @@ body {
   margin: 0 auto;
   padding: var(--sp-12) var(--gutter-page);
 }
-.faixa-busca .eyebrow { color: var(--cbs-azul-200); }
+.faixa-busca .eyebrow { color: var(--cbs-azul-700); }
 .faixa-busca .hero h1 {
   margin-bottom: var(--sp-2);
   font-size: var(--fs-2xl);
   line-height: 1.15;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--cbs-neutro-000);
 }
 .faixa-busca .lead {
   margin-bottom: var(--sp-6);
   font-size: var(--fs-sm);
-  color: var(--cbs-roxo-100);
+  color: var(--text-muted);
 }
-.faixa-busca .lead strong { color: var(--cbs-neutro-000); font-weight: var(--fw-semibold); }
 .search-hint {
   margin: var(--sp-3) 0 0;
   font-size: var(--fs-2xs);
-  color: var(--cbs-roxo-200);
+  color: var(--text-muted);
 }
 
 /* --- Campo de busca (Input do DS, tamanho lg) -------------------------- */
@@ -182,9 +180,12 @@ body {
   background: var(--surface-card);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-control);
-  box-shadow: var(--shadow-inset);
+  box-shadow: var(--shadow-inset), var(--shadow-sm);
   outline: none;
   transition: var(--transition-control);
+}
+#searchInput:hover:not(:focus) {
+  border-color: var(--cbs-azul-400);
 }
 #searchInput:focus {
   border-color: var(--cbs-azul);
@@ -216,6 +217,17 @@ body {
 .table-wrap {
   border-left: var(--border-width-rule) solid var(--cbs-azul);
 }
+.card {
+  transition: box-shadow var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard);
+}
+.card:hover {
+  border-color: var(--cbs-azul-200);
+  border-left-color: var(--cbs-azul);
+  box-shadow: var(--shadow-md);
+}
+.card:hover .card-icon { color: var(--cbs-roxo); }
+.card-icon { transition: color var(--dur-base) var(--ease-standard); }
+.tag-pill:hover { border-color: var(--cbs-azul-400); }
 .card-icon {
   display: block;
   margin-bottom: var(--sp-3);
@@ -316,7 +328,7 @@ body {
 }
 
 .table-wrap {
-  overflow: auto;
+  /* sem overflow: o cabeçalho fixa na janela (sticky); no celular volta a rolar de lado */
   background: var(--surface-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-card);
@@ -324,10 +336,14 @@ body {
 }
 table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
 }
 th {
+  position: sticky;
+  top: var(--topo-h);
+  z-index: 5;
   padding: 13px 14px;
   text-align: left;
   background: var(--surface-sunken);
@@ -349,11 +365,16 @@ td {
 tbody tr:last-child td {
   border-bottom: none;
 }
+/* cantos arredondados do cartão sem precisar de overflow */
+thead th:first-child { border-top-left-radius: calc(var(--radius-card) - 1px); }
+thead th:last-child { border-top-right-radius: calc(var(--radius-card) - 1px); }
+tbody tr:last-child td:first-child { border-bottom-left-radius: calc(var(--radius-card) - 1px); }
+tbody tr:last-child td:last-child { border-bottom-right-radius: calc(var(--radius-card) - 1px); }
 tbody tr {
   transition: background-color var(--dur-fast) var(--ease-standard);
 }
 tbody tr:hover {
-  background: var(--cbs-neutro-025);
+  background: var(--cbs-roxo-050);
 }
 
 .col-sku {
@@ -492,6 +513,8 @@ mark {
   }
 }
 @media (max-width: 768px) {
+  .table-wrap { overflow-x: auto; }
+  th { position: static; }
   .faixa-busca .hero h1 {
     font-size: var(--fs-xl);
   }
