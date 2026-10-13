@@ -208,11 +208,80 @@ end;
 $$;
 
 
+-- 4c) GERENCIAR TAGS (renomear / mesclar / excluir em todos os produtos) -
+-- Renomeia, mescla ou exclui uma tag em TODOS os produtos (atômico).
+--   * Compara sem diferenciar maiúsculas/minúsculas ("curativo" = "CURATIVO").
+--   * p_novo = nome novo. Se o produto já tiver esse nome, fica uma só (mescla).
+--   * p_novo vazio = exclui a tag dos produtos.
+-- Só grava nos produtos que realmente mudam; cada um deles vai para o histórico.
+create or replace function public.renomear_tag(
+  p_origem text,
+  p_novo   text default ''
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+  v_origem    text := btrim(coalesce(p_origem, ''));
+  v_novo      text := btrim(coalesce(p_novo, ''));
+  v_afetados  int  := 0;
+  v_alterados int  := 0;
+begin
+  if v_origem = '' then
+    raise exception 'Informe a tag que será renomeada.';
+  end if;
+
+  select count(*) into v_afetados
+  from public.produtos p
+  where exists (
+    select 1 from unnest(string_to_array(p.tags, ',')) as t
+    where upper(btrim(t)) = upper(v_origem)
+  );
+
+  with novas as (
+    select p.sku,
+           coalesce((
+             select string_agg(d.t, ', ' order by d.ord)
+             from (
+               select distinct on (upper(q.t)) q.t, q.ord
+               from (
+                 select case when upper(btrim(x.t)) = upper(v_origem)
+                             then v_novo else btrim(x.t) end as t,
+                        x.n as ord
+                 from unnest(string_to_array(p.tags, ',')) with ordinality as x(t, n)
+               ) q
+               where q.t <> ''
+               order by upper(q.t), q.ord
+             ) d
+           ), '') as tags
+    from public.produtos p
+    where exists (
+      select 1 from unnest(string_to_array(p.tags, ',')) as t
+      where upper(btrim(t)) = upper(v_origem)
+    )
+  )
+  update public.produtos p
+     set tags = n.tags
+    from novas n
+   where p.sku = n.sku
+     and p.tags is distinct from n.tags;
+  get diagnostics v_alterados = row_count;
+
+  return jsonb_build_object('afetados', v_afetados, 'alterados', v_alterados);
+end;
+$$;
+
+revoke execute on function public.renomear_tag(text, text) from public, anon;
+grant execute on function public.renomear_tag(text, text) to authenticated;
+
+
 -- 5) PERMISSÕES (RLS) ----------------------------------------------------
--- ATENÇÃO: como combinado, o /admin NÃO tem login. Isso significa que a
--- chave pública (anon) precisa poder gravar. Qualquer pessoa que tenha a
--- URL do Supabase + a chave (ambas ficam visíveis no site) consegue editar.
--- O histórico acima existe justamente para poder desfazer qualquer estrago.
+-- * Qualquer pessoa (anon) só LÊ os produtos: é o que o site público usa.
+-- * Quem fez LOGIN (authenticated) pode criar, editar, excluir, importar e
+--   ver o histórico: é o painel de administração.
+-- IMPORTANTE: no Supabase, desative o cadastro público de usuários
+-- (Authentication > Sign In / Providers > Email > "Allow new users to sign up"),
+-- senão qualquer pessoa poderia criar uma conta e virar "authenticated".
 alter table public.produtos           enable row level security;
 alter table public.produtos_historico enable row level security;
 
@@ -223,18 +292,25 @@ drop policy if exists "produtos_delete" on public.produtos;
 drop policy if exists "historico_select" on public.produtos_historico;
 
 create policy "produtos_select" on public.produtos
-  for select to anon using (true);
+  for select to anon, authenticated using (true);
 create policy "produtos_insert" on public.produtos
-  for insert to anon with check (true);
+  for insert to authenticated with check (true);
 create policy "produtos_update" on public.produtos
-  for update to anon using (true) with check (true);
+  for update to authenticated using (true) with check (true);
 create policy "produtos_delete" on public.produtos
-  for delete to anon using (true);
+  for delete to authenticated using (true);
 create policy "historico_select" on public.produtos_historico
-  for select to anon using (true);
+  for select to authenticated using (true);
 
-grant usage on schema public to anon;
-grant select, insert, update, delete on public.produtos to anon;
-grant select on public.produtos_historico to anon;
-grant execute on function public.importar_catalogo(jsonb, boolean) to anon;
-grant execute on function public.editar_tags_em_massa(text[], text[], text[]) to anon;
+grant usage on schema public to anon, authenticated;
+
+revoke insert, update, delete on public.produtos from anon;
+revoke all on public.produtos_historico from anon;
+grant select on public.produtos to anon;
+grant select, insert, update, delete on public.produtos to authenticated;
+grant select on public.produtos_historico to authenticated;
+
+revoke execute on function public.importar_catalogo(jsonb, boolean) from public, anon;
+revoke execute on function public.editar_tags_em_massa(text[], text[], text[]) from public, anon;
+grant execute on function public.importar_catalogo(jsonb, boolean) to authenticated;
+grant execute on function public.editar_tags_em_massa(text[], text[], text[]) to authenticated;

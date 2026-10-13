@@ -26,6 +26,8 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 - **Ordenado por relevância:** código exato, referência exata e tags vêm antes de coincidências soltas na descrição.
 - **Termos destacados** nos resultados; tags que casaram com a busca aparecem primeiro.
 - **Referência legível:** referências só numéricas aparecem sem zeros à esquerda (`000000000038833014` → `38833014`); as com letras ficam como estão (`AR420`). A busca aceita as duas formas.
+- **Tolera erros de digitação:** se nada for encontrado, sugere palavras parecidas da própria base (`esfigmomanomtero` → `esfigmomanometro`) e avisa o que foi buscado.
+- **Praticidade:** clique no código para copiar o SKU e use "Copiar link desta busca" para compartilhar (`?q=sonda`); a busca do link abre já executada.
 - **Leve e seguro:** debounce na digitação, máximo de 100 linhas renderizadas e escape de HTML nos dados.
 - **Modo contingência:** se o banco estiver fora do ar, o site lê o `db.json` e avisa na tela.
 
@@ -33,10 +35,13 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 
 Foi criado um painel para manter a base sem mexer em arquivos JSON, com:
 
+- **Acesso com login** (Supabase Auth): só quem tem usuário e senha altera a base; o site público só lê;
 - **CRUD de produtos e tags**, com chips, sugestões e filtro de produtos sem tags;
+- **Gerenciamento de tags:** lista com contagem, renomear, mesclar e excluir em todos os produtos, com alerta de possíveis duplicadas;
 - **Edição de tags em massa**, com seleção múltipla e prévia do resultado;
 - **Importação de CSV** do sistema (inclui novos SKUs, atualiza descrição e referência e remove descontinuados, sempre preservando as tags), com resumo e confirmação antes de gravar;
-- **Histórico** de edições e exclusões, com restauração (inclusive em lote) e filtro por data.
+- **Histórico** de edições e exclusões, com restauração (inclusive em lote) e filtro por data;
+- **Exportação em CSV** de toda a base, para backup.
 
 ## 🏗️ Arquitetura
 
@@ -50,10 +55,10 @@ Supabase (PostgreSQL + PostgREST)
 | Arquivo / pasta | Função |
 | --- | --- |
 | `index.html`, `script.js`, `style.css` | Site público de busca |
-| `api.js` | Camada de acesso ao Supabase (listar, CRUD, importar, histórico, edição em massa) |
+| `api.js` | Camada de acesso ao Supabase (login, listar, CRUD, importar, histórico, tags) |
 | `config.js` | Endereço do projeto e chave pública (`anon`) do Supabase |
 | `supabase/schema.sql` | Tabelas, políticas, triggers e funções do banco |
-| `supabase/migracoes/` | Scripts incrementais para bancos já criados (ex.: `002_edicao_tags_em_massa.sql`) |
+| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags) |
 | `supabase/produtos_seed.csv` | Carga inicial dos produtos |
 | `db.json` | Cópia estática usada como contingência |
 | `design-system/` | CBS Design System vendorizado ([detalhes](design-system/README.md)) |
@@ -78,17 +83,23 @@ O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/
 
 ## 🔐 Segurança
 
-O painel de administração foi mantido sem autenticação por decisão do projeto. Como o site é estático, a chave pública do Supabase precisa de permissão de gravação, e a rede de segurança é o **Histórico**: tudo que for alterado ou excluído pode ser restaurado. Para proteger no futuro, o caminho natural é o Supabase Auth, trocando as políticas de `anon` para `authenticated` no `schema.sql`.
+- A **leitura** dos produtos é pública (é o que o site usa); **qualquer alteração** exige login (Supabase Auth) e é protegida por regras de acesso no próprio banco (RLS), não só pela interface.
+- O cadastro público de usuários deve ficar **desativado** no Supabase, para que só as contas criadas por você existam.
+- A chave `anon` no `config.js` é pública por natureza e não dá permissão de gravação.
+- O **Histórico** guarda a versão anterior de tudo o que for alterado ou excluído, e a exportação em CSV serve de backup extra.
 
 ## 🛣️ Roadmap
 
 - [x] Busca por partículas, sem acento, com relevância e destaque
 - [x] Banco PostgreSQL (Supabase) no lugar do JSON estático
 - [x] Painel de administração com CRUD, importação de CSV e histórico
-- [x] Edição de tags em massa
-- [x] Aplicação do CBS Design System
-- [ ] Autenticação no painel (Supabase Auth)
-- [ ] Backend próprio (ex.: Java / Spring Boot), se o projeto crescer além do MVP
+- [x] Edição de tags em massa e gerenciamento de tags (renomear, mesclar, excluir)
+- [x] Login no painel (Supabase Auth) e exportação de backup em CSV
+- [x] CBS Design System aplicado
+- [x] Copiar SKU, link compartilhável da busca e tolerância a erro de digitação
+- [ ] Registrar buscas sem resultado, para descobrir apelidos que faltam virar tag
+- [ ] Backup automático agendado
+- [ ] Atalhos e melhorias de uso no celular
 
 ---
 

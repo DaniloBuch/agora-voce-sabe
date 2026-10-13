@@ -101,13 +101,13 @@ input:not([type="checkbox"]):not([type="file"]) {
 }
 .campo-busca { position: relative; flex: 1; min-width: 240px; }
 .campo-busca__icone { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-faint); pointer-events: none; }
-#filtro, .campo input:not([type="checkbox"]) {
+#filtro, #filtroTags, .campo input:not([type="checkbox"]) {
   width: 100%; height: 40px; padding: 0 12px;
   background: var(--cbs-neutro-000); border: 1px solid var(--border-default); border-radius: var(--radius-control);
   box-shadow: var(--shadow-inset); outline: none; transition: var(--transition-control);
 }
-#filtro { padding-left: 36px; }
-#filtro:focus, .campo input:not([type="checkbox"]):focus { border-color: var(--cbs-azul); box-shadow: var(--ring-focus); }
+#filtro, #filtroTags { padding-left: 36px; }
+#filtro:focus, #filtroTags:focus, .campo input:not([type="checkbox"]):focus { border-color: var(--cbs-azul); box-shadow: var(--ring-focus); }
 input::placeholder { color: var(--text-faint); }
 input[readonly] { background: var(--cbs-neutro-050); color: var(--text-muted); }
 
@@ -265,3 +265,21 @@ tr.grupo td { background: var(--cbs-neutro-025); }
   .topo-conteudo { gap: var(--sp-3); }
   .link-voltar { margin-left: auto; }
 }
+
+/* --- Login --------------------------------------------------------------- */
+.login { display: flex; justify-content: center; padding: var(--sp-10) 0; }
+.login__cartao {
+  display: flex; flex-direction: column; gap: var(--sp-4); width: min(400px, 100%);
+  padding: var(--sp-8); background: var(--surface-card); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card); box-shadow: var(--shadow-md);
+}
+.login__cartao h1 { margin: 0; font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--cbs-roxo); }
+.login__cartao .ajuda { margin: 0; }
+.login__cartao .btn { align-self: stretch; justify-content: center; }
+.topo-usuario { font-size: var(--fs-2xs); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+
+/* --- Aba Tags ------------------------------------------------------------ */
+.c-num { width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+th.c-num { text-align: right; }
+td.obs { font-size: var(--fs-2xs); color: var(--text-muted); }
+.aviso-tag { color: var(--cbs-amarelo-700); font-weight: var(--fw-medium); }

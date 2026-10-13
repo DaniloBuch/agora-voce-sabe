@@ -178,6 +178,63 @@ body {
   margin: var(--sp-8) auto 0;
   animation: deslizar var(--dur-base) var(--ease-move);
 }
+.results-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+.results-head .results-info { flex: 1; }
+.btn-link {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-xs);
+  font: inherit;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  color: var(--cbs-azul-700);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.btn-link:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.btn-link.copiado { color: var(--cbs-sucesso); text-decoration: none; }
+
+/* SKU clicável: copia o código */
+.sku-copiar {
+  position: relative;
+  display: inline-block;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-xs);
+  font: inherit;
+  color: inherit;
+  cursor: copy;
+  text-align: left;
+}
+.sku-copiar:hover { background: var(--cbs-roxo-050); }
+.sku-copiar:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.sku-copiar.copiado::after {
+  content: "Copiado";
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 6px;
+  padding: 2px 8px;
+  background: var(--cbs-sucesso);
+  color: var(--cbs-neutro-000);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-core);
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  z-index: 2;
+}
 .results-info {
   min-height: 1.4em;
   margin: 0 0 var(--sp-2);

@@ -54,11 +54,33 @@ importação em massa e as permissões de acesso.
 - Admin: acesse `https://danilobuch.github.io/agora-voce-sabe/admin/`. Edite as tags de um produto,
   salve, recarregue o site público e busque por ele.
 
-## Como usar o /admin
+## 6. Proteger o painel com login (migrações 003 e 004)
+
+Sem este passo, qualquer pessoa que descubra o endereço do painel consegue editar a base.
+Faça **na ordem abaixo** (só uma vez):
+
+1. **Publique no GitHub** os arquivos novos do projeto (inclusive `api.js` e a pasta `admin/`) e
+   espere o GitHub Pages atualizar. Se rodar o SQL antes, o painel antigo para de gravar.
+2. **Crie o seu usuário:** no Supabase, **Authentication → Users → Add user → Create new user**.
+   Informe e-mail e senha e marque **Auto Confirm User**.
+3. **Desative o cadastro público:** em **Authentication → Sign In / Providers → Email**, desligue
+   **Allow new users to sign up** (o nome do menu pode variar um pouco). Sem isso, qualquer pessoa
+   poderia criar uma conta e entrar.
+4. **Rode o SQL:** no **SQL Editor**, cole e execute `supabase/migracoes/003_login_admin.sql`
+   (só quem está logado passa a poder gravar e ver o histórico) e depois
+   `supabase/migracoes/004_gerenciar_tags.sql` (aba **Tags**).
+5. **Teste:** abra o painel, entre com o e-mail e a senha e edite um produto. O site público
+   continua aberto para busca, sem login.
+
+Esqueceu a senha? No Supabase, em **Authentication → Users**, abra o usuário e envie a
+recuperação de senha ou defina uma nova.
+
+## Como usar o painel de administração
 
 | Aba | Para quê |
 | --- | --- |
-| **Produtos** | Buscar, criar, editar (inclusive tags) e excluir. O filtro **"Só sem tags"** mostra o que falta etiquetar. |
+| **Produtos** | Buscar, criar, editar (inclusive tags) e excluir. O botão **Exportar CSV** baixa todos os produtos (use como backup). O filtro **"Só sem tags"** mostra o que falta etiquetar. |
+| **Tags** | Lista todas as tags com a contagem de produtos. **Renomear** troca a tag em todos os produtos; se o novo nome já existir, as duas viram uma só (mescla). **Excluir** tira a tag de todos. Marca possíveis duplicadas (acento, plural, maiúscula). Tudo vai para o Histórico. |
 | **Importar CSV** | Atualiza a base em massa (veja abaixo). |
 | **Histórico** | Mostra versões anteriores de qualquer edição/exclusão, com botão **Restaurar**. Alterações em massa aparecem agrupadas, com **Restaurar todos**; dá para filtrar por data (De/Até). |
 
@@ -96,11 +118,9 @@ excluídos pela importação.
 
 ## Pontos de atenção
 
-- **O /admin não tem senha** (decisão do projeto). Como o site é estático, a chave pública precisa
-  ter permissão de gravação; quem tiver a URL do admin ou inspecionar o site consegue editar a
-  base. O **Histórico** é a rede de segurança: tudo que é editado/excluído pode ser restaurado.
-  Se um dia quiser proteger, o caminho natural é adicionar login (Supabase Auth) e trocar as
-  políticas do arquivo `schema.sql` de `anon` para `authenticated`.
+- **Login do painel:** só quem tem e-mail e senha cadastrados consegue gravar (passo 6). A chave
+  pública do site só consegue **ler** os produtos. Mantenha o cadastro público de usuários
+  desativado e faça um **Exportar CSV** de tempos em tempos como backup extra, além do Histórico.
 - **Plano gratuito do Supabase:** projetos sem uso por um período podem ser pausados. Se o banco
   ficar fora do ar, o site entra em **modo contingência** (lê o `db.json`, com aviso em vermelho
   no card inicial) e esse arquivo pode estar desatualizado. Para reativar, entre no painel e
