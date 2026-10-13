@@ -57,11 +57,22 @@
           </label>
           <button id="btnNovo" class="btn btn--primario"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Novo produto</button>
         </div>
-        <div id="infoLista" class="info"></div>
+        <div id="barraSelecao" class="barra-selecao">
+          <div class="barra-selecao__info">
+            <span id="infoLista"></span>
+            <strong id="txtSelecao" hidden></strong>
+          </div>
+          <div class="barra-selecao__acoes">
+            <button id="btnSelFiltro" class="btn btn--secundario btn--sm" hidden></button>
+            <button id="btnLimparSel" class="btn btn--secundario btn--sm" hidden>Limpar seleção</button>
+            <button id="btnTagsMassa" class="btn btn--primario btn--sm" hidden><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg>Editar tags em massa</button>
+          </div>
+        </div>
         <div class="tabela-wrap">
           <table>
             <thead>
               <tr>
+                <th class="c-sel"><input type="checkbox" id="selPagina" aria-label="Selecionar todos desta página" /></th>
                 <th class="c-sku">SKU</th>
                 <th class="c-ref">Ref.</th>
                 <th>Descrição</th>
@@ -156,6 +167,38 @@
         <div class="dialogo__rodape">
           <button type="button" class="btn btn--secundario" id="btnCancelar">Cancelar</button>
           <button type="submit" class="btn btn--primario" id="btnSalvar">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ========== DIÁLOGO: TAGS EM MASSA ========== -->
+    <dialog id="dlgMassa" class="dialogo dialogo--lg">
+      <form id="formMassa" novalidate>
+        <div class="dialogo__topo">
+          <h2>Editar tags em massa</h2>
+          <button type="button" class="btn-icone" id="btnFecharMassa" aria-label="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+        </div>
+        <div class="dialogo__corpo">
+          <div id="massaResumo" class="massa-resumo"></div>
+          <div class="campo">
+            <label for="fAddInput">Adicionar estas tags</label>
+            <div class="chips" id="chipsAdd">
+              <input id="fAddInput" list="listaTags" autocomplete="off" placeholder="Digite uma tag e tecle Enter" />
+            </div>
+          </div>
+          <div class="campo">
+            <label for="fRemInput">Remover estas tags</label>
+            <div class="chips chips--remover" id="chipsRem">
+              <input id="fRemInput" list="listaTags" autocomplete="off" placeholder="Digite uma tag e tecle Enter" />
+            </div>
+            <div id="massaPresentes" class="massa-presentes"></div>
+          </div>
+          <div id="massaPreview" class="massa-preview" aria-live="polite"></div>
+          <p class="erro" id="massaErro" role="alert"></p>
+        </div>
+        <div class="dialogo__rodape">
+          <button type="button" class="btn btn--secundario" id="btnCancelarMassa">Cancelar</button>
+          <button type="submit" class="btn btn--primario" id="btnAplicarMassa">Aplicar</button>
         </div>
       </form>
     </dialog>

@@ -60,7 +60,7 @@ importação em massa e as permissões de acesso.
 | --- | --- |
 | **Produtos** | Buscar, criar, editar (inclusive tags) e excluir. O filtro **"Só sem tags"** mostra o que falta etiquetar. |
 | **Importar CSV** | Atualiza a base em massa (veja abaixo). |
-| **Histórico** | Mostra versões anteriores de qualquer edição/exclusão, com botão **Restaurar**. |
+| **Histórico** | Mostra versões anteriores de qualquer edição/exclusão, com botão **Restaurar**. Alterações em massa aparecem agrupadas, com **Restaurar todos**. |
 
 ### Importação de CSV
 
@@ -77,6 +77,22 @@ aceita `;` ou `,` e acentos em UTF-8 ou Windows-1252). A importação:
 
 Produtos marcados como **Fixo** (ex.: `999999 – NAO FAZ PARTE DO NOSSO PORTIFOLIO`) nunca são
 excluídos pela importação.
+
+### Edição de tags em massa
+
+Útil quando vários produtos de descrição parecida levam a mesma tag.
+
+1. Na aba **Produtos**, filtre (ex.: `aparelho pressao`) e marque os produtos: a caixa do cabeçalho
+   marca a página; **"Selecionar os N resultados do filtro"** marca todas as páginas.
+2. Clique em **Editar tags em massa**. Digite as tags a **adicionar** (Enter ou vírgula) e/ou a
+   **remover**; as tags já presentes na seleção aparecem para você clicar e remover.
+3. A prévia mostra quantos produtos mudam. Em **Aplicar**, as tags existentes são preservadas, sem
+   duplicar, e tudo é gravado de uma vez (tudo ou nada).
+4. Para desfazer: aba **Histórico** → **Restaurar todos** na linha "Edição em massa".
+
+> **Importante (uma vez só):** a edição em massa usa uma função no banco. Se ainda não rodou,
+> abra o **SQL Editor** do Supabase, cole o conteúdo de
+> `supabase/migracoes/002_edicao_tags_em_massa.sql` e clique em **Run**.
 
 ## Pontos de atenção
 

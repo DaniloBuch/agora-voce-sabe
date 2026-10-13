@@ -226,6 +226,31 @@ details .conteudo .para { color: var(--cbs-sucesso); font-weight: var(--fw-mediu
 #toast.visivel { opacity: 1; transform: translate(-50%, 0); }
 #toast.erro-toast { background: var(--cbs-erro); }
 
+/* --- Edição em massa ----------------------------------------------------- */
+.c-sel { width: 40px; padding-right: 0; }
+.c-sel input { accent-color: var(--cbs-roxo); width: 16px; height: 16px; margin: 0; cursor: pointer; }
+tbody tr.selecionada { background: var(--cbs-roxo-050); }
+.barra-selecao {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap;
+  min-height: 44px; margin: var(--sp-2) 0 var(--sp-3); padding: 6px var(--sp-3);
+  border-radius: var(--radius-sm); font-size: var(--fs-2xs); color: var(--text-muted);
+}
+.barra-selecao.tem-selecao { background: var(--cbs-roxo-050); color: var(--cbs-roxo-700); }
+.barra-selecao__info { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.barra-selecao__acoes { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.dialogo--lg { width: min(640px, calc(100vw - 2 * var(--sp-6))); }
+.massa-resumo { padding: var(--sp-3) var(--sp-4); background: var(--surface-sunken); border-radius: var(--radius-sm); font-size: var(--fs-xs); }
+.massa-resumo p { margin: 0 0 4px; }
+.massa-resumo ul { margin: 0; padding-left: 18px; color: var(--text-muted); }
+.massa-presentes { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin-top: 4px; }
+.massa-presentes .dica { width: 100%; margin-bottom: 4px; }
+.tag-pill--acao { cursor: pointer; font-family: inherit; }
+.tag-pill--acao:hover { border-color: var(--cbs-erro); color: var(--cbs-erro); }
+.massa-preview { padding: var(--sp-3) var(--sp-4); border-left: var(--border-width-rule) solid var(--cbs-azul); background: var(--cbs-info-bg); border-radius: var(--radius-sm); font-size: var(--fs-xs); line-height: var(--lh-relaxed); }
+.massa-exemplo { margin-top: 4px; color: var(--text-muted); font-size: var(--fs-2xs); }
+.chips--remover .chip { background: var(--cbs-erro-bg); color: var(--cbs-erro); border-color: var(--cbs-erro); }
+tr.grupo td { background: var(--cbs-neutro-025); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

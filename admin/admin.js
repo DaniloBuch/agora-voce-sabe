@@ -10,7 +10,7 @@
     filtro: "",
     semTags: false,
     pagina: 1,
-    tagsEdicao: [],
+    selecionados: new Set(), // SKUs marcados para edição em massa
     skuEmEdicao: null, // null = criando
     skuParaExcluir: null,
     importacao: null,
@@ -81,6 +81,7 @@
   async function carregarProdutos() {
     const dados = await api.listarProdutos();
     estado.produtos = dados.map(prepararProduto);
+    podarSelecao();
     atualizarSugestoesTags();
     renderizarLista();
   }
@@ -137,7 +138,7 @@
 
     $("#corpoTabela").innerHTML =
       pagina.length === 0
-        ? `<tr><td colspan="5" class="vazio">Nenhum produto encontrado com esse filtro.</td></tr>`
+        ? `<tr><td colspan="6" class="vazio">Nenhum produto encontrado com esse filtro.</td></tr>`
         : pagina
             .map((p) => {
               const tags = separarTags(p.tags);
@@ -145,7 +146,9 @@
                 tags.length === 0
                   ? `<span class="sem-tags">sem tags</span>`
                   : tags.map((t) => `<span class="tag-pill">${esc(t)}</span>`).join("");
-              return `<tr>
+              const marcado = estado.selecionados.has(p.sku);
+              return `<tr${marcado ? ' class="selecionada"' : ""}>
+                <td class="c-sel"><input type="checkbox" data-sel="${esc(p.sku)}" aria-label="Selecionar ${esc(p.sku)}"${marcado ? " checked" : ""} /></td>
                 <td class="c-sku">${esc(p.sku)}${p.fixo ? '<span class="selo" title="Fixo: nunca excluído pela importação">fixo</span>' : ""}</td>
                 <td class="c-ref">${esc(p.referencia)}</td>
                 <td>${esc(p.descricao_tecnica)}</td>
@@ -158,10 +161,71 @@
             })
             .join("");
 
+    atualizarSelecao(lista, pagina);
     $("#infoPagina").textContent = `Página ${estado.pagina} de ${totalPaginas}`;
     $("#btnAnterior").disabled = estado.pagina <= 1;
     $("#btnProxima").disabled = estado.pagina >= totalPaginas;
   }
+
+  /* ---------------- seleção (edição em massa) ---------------- */
+
+  function atualizarSelecao(lista = filtrados(), pagina = null) {
+    if (!pagina) {
+      const ini = (estado.pagina - 1) * TAMANHO_PAGINA;
+      pagina = lista.slice(ini, ini + TAMANHO_PAGINA);
+    }
+    const n = estado.selecionados.size;
+    const marcadosPagina = pagina.filter((p) => estado.selecionados.has(p.sku)).length;
+    const cab = $("#selPagina");
+    cab.checked = pagina.length > 0 && marcadosPagina === pagina.length;
+    cab.indeterminate = marcadosPagina > 0 && marcadosPagina < pagina.length;
+    cab.disabled = pagina.length === 0;
+
+    $("#barraSelecao").classList.toggle("tem-selecao", n > 0);
+    const txt = $("#txtSelecao");
+    txt.hidden = n === 0;
+    txt.textContent = `${fmt.format(n)} ${n === 1 ? "selecionado" : "selecionados"}`;
+    $("#btnLimparSel").hidden = n === 0;
+    $("#btnTagsMassa").hidden = n === 0;
+
+    // oferece selecionar todos os resultados do filtro (várias páginas)
+    const btn = $("#btnSelFiltro");
+    const faltam = lista.filter((p) => !estado.selecionados.has(p.sku)).length;
+    const filtrando = lista.length < estado.produtos.length;
+    btn.hidden = !(filtrando && faltam > 0 && lista.length > pagina.length);
+    btn.textContent = `Selecionar os ${fmt.format(lista.length)} resultados do filtro`;
+  }
+
+  function podarSelecao() {
+    const existentes = new Set(estado.produtos.map((p) => p.sku));
+    for (const sku of [...estado.selecionados]) if (!existentes.has(sku)) estado.selecionados.delete(sku);
+  }
+
+  $("#selPagina").addEventListener("change", (e) => {
+    const lista = filtrados();
+    const ini = (estado.pagina - 1) * TAMANHO_PAGINA;
+    for (const p of lista.slice(ini, ini + TAMANHO_PAGINA)) {
+      if (e.target.checked) estado.selecionados.add(p.sku);
+      else estado.selecionados.delete(p.sku);
+    }
+    renderizarLista();
+  });
+  $("#btnSelFiltro").addEventListener("click", () => {
+    filtrados().forEach((p) => estado.selecionados.add(p.sku));
+    renderizarLista();
+  });
+  $("#btnLimparSel").addEventListener("click", () => {
+    estado.selecionados.clear();
+    renderizarLista();
+  });
+  $("#corpoTabela").addEventListener("change", (e) => {
+    const cx = e.target.closest("input[data-sel]");
+    if (!cx) return;
+    if (cx.checked) estado.selecionados.add(cx.dataset.sel);
+    else estado.selecionados.delete(cx.dataset.sel);
+    cx.closest("tr").classList.toggle("selecionada", cx.checked);
+    atualizarSelecao();
+  });
 
   let timerFiltro = null;
   $("#filtro").addEventListener("input", (e) => {
@@ -197,66 +261,70 @@
 
   /* ---------------- diálogo novo / editar ---------------- */
 
-  function renderizarChips() {
-    const campo = $("#fTagInput");
-    $("#chips")
-      .querySelectorAll(".chip")
-      .forEach((c) => c.remove());
-    estado.tagsEdicao.forEach((tag, i) => {
-      const chip = document.createElement("span");
-      chip.className = "chip";
-      chip.textContent = tag;
-      const x = document.createElement("button");
-      x.type = "button";
-      x.innerHTML = window.CBSIcon("x", 12);
-      x.setAttribute("aria-label", `Remover ${tag}`);
-      x.addEventListener("click", () => {
-        estado.tagsEdicao.splice(i, 1);
-        renderizarChips();
-        campo.focus();
+  // Editor de chips reutilizável (produto, "adicionar" e "remover" da edição em massa)
+  function criarEditorTags(chipsEl, campo, aoMudar = () => {}) {
+    let tags = [];
+    function renderizar() {
+      chipsEl.querySelectorAll(".chip").forEach((c) => c.remove());
+      tags.forEach((tag, i) => {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = tag;
+        const x = document.createElement("button");
+        x.type = "button";
+        x.innerHTML = window.CBSIcon("x", 12);
+        x.setAttribute("aria-label", `Remover ${tag}`);
+        x.addEventListener("click", () => {
+          tags.splice(i, 1);
+          renderizar();
+          campo.focus();
+        });
+        chip.appendChild(x);
+        chipsEl.insertBefore(chip, campo);
       });
-      chip.appendChild(x);
-      $("#chips").insertBefore(chip, campo);
-    });
-  }
-
-  function adicionarTags(texto) {
-    for (const bruta of separarTags(texto)) {
-      const tag = bruta.toLocaleUpperCase("pt-BR");
-      if (!estado.tagsEdicao.some((t) => normalizar(t) === normalizar(tag))) {
-        estado.tagsEdicao.push(tag);
+      aoMudar();
+    }
+    function adicionar(texto) {
+      for (const bruta of separarTags(texto)) {
+        const tag = bruta.toLocaleUpperCase("pt-BR");
+        if (!tags.some((t) => normalizar(t) === normalizar(tag))) tags.push(tag);
+      }
+      renderizar();
+    }
+    function pendente() {
+      if (campo.value.trim()) {
+        adicionar(campo.value);
+        campo.value = "";
       }
     }
-    renderizarChips();
+    campo.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        pendente();
+      } else if (e.key === "Backspace" && campo.value === "" && tags.length) {
+        tags.pop();
+        renderizar();
+      }
+    });
+    campo.addEventListener("change", pendente); // escolha de sugestão do datalist
+    campo.addEventListener("blur", pendente);
+    chipsEl.addEventListener("click", (e) => {
+      if (e.target === chipsEl) campo.focus();
+    });
+    return {
+      obter: () => [...tags],
+      definir(novas) {
+        tags = [...novas];
+        campo.value = "";
+        renderizar();
+      },
+      adicionar,
+      pendente,
+    };
   }
 
+  const editorProduto = criarEditorTags($("#chips"), $("#fTagInput"));
   const campoTag = $("#fTagInput");
-  campoTag.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      adicionarTags(campoTag.value);
-      campoTag.value = "";
-    } else if (e.key === "Backspace" && campoTag.value === "" && estado.tagsEdicao.length) {
-      estado.tagsEdicao.pop();
-      renderizarChips();
-    }
-  });
-  campoTag.addEventListener("change", () => {
-    // escolha de uma sugestão do datalist
-    if (campoTag.value.trim()) {
-      adicionarTags(campoTag.value);
-      campoTag.value = "";
-    }
-  });
-  campoTag.addEventListener("blur", () => {
-    if (campoTag.value.trim()) {
-      adicionarTags(campoTag.value);
-      campoTag.value = "";
-    }
-  });
-  $("#chips").addEventListener("click", (e) => {
-    if (e.target === $("#chips")) campoTag.focus();
-  });
 
   function abrirEdicao(produto) {
     estado.skuEmEdicao = produto ? produto.sku : null;
@@ -266,10 +334,8 @@
     $("#fDesc").value = produto ? produto.descricao_tecnica : "";
     $("#fRef").value = produto ? produto.referencia : "";
     $("#fFixo").checked = produto ? produto.fixo : false;
-    estado.tagsEdicao = produto ? separarTags(produto.tags) : [];
-    campoTag.value = "";
+    editorProduto.definir(produto ? separarTags(produto.tags) : []);
     $("#fErro").textContent = "";
-    renderizarChips();
     $("#dlgProduto").showModal();
     (produto ? campoTag : $("#fSku")).focus();
   }
@@ -280,10 +346,7 @@
 
   $("#formProduto").addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (campoTag.value.trim()) {
-      adicionarTags(campoTag.value);
-      campoTag.value = "";
-    }
+    editorProduto.pendente();
     const sku = $("#fSku").value.trim();
     const erro = $("#fErro");
     erro.textContent = "";
@@ -300,7 +363,7 @@
     const campos = {
       descricao_tecnica: $("#fDesc").value.trim(),
       referencia: $("#fRef").value.trim(),
-      tags: estado.tagsEdicao.join(", "),
+      tags: editorProduto.obter().join(", "),
       fixo: $("#fFixo").checked,
     };
 
@@ -322,6 +385,124 @@
       erro.textContent = err.status === 409 ? `Já existe um produto com o SKU ${sku}.` : err.message;
     } finally {
       btn.disabled = false;
+    }
+  });
+
+  /* ---------------- diálogo: tags em massa ---------------- */
+
+  const editorAdd = criarEditorTags($("#chipsAdd"), $("#fAddInput"), () => atualizarMassa());
+  const editorRem = criarEditorTags($("#chipsRem"), $("#fRemInput"), () => atualizarMassa());
+
+  function produtosSelecionados() {
+    return estado.produtos.filter((p) => estado.selecionados.has(p.sku));
+  }
+
+  // Espelha a função SQL editar_tags_em_massa: remove, depois acrescenta (sem repetir)
+  // mesma comparação do SQL (upper): ESFIGMOMANOMETRO e ESFIGMOMANÔMETRO são tags diferentes
+  const chaveTag = (t) => String(t).trim().toLocaleUpperCase("pt-BR");
+
+  function simularTags(tagsAtuais, adicionar, remover) {
+    const rem = new Set(remover.map(chaveTag));
+    const resultado = [];
+    const vistos = new Set();
+    for (const t of [...separarTags(tagsAtuais), ...adicionar]) {
+      const chave = chaveTag(t);
+      if (rem.has(chave) || vistos.has(chave)) continue;
+      vistos.add(chave);
+      resultado.push(t);
+    }
+    return resultado.join(", ");
+  }
+
+  function atualizarMassa() {
+    const sel = produtosSelecionados();
+    const add = editorAdd.obter();
+    const rem = editorRem.obter();
+    const btn = $("#btnAplicarMassa");
+
+    const contagem = new Map();
+    for (const p of sel) for (const t of separarTags(p.tags)) contagem.set(t, (contagem.get(t) || 0) + 1);
+    const presentes = [...contagem.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"));
+    $("#massaPresentes").innerHTML = presentes.length
+      ? `<span class="dica">Tags já presentes na seleção (clique para remover):</span> ` +
+        presentes
+          .slice(0, 40)
+          .map(([t, n]) => `<button type="button" class="tag-pill tag-pill--acao" data-rem="${esc(t)}">${esc(t)} · ${fmt.format(n)}</button>`)
+          .join("")
+      : "";
+
+    if (add.length === 0 && rem.length === 0) {
+      $("#massaPreview").innerHTML = `<span class="dica">Escolha tags para adicionar ou remover.</span>`;
+      btn.disabled = true;
+      return;
+    }
+    let alterados = 0;
+    for (const p of sel) if (simularTags(p.tags, add, rem) !== separarTags(p.tags).join(", ")) alterados++;
+    const partes = [];
+    if (add.length) partes.push(`adicionar <strong>${esc(add.join(", "))}</strong>`);
+    if (rem.length) partes.push(`remover <strong>${esc(rem.join(", "))}</strong>`);
+    const ex = sel.find((p) => simularTags(p.tags, add, rem) !== separarTags(p.tags).join(", "));
+    $("#massaPreview").innerHTML =
+      `Vai ${partes.join(" e ")}: <strong>${fmt.format(alterados)}</strong> de ${fmt.format(sel.length)} produto(s) serão alterados.` +
+      (ex ? `<div class="massa-exemplo">Ex.: <strong>${esc(ex.sku)}</strong> → ${esc(simularTags(ex.tags, add, rem) || "(sem tags)")}</div>` : "");
+    btn.disabled = alterados === 0;
+  }
+
+  function abrirMassa() {
+    const sel = produtosSelecionados();
+    if (sel.length === 0) return;
+    const exemplos = sel
+      .slice(0, 3)
+      .map((p) => `<li><strong>${esc(p.sku)}</strong> ${esc(p.descricao_tecnica)}</li>`)
+      .join("");
+    $("#massaResumo").innerHTML =
+      `<p><strong>${fmt.format(sel.length)}</strong> ${sel.length === 1 ? "produto selecionado" : "produtos selecionados"}</p>` +
+      `<ul>${exemplos}</ul>` +
+      (sel.length > 3 ? `<p class="dica">… e mais ${fmt.format(sel.length - 3)}</p>` : "");
+    $("#massaErro").textContent = "";
+    editorAdd.definir([]);
+    editorRem.definir([]);
+    atualizarMassa();
+    $("#dlgMassa").showModal();
+    $("#fAddInput").focus();
+  }
+
+  $("#btnTagsMassa").addEventListener("click", abrirMassa);
+  $("#btnCancelarMassa").addEventListener("click", () => $("#dlgMassa").close());
+  $("#btnFecharMassa").addEventListener("click", () => $("#dlgMassa").close());
+  $("#massaPresentes").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-rem]");
+    if (b) editorRem.adicionar(b.dataset.rem);
+  });
+
+  $("#formMassa").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    editorAdd.pendente();
+    editorRem.pendente();
+    const add = editorAdd.obter();
+    const rem = editorRem.obter();
+    if (add.length === 0 && rem.length === 0) return;
+    const skus = [...estado.selecionados];
+    const erro = $("#massaErro");
+    erro.textContent = "";
+    const btn = $("#btnAplicarMassa");
+    btn.disabled = true;
+    btn.textContent = "Aplicando...";
+    try {
+      const r = await api.editarTagsEmMassa(skus, add, rem);
+      await carregarProdutos();
+      estado.selecionados.clear();
+      renderizarLista();
+      $("#dlgMassa").close();
+      aviso(`Tags atualizadas em ${fmt.format(r.alterados)} produto(s). Dá para desfazer no Histórico.`);
+    } catch (err) {
+      erro.textContent =
+        err.status === 404
+          ? "A função de edição em massa ainda não existe no Supabase. Rode o arquivo supabase/migracoes/002_edicao_tags_em_massa.sql no SQL Editor (veja o SETUP-SUPABASE.md)."
+          : err.message;
+    } finally {
+      btn.textContent = "Aplicar";
+      atualizarMassa();
     }
   });
 
@@ -623,26 +804,61 @@
   /* ---------------- histórico ---------------- */
 
   let historicoCache = [];
+  let historicoGrupos = [];
+
+  // Alterações feitas na mesma transação (mesmo registrado_em) formam um grupo:
+  // é o que permite desfazer uma edição/exclusão em massa de uma vez.
+  function agruparHistorico(linhas) {
+    const grupos = [];
+    const porTempo = new Map();
+    for (const h of linhas) {
+      let g = porTempo.get(h.registrado_em);
+      if (!g) {
+        g = { quando: h.registrado_em, itens: [] };
+        porTempo.set(h.registrado_em, g);
+        grupos.push(g);
+      }
+      g.itens.push(h);
+    }
+    return grupos;
+  }
+
+  function linhaHistorico(h) {
+    return `<tr>
+      <td>${esc(fmtData.format(new Date(h.registrado_em)))}</td>
+      <td>${h.acao === "DELETE" ? "Excluído" : "Editado"}</td>
+      <td class="c-sku">${esc(h.sku)}</td>
+      <td>${esc(h.dados.descricao_tecnica)}</td>
+      <td class="c-tags">${separarTags(h.dados.tags).map((t) => `<span class="tag-pill">${esc(t)}</span>`).join("")}</td>
+      <td class="c-acoes"><button class="btn btn--secundario btn--sm" data-hid="${h.id}">${window.CBSIcon("rotate-ccw", 14)}Restaurar</button></td>
+    </tr>`;
+  }
+
+  function linhaGrupo(g, i) {
+    const exclusao = g.itens.every((h) => h.acao === "DELETE");
+    const primeiro = g.itens[0];
+    return `<tr class="grupo">
+      <td>${esc(fmtData.format(new Date(g.quando)))}</td>
+      <td>${exclusao ? "Exclusão em massa" : "Edição em massa"}</td>
+      <td class="c-sku">${fmt.format(g.itens.length)} produtos</td>
+      <td>${esc(primeiro.dados.descricao_tecnica)} <span class="dica">e mais ${fmt.format(g.itens.length - 1)}</span></td>
+      <td class="c-tags"><span class="dica">versões anteriores</span></td>
+      <td class="c-acoes"><button class="btn btn--secundario btn--sm" data-grupo="${i}">${window.CBSIcon("rotate-ccw", 14)}Restaurar todos</button></td>
+    </tr>`;
+  }
 
   async function carregarHistorico() {
     const corpo = $("#corpoHistorico");
     corpo.innerHTML = `<tr><td colspan="6" class="vazio">Carregando...</td></tr>`;
     try {
-      historicoCache = await api.historico(100);
+      historicoCache = await api.historico(2000);
+      historicoGrupos = agruparHistorico(historicoCache);
       corpo.innerHTML =
         historicoCache.length === 0
           ? `<tr><td colspan="6" class="vazio">Nenhuma alteração registrada ainda.</td></tr>`
-          : historicoCache
-              .map(
-                (h) => `<tr>
-              <td>${esc(fmtData.format(new Date(h.registrado_em)))}</td>
-              <td>${h.acao === "DELETE" ? "Excluído" : "Editado"}</td>
-              <td class="c-sku">${esc(h.sku)}</td>
-              <td>${esc(h.dados.descricao_tecnica)}</td>
-              <td class="c-tags">${separarTags(h.dados.tags).map((t) => `<span class="tag-pill">${esc(t)}</span>`).join("")}</td>
-              <td class="c-acoes"><button class="btn btn--secundario btn--sm" data-hid="${h.id}">${window.CBSIcon("rotate-ccw", 14)}Restaurar</button></td>
-            </tr>`,
-              )
+          : historicoGrupos
+              .slice(0, 100)
+              .map((g, i) => (g.itens.length > 1 ? linhaGrupo(g, i) : linhaHistorico(g.itens[0])))
               .join("");
     } catch (err) {
       corpo.innerHTML = `<tr><td colspan="6" class="vazio">${esc(err.message)}</td></tr>`;
@@ -650,6 +866,25 @@
   }
 
   $("#corpoHistorico").addEventListener("click", async (e) => {
+    const btnGrupo = e.target.closest("button[data-grupo]");
+    if (btnGrupo) {
+      const g = historicoGrupos[Number(btnGrupo.dataset.grupo)];
+      if (!g) return;
+      btnGrupo.disabled = true;
+      try {
+        // se o mesmo SKU aparece mais de uma vez no grupo, vale a versão mais antiga guardada
+        const porSku = new Map();
+        for (const h of g.itens) porSku.set(h.sku, h.dados);
+        await api.restaurarVarios([...porSku.values()]);
+        await carregarProdutos();
+        await carregarHistorico();
+        aviso(`${fmt.format(porSku.size)} produtos restaurados.`);
+      } catch (err) {
+        aviso(err.message, true);
+        btnGrupo.disabled = false;
+      }
+      return;
+    }
     const btn = e.target.closest("button[data-hid]");
     if (!btn) return;
     const entrada = historicoCache.find((h) => String(h.id) === btn.dataset.hid);
