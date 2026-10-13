@@ -3,229 +3,105 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="robots" content="noindex, nofollow" />
-    <title>Admin - CBS Produtos</title>
-    <link rel="icon" href="../icon.png" sizes="32x32" />
-    <link rel="icon" type="image/svg+xml" href="../design-system/assets/brand/simbolo-s-roxo-quadrado-laranja.svg" />
-    <link rel="preload" href="../design-system/assets/fonts/Quicksand-VariableFont_wght.ttf" as="font" type="font/ttf" crossorigin />
-    <link rel="stylesheet" href="../design-system/styles.css" />
-    <link rel="stylesheet" href="admin.css" />
+    <title>CBS - Agora Você Sabe!</title>
+    <link rel="icon" href="./icon.png" sizes="32x32" />
+    <link rel="icon" type="image/svg+xml" href="./design-system/assets/brand/simbolo-s-roxo-quadrado-laranja.svg" />
+    <link rel="preload" href="./design-system/assets/fonts/Quicksand-VariableFont_wght.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="stylesheet" href="./design-system/styles.css" />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <header class="topo">
-      <div class="topo-conteudo">
-        <a class="marca" href="../" aria-label="CBS Médico Científica, voltar à busca">
-          <img src="../design-system/assets/brand/logo-completo-gentequemove-roxo-quadrado-laranja.svg" alt="CBS · Gente que move o cuidado" width="160" />
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a class="brand" href="./" aria-label="CBS Médico Científica, página inicial">
+          <img
+            src="design-system/assets/brand/logo-completo-gentequemove-roxo-quadrado-laranja.svg"
+            alt="CBS · Gente que move o cuidado"
+            width="160"
+          />
         </a>
-        <span class="selo selo--quadrado">Admin</span>
-        <span class="topo-titulo">Administração de produtos</span>
-        <a class="link-voltar" href="../">Voltar à busca</a>
+        <span class="site-header__label">Busca de produtos</span>
       </div>
     </header>
 
-    <main class="pagina">
-      <div id="avisoConfig" class="alerta alerta--erro" role="alert" hidden>
-        <svg class="icone" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
-        <div>
-          O Supabase ainda não está configurado. Preencha o
-          <code>config.js</code> seguindo o passo 4 do
-          <code>SETUP-SUPABASE.md</code>.
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">Agora você sabe</p>
+        <h1>Busca inteligente de produtos</h1>
+        <p class="lead">
+          Digite o código, o nome técnico ou o nome comercial. Lembre-se de
+          buscar por palavras-chave como
+          <strong>Jelco, Zobec, Aeropuff, Transofix, Polifix e Esfigmomanômetro</strong>.
+        </p>
+
+        <div class="search-wrapper">
+          <label class="sr-only" for="searchInput">Buscar produto</label>
+          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Busque por SKU, descrição, referência ou apelido..."
+            autocomplete="off"
+            autofocus
+          />
+        </div>
+      </section>
+
+      <div id="heroCards" class="hero-cards">
+        <div class="card">
+          <svg class="card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"></path><path d="m7 16.5-4.74-2.85"></path><path d="m7 16.5 5-3"></path><path d="M7 16.5v5.17"></path><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z"></path><path d="m17 16.5-5-3"></path><path d="m17 16.5 4.74-2.85"></path><path d="M17 16.5v5.17"></path><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z"></path><path d="M12 8 7.26 5.15"></path><path d="m12 8 4.74-2.85"></path><path d="M12 13.5V8"></path></svg>
+          <h3>Base atualizada</h3>
+          <p>Carregando a base de produtos...</p>
+        </div>
+        <div class="card">
+          <svg class="card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+          <h3>Busca inteligente</h3>
+          <p>Entende "Transofix", "Jelco" e outros apelidos comerciais.</p>
+        </div>
+        <div class="card">
+          <svg class="card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+          <h3>Dados técnicos</h3>
+          <p>SKU, descrição, referência e tags.</p>
         </div>
       </div>
 
-      <nav class="abas" role="tablist">
-        <button class="aba ativa" data-aba="produtos" role="tab" aria-selected="true">Produtos</button>
-        <button class="aba" data-aba="importar" role="tab" aria-selected="false">Importar CSV</button>
-        <button class="aba" data-aba="historico" role="tab" aria-selected="false">Histórico</button>
-      </nav>
-
-      <!-- ========== ABA PRODUTOS ========== -->
-      <section id="aba-produtos" class="painel">
-        <div class="barra-ferramentas">
-          <div class="campo-busca">
-            <svg class="campo-busca__icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
-            <input
-              type="search"
-              id="filtro"
-              placeholder="Filtrar por SKU, descrição, referência ou tag..."
-              autocomplete="off"
-              aria-label="Filtrar produtos"
-            />
-          </div>
-          <label class="check">
-            <input type="checkbox" id="filtroSemTags" /> Só sem tags
-          </label>
-          <button id="btnNovo" class="btn btn--primario"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Novo produto</button>
-        </div>
-        <div id="barraSelecao" class="barra-selecao">
-          <div class="barra-selecao__info">
-            <span id="infoLista"></span>
-            <strong id="txtSelecao" hidden></strong>
-          </div>
-          <div class="barra-selecao__acoes">
-            <button id="btnSelFiltro" class="btn btn--secundario btn--sm" hidden></button>
-            <button id="btnLimparSel" class="btn btn--secundario btn--sm" hidden>Limpar seleção</button>
-            <button id="btnTagsMassa" class="btn btn--primario btn--sm" hidden><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg>Editar tags em massa</button>
-          </div>
-        </div>
-        <div class="tabela-wrap">
+      <div id="resultsContainer" class="results-container">
+        <div id="resultsInfo" class="results-info" aria-live="polite"></div>
+        <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th class="c-sel"><input type="checkbox" id="selPagina" aria-label="Selecionar todos desta página" /></th>
-                <th class="c-sku">SKU</th>
-                <th class="c-ref">Ref.</th>
-                <th>Descrição</th>
-                <th class="c-tags">Tags</th>
-                <th class="c-acoes"><span class="sr-only">Ações</span></th>
+                <th class="col-sku">SKU</th>
+                <th class="col-desc">Descrição do produto</th>
+                <th class="col-tags">Tags / categorias</th>
+                <th class="col-ref">Ref.</th>
               </tr>
             </thead>
-            <tbody id="corpoTabela"></tbody>
+            <tbody id="tableBody"></tbody>
           </table>
         </div>
-        <div class="paginacao">
-          <button id="btnAnterior" class="btn btn--secundario btn--sm"><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>Anterior</button>
-          <span id="infoPagina"></span>
-          <button id="btnProxima" class="btn btn--secundario btn--sm">Próxima<svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
-        </div>
-      </section>
-
-      <!-- ========== ABA IMPORTAR ========== -->
-      <section id="aba-importar" class="painel" hidden>
-        <p class="ajuda">
-          Envie o CSV do sistema com as colunas <strong>Codigo</strong>,
-          <strong>Descricao</strong> e <strong>Cod prd forn</strong>. Nada é
-          gravado antes da sua confirmação, e as <strong>tags nunca são
-          alteradas</strong> pela importação.
-        </p>
-        <label class="upload" id="areaUpload">
-          <input type="file" id="arquivoCsv" accept=".csv,.txt,text/csv" />
-          <svg class="icone" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
-          <span>Escolha o arquivo CSV ou arraste até aqui</span>
-        </label>
-        <div id="resultadoImport"></div>
-      </section>
-
-      <!-- ========== ABA HISTÓRICO ========== -->
-      <section id="aba-historico" class="painel" hidden>
-        <p class="ajuda">
-          Toda edição e exclusão guarda a versão anterior. Use
-          <strong>Restaurar</strong> para desfazer.
-        </p>
-        <div class="tabela-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Quando</th>
-                <th>Ação</th>
-                <th class="c-sku">SKU</th>
-                <th>Descrição (versão guardada)</th>
-                <th class="c-tags">Tags</th>
-                <th class="c-acoes"><span class="sr-only">Ações</span></th>
-              </tr>
-            </thead>
-            <tbody id="corpoHistorico"></tbody>
-          </table>
-        </div>
-      </section>
+      </div>
     </main>
 
-    <!-- ========== DIÁLOGO: NOVO / EDITAR ========== -->
-    <dialog id="dlgProduto" class="dialogo">
-      <form id="formProduto" novalidate>
-        <div class="dialogo__topo">
-          <h2 id="dlgTitulo">Produto</h2>
-          <button type="button" class="btn-icone" id="btnFecharProduto" aria-label="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
-        </div>
-        <div class="dialogo__corpo">
-          <div class="campo">
-            <label for="fSku">SKU</label>
-            <input id="fSku" required maxlength="40" autocomplete="off" />
-          </div>
-          <div class="campo">
-            <label for="fDesc">Descrição técnica</label>
-            <input id="fDesc" autocomplete="off" />
-          </div>
-          <div class="campo">
-            <label for="fRef">Referência (Cod prd forn)</label>
-            <input id="fRef" autocomplete="off" />
-          </div>
-          <div class="campo">
-            <label for="fTagInput">Tags</label>
-            <div class="chips" id="chips">
-              <input id="fTagInput" list="listaTags" autocomplete="off" placeholder="Digite uma tag e tecle Enter" />
-            </div>
-            <span class="dica">Enter ou vírgula adiciona; as tags são gravadas em caixa alta.</span>
-            <datalist id="listaTags"></datalist>
-          </div>
-          <label class="check">
-            <input type="checkbox" id="fFixo" />
-            Fixo: a importação de CSV nunca exclui este produto
-          </label>
-          <p class="erro" id="fErro" role="alert"></p>
-        </div>
-        <div class="dialogo__rodape">
-          <button type="button" class="btn btn--secundario" id="btnCancelar">Cancelar</button>
-          <button type="submit" class="btn btn--primario" id="btnSalvar">Salvar</button>
-        </div>
-      </form>
-    </dialog>
+    <footer class="site-footer">
+      <img
+        class="site-footer__grafismo"
+        src="design-system/assets/brand/grafismo-sorriso-branco.svg"
+        alt=""
+        aria-hidden="true"
+      />
+      <div class="site-footer__inner">
+        <img
+          src="design-system/assets/brand/logo-completo-gentequemove-branco.svg"
+          alt="CBS · Gente que move o cuidado"
+          width="160"
+        />
+        <p>Parceira estratégica do sistema de saúde brasileiro, unindo tecnologia, pessoas e excelência logística.</p>
+      </div>
+    </footer>
 
-    <!-- ========== DIÁLOGO: TAGS EM MASSA ========== -->
-    <dialog id="dlgMassa" class="dialogo dialogo--lg">
-      <form id="formMassa" novalidate>
-        <div class="dialogo__topo">
-          <h2>Editar tags em massa</h2>
-          <button type="button" class="btn-icone" id="btnFecharMassa" aria-label="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
-        </div>
-        <div class="dialogo__corpo">
-          <div id="massaResumo" class="massa-resumo"></div>
-          <div class="campo">
-            <label for="fAddInput">Adicionar estas tags</label>
-            <div class="chips" id="chipsAdd">
-              <input id="fAddInput" list="listaTags" autocomplete="off" placeholder="Digite uma tag e tecle Enter" />
-            </div>
-          </div>
-          <div class="campo">
-            <label for="fRemInput">Remover estas tags</label>
-            <div class="chips chips--remover" id="chipsRem">
-              <input id="fRemInput" list="listaTags" autocomplete="off" placeholder="Digite uma tag e tecle Enter" />
-            </div>
-            <div id="massaPresentes" class="massa-presentes"></div>
-          </div>
-          <div id="massaPreview" class="massa-preview" aria-live="polite"></div>
-          <p class="erro" id="massaErro" role="alert"></p>
-        </div>
-        <div class="dialogo__rodape">
-          <button type="button" class="btn btn--secundario" id="btnCancelarMassa">Cancelar</button>
-          <button type="submit" class="btn btn--primario" id="btnAplicarMassa">Aplicar</button>
-        </div>
-      </form>
-    </dialog>
-
-    <!-- ========== DIÁLOGO: EXCLUIR ========== -->
-    <dialog id="dlgExcluir" class="dialogo dialogo--sm">
-      <form method="dialog" id="formExcluir">
-        <div class="dialogo__topo">
-          <h2>Excluir produto?</h2>
-          <button type="button" class="btn-icone" id="btnFecharExcluir" aria-label="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
-        </div>
-        <div class="dialogo__corpo">
-          <p id="txtExcluir" class="destaque-texto"></p>
-          <p class="ajuda">A versão atual fica guardada no Histórico e pode ser restaurada.</p>
-        </div>
-        <div class="dialogo__rodape">
-          <button type="button" class="btn btn--secundario" id="btnNaoExcluir">Cancelar</button>
-          <button type="submit" class="btn btn--perigo" id="btnSimExcluir">Excluir</button>
-        </div>
-      </form>
-    </dialog>
-
-    <div id="toast" role="status" aria-live="polite"></div>
-
-    <script src="../design-system/icons.js"></script>
-    <script src="../config.js"></script>
-    <script src="../api.js"></script>
-    <script src="admin.js"></script>
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+    <script src="script.js"></script>
   </body>
 </html>

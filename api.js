@@ -9,17 +9,17 @@
     .replace(/\/rest\/v1$/i, "");
   const KEY = String(cfg.SUPABASE_ANON_KEY || "").trim();
   const configurado = Boolean(BASE && KEY);
-
+ 
   const PAGINA = 1000; // limite padrão de linhas por requisição no Supabase
   const COLUNAS = "sku,descricao_tecnica,referencia,tags,fixo";
-
+ 
   function cabecalhos(extra) {
     const h = { apikey: KEY, "Content-Type": "application/json", ...extra };
     // Chaves antigas (JWT) também vão em Authorization; as novas "sb_publishable_" não.
     if (KEY.startsWith("eyJ")) h.Authorization = `Bearer ${KEY}`;
     return h;
   }
-
+ 
   async function requisitar(caminho, { method = "GET", corpo, headers } = {}) {
     if (!configurado) throw new Error("Supabase não configurado (config.js).");
     let resp;
@@ -44,9 +44,9 @@
     }
     return resp;
   }
-
+ 
   const filtroSku = (sku) => `sku=eq.${encodeURIComponent(sku)}`;
-
+ 
   // Lê TODOS os produtos (o Supabase entrega no máx. 1000 por vez).
   async function listarProdutos() {
     const base = `produtos?select=${COLUNAS}&order=descricao_tecnica.asc,sku.asc`;
@@ -55,7 +55,7 @@
     });
     const linhas = await primeira.json();
     if (linhas.length < PAGINA) return linhas;
-
+ 
     const total = Number((primeira.headers.get("content-range") || "").split("/")[1]);
     if (Number.isFinite(total)) {
       const paginas = [];
@@ -74,11 +74,11 @@
       if (pag.length < PAGINA) return todas;
     }
   }
-
+ 
   async function criar(produto) {
     await requisitar("produtos", { method: "POST", corpo: produto });
   }
-
+ 
   async function atualizar(sku, campos) {
     const resp = await requisitar(`produtos?${filtroSku(sku)}`, {
       method: "PATCH",
@@ -88,11 +88,11 @@
     const linhas = await resp.json();
     if (linhas.length === 0) throw new Error("Produto não encontrado (talvez já tenha sido excluído).");
   }
-
+ 
   async function excluir(sku) {
     await requisitar(`produtos?${filtroSku(sku)}`, { method: "DELETE" });
   }
-
+ 
   // Importação em massa; roda numa transação única no banco.
   async function importar(itens, excluirAusentes) {
     const resp = await requisitar("rpc/importar_catalogo", {
@@ -101,23 +101,14 @@
     });
     return resp.json();
   }
-
-  // Adiciona/remove tags de vários produtos numa transação única (função SQL editar_tags_em_massa).
-  async function editarTagsEmMassa(skus, adicionar, remover) {
-    const resp = await requisitar("rpc/editar_tags_em_massa", {
-      method: "POST",
-      corpo: { p_skus: skus, p_adicionar: adicionar, p_remover: remover },
-    });
-    return resp.json();
-  }
-
+ 
   async function historico(limite = 100) {
     const resp = await requisitar(
       `produtos_historico?select=*&order=id.desc&limit=${limite}`,
     );
     return resp.json();
   }
-
+ 
   // Devolve ao banco a versão guardada no histórico (recria ou sobrescreve).
   async function restaurar(dados) {
     const { atualizado_em, ...produto } = dados;
@@ -127,17 +118,7 @@
       headers: { Prefer: "resolution=merge-duplicates" },
     });
   }
-
-  // Restaura várias versões de uma vez (um único pedido = uma transação).
-  async function restaurarVarios(listaDados) {
-    const produtos = listaDados.map(({ atualizado_em, ...produto }) => produto);
-    await requisitar("produtos?on_conflict=sku", {
-      method: "POST",
-      corpo: produtos,
-      headers: { Prefer: "resolution=merge-duplicates" },
-    });
-  }
-
+ 
   window.CBS_API = {
     configurado,
     listarProdutos,
@@ -147,7 +128,6 @@
     importar,
     historico,
     restaurar,
-    restaurarVarios,
-    editarTagsEmMassa,
   };
 })();
+ 

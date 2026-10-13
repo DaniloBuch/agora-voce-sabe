@@ -27,7 +27,7 @@ Frontend estático (GitHub Pages) + banco **PostgreSQL no Supabase**, acessado d
 
 1. **Banco:** tabela `produtos` (`sku`, `descricao_tecnica`, `referencia`, `tags`, `fixo`) + `produtos_historico` (desfazer). Script em [`supabase/schema.sql`](supabase/schema.sql).
 2. **Site (`/`):** baixa a lista do banco para a memória e busca localmente (milissegundos). Se o banco estiver fora do ar, usa o `db.json` como contingência.
-3. **Admin (`/admin/`):** CRUD de produtos e tags, importação em massa de CSV (inclui novos, atualiza descrição/referência e exclui descontinuados, sem tocar nas tags), edição de tags em massa e histórico com restauração (inclusive em lote).
+3. **Admin (`/admin/`):** CRUD de produtos e tags, importação em massa de CSV (inclui novos, atualiza descrição/referência e exclui descontinuados, sem tocar nas tags) e histórico com restauração.
 
 Configuração do banco: veja [`SETUP-SUPABASE.md`](SETUP-SUPABASE.md).
 
