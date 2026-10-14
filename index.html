@@ -13,6 +13,9 @@
   <body>
     <header class="site-header">
       <div class="site-header__inner">
+        <button type="button" class="menu-categorias" id="categoriasToggle" aria-expanded="false" aria-controls="categorias" aria-label="Abrir categorias" title="Categorias" hidden>
+          <svg class="icone" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16"/><path d="M4 18h16"/><path d="M4 6h16"/></svg><span class="menu-categorias__texto">Categorias</span>
+        </button>
         <a class="brand" href="./" aria-label="CBS Médico Científica, página inicial">
           <img
             src="design-system/assets/brand/logo-completo-gentequemove-roxo-quadrado-laranja.svg"
@@ -25,14 +28,19 @@
       </div>
     </header>
 
-    <main class="pagina sem-lateral" id="pagina">
-      <div class="pagina__faixa" aria-hidden="true">
-        <div class="pagina__faixa-fundo">
-          <img class="faixa-busca__grafismo" src="design-system/assets/brand/grafismo-sorriso-roxo.svg" alt="" />
-        </div>
+    <!-- Gaveta de categorias (off-canvas): abre pelo botão do cabeçalho, por cima da página -->
+    <div class="gaveta-fundo" id="gavetaFundo" hidden></div>
+    <aside class="gaveta" id="categorias" aria-label="Categorias de produtos" inert>
+      <div class="gaveta__topo">
+        <p class="gaveta__titulo" id="gavetaTitulo">Categorias</p>
+        <button type="button" class="gaveta__fechar" id="gavetaFechar" aria-label="Fechar categorias" title="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg></button>
       </div>
+      <div class="categorias__lista" id="categoriasLista" role="group" aria-labelledby="gavetaTitulo"></div>
+    </aside>
 
-      <section class="faixa-busca">
+    <section class="faixa-busca">
+      <img class="faixa-busca__grafismo" src="design-system/assets/brand/grafismo-sorriso-roxo.svg" alt="" aria-hidden="true" />
+      <div class="faixa-busca__conteudo">
           <div class="hero">
             <p class="eyebrow">Agora você sabe</p>
             <h1>Busca inteligente de produtos</h1>
@@ -53,20 +61,16 @@
                 autofocus
               />
             </div>
+            <div class="filtro-ativo" id="filtroAtivo" hidden>
+              <span>Categoria: <strong id="filtroAtivoNome"></strong></span>
+              <button type="button" id="filtroAtivoLimpar" aria-label="Remover filtro de categoria"><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+            </div>
             <p class="search-hint">Ex.: 000437 sonda · também aceita o código do fornecedor e apelidos comerciais</p>
           </div>
-      </section>
+      </div>
+    </section>
 
-      <aside class="categorias" id="categorias" aria-label="Categorias de produtos" hidden>
-        <button type="button" class="categorias__toggle" id="categoriasToggle" aria-expanded="false" aria-controls="categoriasLista">
-          <span id="categoriasToggleTexto">Categorias</span>
-          <svg class="categorias__seta" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </button>
-        <p class="categorias__rotulo" id="categoriasRotulo">Categorias</p>
-        <div class="categorias__lista" id="categoriasLista" role="group" aria-labelledby="categoriasRotulo"></div>
-      </aside>
-
-      <div class="pagina__conteudo">
+    <main class="page">
       <div id="heroCards" class="hero-cards">
         <div class="card">
           <svg class="card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"></path><path d="m7 16.5-4.74-2.85"></path><path d="m7 16.5 5-3"></path><path d="M7 16.5v5.17"></path><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z"></path><path d="m17 16.5-5-3"></path><path d="m17 16.5 4.74-2.85"></path><path d="M17 16.5v5.17"></path><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z"></path><path d="M12 8 7.26 5.15"></path><path d="m12 8 4.74-2.85"></path><path d="M12 13.5V8"></path></svg>
@@ -103,7 +107,6 @@
             <tbody id="tableBody"></tbody>
           </table>
         </div>
-      </div>
       </div>
     </main>
 

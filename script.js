@@ -16,9 +16,11 @@ const tbody = document.getElementById("tableBody");
 const btnLink = document.getElementById("btnLink");
 const caixaCategorias = document.getElementById("categorias");
 const listaCategorias = document.getElementById("categoriasLista");
-const paginaLayout = document.getElementById("pagina");
 const botaoCategorias = document.getElementById("categoriasToggle");
-const textoBotaoCategorias = document.getElementById("categoriasToggleTexto");
+const gavetaFundo = document.getElementById("gavetaFundo");
+const botaoFecharGaveta = document.getElementById("gavetaFechar");
+const filtroAtivo = document.getElementById("filtroAtivo");
+const filtroAtivoNome = document.getElementById("filtroAtivoNome");
 const PLACEHOLDER_PADRAO = input.placeholder;
 
 // URL do seu JSON
@@ -549,13 +551,12 @@ function montarCategorias() {
 
 function renderizarCategorias() {
   if (categoriasLista.length === 0) {
-    caixaCategorias.hidden = true;
-    paginaLayout.classList.add("sem-lateral");
+    botaoCategorias.hidden = true; // banco sem categorias: o botão do cabeçalho some
+    filtroAtivo.hidden = true;
     categoriaAtual = "";
     return;
   }
-  caixaCategorias.hidden = false;
-  paginaLayout.classList.remove("sem-lateral");
+  botaoCategorias.hidden = false;
 
   const item = (nome, n, rotulo) =>
     `<button type="button" class="cat-item${nome ? "" : " cat-item--todas"}" data-categoria="${escaparHtml(nome)}" aria-pressed="${nome === categoriaAtual}">` +
@@ -564,7 +565,10 @@ function renderizarCategorias() {
     item("", database.length, "Todos os produtos") +
     categoriasLista.map(([nome, n]) => item(nome, n, nome)).join("");
 
-  textoBotaoCategorias.textContent = categoriaAtual ? `Categoria: ${categoriaAtual}` : "Categorias";
+  botaoCategorias.classList.toggle("tem-selecao", Boolean(categoriaAtual));
+  botaoCategorias.setAttribute("aria-label", categoriaAtual ? `Abrir categorias (selecionada: ${categoriaAtual})` : "Abrir categorias");
+  filtroAtivo.hidden = !categoriaAtual;
+  filtroAtivoNome.textContent = categoriaAtual;
   input.placeholder = categoriaAtual
     ? `Refine em ${categoriaAtual}: tamanho, marca, código...`
     : PLACEHOLDER_PADRAO;
@@ -589,13 +593,35 @@ listaCategorias.addEventListener("click", (e) => {
   if (!botao) return;
   const nome = botao.dataset.categoria;
   escolherCategoria(nome === categoriaAtual ? "" : nome); // clicar de novo desmarca; "Todos" limpa o filtro
-  caixaCategorias.classList.remove("is-aberta"); // no celular a lista recolhe depois de escolher
-  botaoCategorias.setAttribute("aria-expanded", "false");
+  definirGavetaAberta(false); // depois de escolher, a gaveta fecha e os resultados aparecem
 });
 
-botaoCategorias.addEventListener("click", () => {
-  const aberta = caixaCategorias.classList.toggle("is-aberta");
+// Gaveta de categorias (off-canvas): abre pelo botão do cabeçalho, fecha com Esc, fundo, « ou ao escolher
+function definirGavetaAberta(aberta, devolverFoco = true) {
+  if (caixaCategorias.classList.contains("is-aberta") === aberta) return;
+  caixaCategorias.classList.toggle("is-aberta", aberta);
+  caixaCategorias.inert = !aberta;
   botaoCategorias.setAttribute("aria-expanded", String(aberta));
+  gavetaFundo.hidden = false;
+  requestAnimationFrame(() => gavetaFundo.classList.toggle("is-visivel", aberta));
+  if (!aberta) setTimeout(() => { if (!caixaCategorias.classList.contains("is-aberta")) gavetaFundo.hidden = true; }, 250);
+  if (aberta) {
+    const alvo = listaCategorias.querySelector('[aria-pressed="true"]') || botaoFecharGaveta;
+    setTimeout(() => alvo.focus({ preventScroll: true }), 50);
+  } else if (devolverFoco) {
+    botaoCategorias.focus({ preventScroll: true });
+  }
+}
+
+botaoCategorias.addEventListener("click", () => definirGavetaAberta(!caixaCategorias.classList.contains("is-aberta")));
+botaoFecharGaveta.addEventListener("click", () => definirGavetaAberta(false));
+gavetaFundo.addEventListener("click", () => definirGavetaAberta(false));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && caixaCategorias.classList.contains("is-aberta")) definirGavetaAberta(false);
+});
+document.getElementById("filtroAtivoLimpar").addEventListener("click", () => {
+  escolherCategoria("");
+  input.focus();
 });
 
 // Abre já com a busca do link (?q=... e/ou ?cat=...)
