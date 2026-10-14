@@ -22,6 +22,7 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 
 - **Busca por partículas:** os termos podem vir em qualquer ordem. `000437 sonda` e `sonda 04` levam ao mesmo produto.
 - **Ignora acentos e maiúsculas:** `esfigmomanometro` encontra "Esfigmomanômetro".
+- **Categorias:** botões acima da busca (Luvas, Cateteres, Fraldas…) filtram a base por tipo de produto; depois é só digitar no campo para refinar dentro da categoria. Clicar de novo na categoria desfaz o filtro, e o link compartilhado guarda categoria e busca (`?cat=Luvas&q=nitril`).
 - **Quatro campos ao mesmo tempo:** SKU, descrição técnica, referência (Ref.) e tags.
 - **Ordenado por relevância:** código exato, referência exata e tags vêm antes de coincidências soltas na descrição.
 - **Termos destacados** nos resultados; tags que casaram com a busca aparecem primeiro.
@@ -38,9 +39,10 @@ Painel para manter a base sem mexer em arquivos JSON. O acesso é pelo botão **
 - **Visão geral** no topo, com o total de produtos, quantos estão sem tags e quantas tags existem;
 - **Acesso com login** (Supabase Auth): só quem tem usuário e senha altera a base; o site público só lê;
 - **CRUD de produtos e tags**, com chips, sugestões e filtro de produtos sem tags;
+- **Categorias:** uma por produto (`-` quando não há), com aba própria para criar, renomear, mesclar e excluir, filtro na lista e campo no cadastro e na edição em massa;
 - **Gerenciamento de tags:** lista com contagem, renomear, mesclar e excluir em todos os produtos, com alerta de possíveis duplicadas;
 - **Edição de tags em massa**, com seleção múltipla e prévia do resultado;
-- **Importação de CSV** do sistema (inclui novos SKUs, atualiza descrição e referência e remove descontinuados, sempre preservando as tags), com resumo e confirmação antes de gravar;
+- **Importação de CSV** do sistema (inclui novos SKUs, atualiza descrição e referência e remove descontinuados), com resumo e confirmação antes de gravar. Colunas opcionais **Categoria** e **Tags**: as tags do CSV são só **acrescentadas** às existentes, nunca removidas;
 - **Histórico** de edições e exclusões, com restauração (inclusive em lote) e filtro por data;
 - **Exportação em CSV** de toda a base, para backup.
 
@@ -60,12 +62,12 @@ Supabase (PostgreSQL + PostgREST)
 | `api.js` | Camada de acesso ao Supabase (login, listar, CRUD, importar, histórico, tags) |
 | `config.js` | Endereço do projeto e chave pública (`anon`) do Supabase |
 | `supabase/schema.sql` | Tabelas, políticas, triggers e funções do banco |
-| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags) |
+| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags, `005` categorias, `006` categorias iniciais) |
 | `supabase/produtos_seed.csv` | Carga inicial dos produtos |
 | `db.json` | Cópia estática usada como contingência |
 | `design-system/` | CBS Design System vendorizado ([detalhes](design-system/README.md)) |
 
-**Banco de dados:** tabela `produtos` (`sku`, `descricao_tecnica`, `referencia`, `tags`, `fixo`) e `produtos_historico` (preenchida por trigger a cada edição/exclusão). A importação de CSV e a edição de tags em massa são funções SQL (RPC), então rodam de forma atômica: ou tudo é gravado ou nada. Produtos marcados como **fixo** nunca são excluídos pela importação.
+**Banco de dados:** tabela `produtos` (`sku`, `descricao_tecnica`, `referencia`, `tags`, `categoria`, `fixo`), tabela `categorias` e `produtos_historico` (preenchida por trigger a cada edição/exclusão). A importação de CSV e a edição de tags em massa são funções SQL (RPC), então rodam de forma atômica: ou tudo é gravado ou nada. Produtos marcados como **fixo** nunca são excluídos pela importação.
 
 ## 🎨 Identidade visual
 
@@ -99,6 +101,8 @@ O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/
 - [x] Login no painel (Supabase Auth) e novo visual do painel e exportação de backup em CSV
 - [x] CBS Design System aplicado
 - [x] Copiar SKU, link compartilhável da busca e tolerância a erro de digitação
+- [x] Categorias de produtos (filtro no site, gestão no painel, CSV)
+- [ ] Valor e saldo em estoque apenas para usuários logados (exige perfis de acesso e avaliação de dado sensível)
 - [ ] Registrar buscas sem resultado, para descobrir apelidos que faltam virar tag
 - [ ] Backup automático agendado
 - [ ] Atalhos e melhorias de uso no celular

@@ -4,6 +4,10 @@ let erroCarga = false;
 let timeoutBusca = null;
 let timeoutFade = null;
 let vocabulario = null; // palavras da base, para sugerir correções de digitação
+let categoriaAtual = ""; // categoria escolhida nos botões ("" = todas)
+let categoriasLista = []; // [[nome, quantidade]], da mais usada para a menos usada
+let categoriasExpandidas = false;
+let categoriaDoLink = new URLSearchParams(location.search).get("cat") || "";
 
 const input = document.getElementById("searchInput");
 const heroCards = document.getElementById("heroCards");
@@ -11,6 +15,10 @@ const resultsContainer = document.getElementById("resultsContainer");
 const resultsInfo = document.getElementById("resultsInfo");
 const tbody = document.getElementById("tableBody");
 const btnLink = document.getElementById("btnLink");
+const caixaCategorias = document.getElementById("categorias");
+const listaCategorias = document.getElementById("categoriasLista");
+const PLACEHOLDER_PADRAO = input.placeholder;
+const CATEGORIAS_VISIVEIS = 10;
 
 // URL do seu JSON
 const DATA_URL = "./db.json";
@@ -146,6 +154,7 @@ async function carregarDados() {
           descricao,
           referencia,
           referenciaOriginal,
+          categoria: String(item.categoria ?? "").trim() || "-", // "-" = sem categoria
           tags: tagsArray,
           _sku: normalizar(sku),
           _desc: normalizar(descricao),
@@ -160,6 +169,7 @@ async function carregarDados() {
     vocabulario = null;
     carregado = true;
     console.log("Sistema CBS Online. Itens:", database.length);
+    montarCategorias();
 
     // Atualiza o card com o numero real
     if (cardInfo) {
@@ -169,9 +179,15 @@ async function carregarDados() {
       cardInfo.classList.toggle("is-erro", contingencia);
     }
 
-    // Se o usuário já digitou algo enquanto carregava, busca agora
+    // Se o usuário já digitou algo (ou abriu um link com categoria) enquanto carregava, busca agora
     const termo = input.value.trim();
-    if (termo) executarBusca(termo);
+    if (termo || categoriaAtual) {
+      mostrarBusca();
+      atualizarEndereco();
+      executarBusca(termo);
+    } else {
+      mostrarHome(); // link com categoria que não existe mais: volta para o início
+    }
   } catch (erro) {
     console.error("Erro Fatal:", erro);
     erroCarga = true;
@@ -207,7 +223,7 @@ input.addEventListener("input", function (e) {
 
   clearTimeout(timeoutBusca);
 
-  if (termo === "") {
+  if (termo === "" && !categoriaAtual) {
     mostrarHome();
     return;
   }
@@ -324,8 +340,11 @@ function executarBusca(termoOriginal) {
     .split(/\s+/)
     .filter((t) => t !== "");
 
+  // com categoria escolhida, a busca acontece só dentro dela
+  const base = categoriaAtual ? database.filter((item) => item.categoria === categoriaAtual) : database;
+
   let resultados = ordenar(
-    database.filter((item) => termosBusca.every((t) => item._buscaFull.includes(t))),
+    base.filter((item) => termosBusca.every((t) => item._buscaFull.includes(t))),
     termosBusca,
   );
   let correcao = null;
@@ -333,10 +352,10 @@ function executarBusca(termoOriginal) {
   // Sem nada encontrado: tenta corrigir erros de digitação nos termos que não existem na base
   if (resultados.length === 0 && termosBusca.length > 0) {
     const grupos = termosBusca.map((t) =>
-      database.some((item) => item._buscaFull.includes(t)) ? [t] : sugerirPalavras(t),
+      base.some((item) => item._buscaFull.includes(t)) ? [t] : sugerirPalavras(t),
     );
     if (grupos.every((g) => g.length > 0) && grupos.some((g, i) => g[0] !== termosBusca[i])) {
-      const filtrados = database.filter((item) =>
+      const filtrados = base.filter((item) =>
         grupos.every((g) => g.some((alt) => item._buscaFull.includes(alt))),
       );
       if (filtrados.length > 0) {
@@ -365,8 +384,12 @@ function ordenar(lista, termos) {
 }
 
 function renderizarTabela(lista, total, termos, correcao = null) {
+  const emCategoria = categoriaAtual ? ` em <strong>${escaparHtml(categoriaAtual)}</strong>` : "";
+
   if (lista.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="msg-erro">Não encontramos nenhum produto com esse termo. Tente o código, o nome técnico ou um apelido.</td></tr>`;
+    tbody.innerHTML = categoriaAtual
+      ? `<tr><td colspan="4" class="msg-erro">Não encontramos nenhum produto em <strong>${escaparHtml(categoriaAtual)}</strong> com esse termo. <button type="button" class="btn-link" data-limpar-categoria>Buscar em todas as categorias</button></td></tr>`
+      : `<tr><td colspan="4" class="msg-erro">Não encontramos nenhum produto com esse termo. Tente o código, o nome técnico ou um apelido.</td></tr>`;
     resultsInfo.innerText = "";
     return;
   }
@@ -374,14 +397,20 @@ function renderizarTabela(lista, total, termos, correcao = null) {
   if (correcao) {
     resultsInfo.innerHTML =
       `Nenhum resultado exato para <strong>${escaparHtml(correcao.original)}</strong>. ` +
-      `Mostrando ${total > lista.length ? `${lista.length} de ${total}` : total} resultado(s) para ` +
+      `Mostrando ${total > lista.length ? `${lista.length} de ${total}` : total} resultado(s)${emCategoria} para ` +
       `<strong>${escaparHtml(correcao.sugeridos.join(" "))}</strong>.`;
     resultsInfo.className = "results-info results-info--alerta";
+  } else if (termos.length === 0) {
+    // só a categoria escolhida, ainda sem texto na busca
+    resultsInfo.innerHTML =
+      `Mostrando <strong>${lista.length}</strong> de <strong>${total}</strong> produtos${emCategoria}.` +
+      (total > lista.length ? " Digite no campo de busca para refinar." : "");
+    resultsInfo.className = total > lista.length ? "results-info results-info--alerta" : "results-info";
   } else if (total > lista.length) {
-    resultsInfo.innerHTML = `Mostrando <strong>${lista.length}</strong> de <strong>${total}</strong> resultados. Refine sua busca para ver os demais.`;
+    resultsInfo.innerHTML = `Mostrando <strong>${lista.length}</strong> de <strong>${total}</strong> resultados${emCategoria}. Refine sua busca para ver os demais.`;
     resultsInfo.className = "results-info results-info--alerta";
   } else {
-    resultsInfo.innerText = `Mostrando ${lista.length} de ${total} resultados encontrados.`;
+    resultsInfo.innerHTML = `Mostrando ${lista.length} de ${total} resultados encontrados${emCategoria}.`;
     resultsInfo.className = "results-info";
   }
 
@@ -458,13 +487,26 @@ function sinalizarCopiado(el, textoOriginal) {
 }
 
 tbody.addEventListener("click", async (e) => {
+  if (e.target.closest("[data-limpar-categoria]")) {
+    escolherCategoria("");
+    return;
+  }
   const btn = e.target.closest("button.sku-copiar");
   if (btn && (await copiarTexto(btn.dataset.sku))) sinalizarCopiado(btn);
 });
 
-function linkDaBusca() {
+// Endereço da busca atual: ?cat=...&q=...
+function parametrosDaBusca() {
+  const params = new URLSearchParams();
+  if (categoriaAtual) params.set("cat", categoriaAtual);
   const termo = input.value.trim();
-  return termo ? `${location.origin}${location.pathname}?q=${encodeURIComponent(termo)}` : "";
+  if (termo) params.set("q", termo);
+  return params.toString();
+}
+
+function linkDaBusca() {
+  const params = parametrosDaBusca();
+  return params ? `${location.origin}${location.pathname}?${params}` : "";
 }
 
 btnLink.addEventListener("click", async () => {
@@ -474,15 +516,95 @@ btnLink.addEventListener("click", async () => {
 
 // Mantém o endereço da página igual à busca (dá para compartilhar ou recarregar)
 function atualizarEndereco() {
-  const termo = input.value.trim();
-  btnLink.hidden = termo === "";
+  const params = parametrosDaBusca();
+  btnLink.hidden = params === "";
   try {
-    history.replaceState(null, "", termo ? `?q=${encodeURIComponent(termo)}` : location.pathname);
+    history.replaceState(null, "", params ? `?${params}` : location.pathname);
   } catch (_) {}
 }
 input.addEventListener("input", atualizarEndereco);
 
-// Abre já com a busca do link (?q=...)
+/* ---------- Categorias (botões de filtro) ---------- */
+
+function montarCategorias() {
+  const contagem = new Map();
+  for (const item of database) {
+    if (item.categoria !== "-") contagem.set(item.categoria, (contagem.get(item.categoria) || 0) + 1);
+  }
+  categoriasLista = [...contagem.entries()].sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"),
+  );
+
+  // categoria vinda do link (?cat=): aceita sem diferenciar maiúsculas/acentos
+  if (categoriaDoLink) {
+    const achada = categoriasLista.find(([nome]) => normalizar(nome) === normalizar(categoriaDoLink));
+    if (achada) {
+      categoriaAtual = achada[0];
+      if (categoriasLista.indexOf(achada) >= CATEGORIAS_VISIVEIS) categoriasExpandidas = true;
+    }
+    categoriaDoLink = "";
+  }
+  renderizarCategorias();
+}
+
+function renderizarCategorias() {
+  if (categoriasLista.length === 0) {
+    caixaCategorias.hidden = true;
+    categoriaAtual = "";
+    return;
+  }
+  caixaCategorias.hidden = false;
+
+  let visiveis = categoriasExpandidas ? categoriasLista : categoriasLista.slice(0, CATEGORIAS_VISIVEIS);
+  if (categoriaAtual && !visiveis.some(([nome]) => nome === categoriaAtual)) {
+    visiveis = [...visiveis, categoriasLista.find(([nome]) => nome === categoriaAtual)];
+  }
+
+  let html = visiveis
+    .map(
+      ([nome, n]) =>
+        `<button type="button" class="cat-chip" data-categoria="${escaparHtml(nome)}" aria-pressed="${nome === categoriaAtual}">${escaparHtml(nome)}<span class="cat-chip__n">${n}</span></button>`,
+    )
+    .join("");
+  if (categoriasLista.length > CATEGORIAS_VISIVEIS) {
+    html += categoriasExpandidas
+      ? `<button type="button" class="cat-chip cat-chip--mais" data-categorias-menos>Mostrar menos</button>`
+      : `<button type="button" class="cat-chip cat-chip--mais" data-categorias-mais>+${categoriasLista.length - CATEGORIAS_VISIVEIS} categorias</button>`;
+  }
+  listaCategorias.innerHTML = html;
+
+  input.placeholder = categoriaAtual
+    ? `Refine em ${categoriaAtual}: tamanho, marca, código...`
+    : PLACEHOLDER_PADRAO;
+}
+
+function escolherCategoria(nome) {
+  categoriaAtual = nome;
+  renderizarCategorias();
+  clearTimeout(timeoutBusca);
+  const termo = input.value.trim();
+  atualizarEndereco();
+  if (!termo && !categoriaAtual) {
+    mostrarHome();
+    return;
+  }
+  mostrarBusca();
+  executarBusca(termo);
+}
+
+listaCategorias.addEventListener("click", (e) => {
+  const chip = e.target.closest("button");
+  if (!chip) return;
+  if ("categoriasMais" in chip.dataset || "categoriasMenos" in chip.dataset) {
+    categoriasExpandidas = "categoriasMais" in chip.dataset;
+    renderizarCategorias();
+    return;
+  }
+  const nome = chip.dataset.categoria;
+  escolherCategoria(nome === categoriaAtual ? "" : nome); // clicar de novo desmarca
+});
+
+// Abre já com a busca do link (?q=... e/ou ?cat=...)
 (function buscaDoLink() {
   const q = new URLSearchParams(location.search).get("q");
   if (q && q.trim()) {
@@ -490,5 +612,8 @@ input.addEventListener("input", atualizarEndereco);
     mostrarBusca();
     btnLink.hidden = false;
     executarBusca(q.trim());
+  } else if (categoriaDoLink) {
+    mostrarBusca();
+    btnLink.hidden = false;
   }
 })();

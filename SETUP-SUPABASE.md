@@ -75,12 +75,27 @@ Faça **na ordem abaixo** (só uma vez):
 Esqueceu a senha? No Supabase, em **Authentication → Users**, abra o usuário e envie a
 recuperação de senha ou defina uma nova.
 
+## 7. Categorias (migrações 005 e 006)
+
+Para bancos já criados. Em banco novo, o `schema.sql` já traz tudo.
+
+1. **Publique no GitHub** os arquivos novos e espere o GitHub Pages atualizar (o site e o painel
+   continuam funcionando antes do SQL, só sem as categorias).
+2. No **SQL Editor**, rode `supabase/migracoes/005_categorias.sql` (cria a coluna, a tabela de
+   categorias e atualiza importação, edição em massa e histórico).
+3. Depois rode `supabase/migracoes/006_categorias_iniciais.sql`: classifica os produtos atuais
+   em categorias sugeridas a partir da descrição. Só preenche quem ainda está com `-` (nunca
+   sobrescreve) e **não entra no Histórico**.
+4. Abra o painel, confira a aba **Categorias** e ajuste o que precisar (renomear, mesclar, mover
+   produtos pela edição em massa). Produtos sem categoria ficam com `-`.
+
 ## Como usar o painel de administração
 
 | Aba | Para quê |
 | --- | --- |
-| **Produtos** | Buscar, criar, editar (inclusive tags) e excluir. O botão **Exportar CSV** baixa todos os produtos (use como backup). O filtro **"Só sem tags"** mostra o que falta etiquetar. |
+| **Produtos** | Buscar, criar, editar (inclusive tags) e excluir. O botão **Exportar CSV** baixa todos os produtos, com Categoria e Tags (use como backup). O filtro **"Só sem tags"** mostra o que falta etiquetar. |
 | **Tags** | Lista todas as tags com a contagem de produtos. **Renomear** troca a tag em todos os produtos; se o novo nome já existir, as duas viram uma só (mescla). **Excluir** tira a tag de todos. Marca possíveis duplicadas (acento, plural, maiúscula). Tudo vai para o Histórico. |
+| **Categorias** | Lista as categorias com a contagem de produtos. Permite **criar**, **renomear** (se o nome já existir, mescla) e **excluir** (os produtos voltam para `-`). "Ver produtos" abre a lista já filtrada. Categoria de um produto: no cadastro dele ou na **Edição em massa**. |
 | **Importar CSV** | Atualiza a base em massa (veja abaixo). |
 | **Histórico** | Mostra versões anteriores de qualquer edição/exclusão, com botão **Restaurar**. Alterações em massa aparecem agrupadas, com **Restaurar todos**; dá para filtrar por data (De/Até). |
 
@@ -90,7 +105,8 @@ O arquivo precisa ter as colunas **Codigo**, **Descricao** e **Cod prd forn** (q
 aceita `;` ou `,` e acentos em UTF-8 ou Windows-1252). A importação:
 
 - **Inclui** os códigos que ainda não existem (com tags vazias).
-- **Atualiza** descrição/referência dos que mudaram. **Nunca altera as tags.**
+- **Atualiza** descrição/referência dos que mudaram.
+- **Colunas opcionais `Categoria` e `Tags`:** em produto novo, entram como informadas. Em produto existente, a categoria só muda se o CSV trouxer um valor diferente de vazio e de `-`; as tags do CSV (separadas por `,` ou `|`) são **somadas** às que já existem. **O importador nunca remove tags.** Categorias novas são criadas automaticamente.
 - **Exclui** (opcional) os códigos que não estão mais no CSV. Antes de gravar você vê o resumo e
   as listas. Se a exclusão for grande (mais de 20% da base ou 200 itens) o sistema pede uma
   confirmação extra, para evitar apagar tudo por engano com um CSV incompleto.

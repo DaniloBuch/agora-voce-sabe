@@ -167,6 +167,69 @@ body { font-weight: var(--fw-medium); }
 }
 
 /* --- Campo de busca (Input do DS, tamanho lg) -------------------------- */
+/* --- Filtro por categoria (botões) --------------------------------------- */
+.categorias {
+  margin-top: var(--sp-5);
+  max-width: 900px;
+}
+.categorias__rotulo {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-label);
+}
+.categorias__rotulo span {
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-weight: var(--fw-medium);
+}
+.categorias__lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-family: var(--font-core);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  color: var(--text-body);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.cat-chip:hover {
+  border-color: var(--cbs-azul-400);
+  background: var(--cbs-azul-050);
+}
+.cat-chip__n {
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+}
+.cat-chip[aria-pressed="true"] {
+  background: var(--cbs-roxo);
+  border-color: var(--cbs-roxo);
+  color: var(--text-on-brand);
+}
+.cat-chip[aria-pressed="true"] .cat-chip__n {
+  color: var(--cbs-roxo-200);
+}
+.cat-chip--mais {
+  background: transparent;
+  border-style: dashed;
+  color: var(--cbs-azul-700);
+}
+
 .search-wrapper {
   position: relative;
   width: 100%;

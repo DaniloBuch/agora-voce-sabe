@@ -6,9 +6,11 @@
   const LIMITE_ALERTA_EXCLUSAO = 0.2; // pede confirmação extra se >20% da base sumir
 
   const estado = {
-    produtos: [], // {sku, descricao_tecnica, referencia, tags, fixo, _busca}
+    produtos: [], // {sku, descricao_tecnica, referencia, tags, fixo, categoria, _busca}
     filtro: "",
     semTags: false,
+    categoria: "", // filtro: "" = todas, "-" = sem categoria, ou o nome da categoria
+    categorias: [], // nomes cadastrados (inclui as que ainda não têm produtos)
     pagina: 1,
     selecionados: new Set(), // SKUs marcados para edição em massa
     skuEmEdicao: null, // null = criando
@@ -66,13 +68,15 @@
 
   function prepararProduto(p) {
     const tags = String(p.tags ?? "");
+    const categoria = String(p.categoria ?? "").trim() || "-"; // "-" = sem categoria
     return {
       sku: String(p.sku),
       descricao_tecnica: String(p.descricao_tecnica ?? ""),
       referencia: String(p.referencia ?? ""),
       tags,
       fixo: Boolean(p.fixo),
-      _busca: normalizar(`${p.sku} ${p.descricao_tecnica} ${p.referencia} ${tags}`),
+      categoria,
+      _busca: normalizar(`${p.sku} ${p.descricao_tecnica} ${p.referencia} ${tags} ${categoria === "-" ? "" : categoria}`),
     };
   }
 
@@ -81,17 +85,62 @@
   async function carregarProdutos() {
     const dados = await api.listarProdutos();
     estado.produtos = dados.map(prepararProduto);
+    await carregarCategorias();
     podarSelecao();
     atualizarSugestoesTags();
     atualizarKpis();
     renderizarLista();
     if (!$("#aba-tags").hidden) renderizarTags();
+    if (!$("#aba-categorias").hidden) renderizarCategorias();
   }
 
   function atualizarKpis() {
     $("#kpiProdutos").textContent = fmt.format(estado.produtos.length);
     $("#kpiSemTags").textContent = fmt.format(estado.produtos.filter((p) => p.tags.trim() === "").length);
     $("#kpiTags").textContent = fmt.format(indiceTags().size);
+    $("#kpiCategorias").textContent = fmt.format(estado.categorias.length);
+    $("#kpiSemCategoria").textContent = fmt.format(estado.produtos.filter((p) => p.categoria === "-").length);
+  }
+
+  /* ---------------- categorias: lista e seletores ---------------- */
+
+  const chaveCat = (t) => String(t).trim().toLocaleUpperCase("pt-BR");
+
+  // Lista de categorias = as cadastradas + as que algum produto usa (sem repetir)
+  async function carregarCategorias() {
+    const temColuna = api.categoriasDisponiveis();
+    document.body.classList.toggle("sem-categorias", !temColuna);
+    $("#avisoCategorias").hidden = temColuna;
+    if (!temColuna) {
+      $("#avisoCategorias").innerHTML =
+        window.CBSIcon("triangle-alert", 20) +
+        `<div>Categorias ainda não ativadas no banco. Rode os arquivos <code>supabase/migracoes/005_categorias.sql</code> e <code>006_categorias_iniciais.sql</code> no SQL Editor do Supabase (veja o SETUP-SUPABASE.md).</div>`;
+      estado.categorias = [];
+      return;
+    }
+    const nomes = new Map();
+    for (const nome of await api.listarCategorias()) nomes.set(chaveCat(nome), nome);
+    for (const p of estado.produtos) if (p.categoria !== "-" && !nomes.has(chaveCat(p.categoria))) nomes.set(chaveCat(p.categoria), p.categoria);
+    estado.categorias = [...nomes.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    preencherSeletoresCategoria();
+  }
+
+  function opcoesCategoria(extra) {
+    return (
+      extra +
+      estado.categorias.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("")
+    );
+  }
+
+  function preencherSeletoresCategoria() {
+    const filtro = $("#filtroCategoria");
+    filtro.innerHTML = opcoesCategoria(`<option value="">Todas as categorias</option><option value="-">Sem categoria</option>`);
+    if (![...filtro.options].some((o) => o.value === estado.categoria)) estado.categoria = "";
+    filtro.value = estado.categoria;
+    $("#fCategoria").innerHTML = opcoesCategoria(`<option value="-">Sem categoria</option>`);
+    $("#fMassaCategoria").innerHTML = opcoesCategoria(
+      `<option value="">(não alterar)</option><option value="-">Sem categoria</option>`,
+    );
   }
 
   function atualizarSugestoesTags() {
@@ -111,11 +160,12 @@
       b.classList.toggle("ativa", ativa);
       b.setAttribute("aria-selected", String(ativa));
     });
-    ["produtos", "tags", "importar", "historico"].forEach((n) => {
+    ["produtos", "categorias", "tags", "importar", "historico"].forEach((n) => {
       $(`#aba-${n}`).hidden = n !== nome;
     });
     if (nome === "historico") carregarHistorico();
     if (nome === "tags") renderizarTags();
+    if (nome === "categorias") renderizarCategorias();
   }
 
   document.querySelectorAll(".aba").forEach((b) =>
@@ -129,7 +179,8 @@
     return estado.produtos.filter(
       (p) =>
         termos.every((t) => p._busca.includes(t)) &&
-        (!estado.semTags || p.tags.trim() === ""),
+        (!estado.semTags || p.tags.trim() === "") &&
+        (!estado.categoria || chaveCat(p.categoria) === chaveCat(estado.categoria)),
     );
   }
 
@@ -147,7 +198,7 @@
 
     $("#corpoTabela").innerHTML =
       pagina.length === 0
-        ? `<tr><td colspan="6" class="vazio">Nenhum produto encontrado com esse filtro.</td></tr>`
+        ? `<tr><td colspan="7" class="vazio">Nenhum produto encontrado com esse filtro.</td></tr>`
         : pagina
             .map((p) => {
               const tags = separarTags(p.tags);
@@ -161,6 +212,7 @@
                 <td class="c-sku">${esc(p.sku)}${p.fixo ? '<span class="selo" title="Fixo: nunca excluído pela importação">fixo</span>' : ""}</td>
                 <td class="c-ref">${esc(p.referencia)}</td>
                 <td>${esc(p.descricao_tecnica)}</td>
+                <td class="c-cat so-categorias">${p.categoria === "-" ? '<span class="sem-categoria">–</span>' : esc(p.categoria)}</td>
                 <td class="c-tags">${tagsHtml}</td>
                 <td class="c-acoes">
                   <button class="btn btn--secundario btn--sm" data-acao="editar" data-sku="${esc(p.sku)}">${window.CBSIcon("pencil", 14)}Editar</button>
@@ -244,6 +296,11 @@
       estado.pagina = 1;
       renderizarLista();
     }, 200);
+  });
+  $("#filtroCategoria").addEventListener("change", (e) => {
+    estado.categoria = e.target.value;
+    estado.pagina = 1;
+    renderizarLista();
   });
   $("#filtroSemTags").addEventListener("change", (e) => {
     estado.semTags = e.target.checked;
@@ -343,6 +400,8 @@
     $("#fDesc").value = produto ? produto.descricao_tecnica : "";
     $("#fRef").value = produto ? produto.referencia : "";
     $("#fFixo").checked = produto ? produto.fixo : false;
+    $("#fCategoria").value = produto ? produto.categoria : "-";
+    if ($("#fCategoria").value !== (produto ? produto.categoria : "-")) $("#fCategoria").value = "-";
     editorProduto.definir(produto ? separarTags(produto.tags) : []);
     $("#fErro").textContent = "";
     $("#dlgProduto").showModal();
@@ -375,6 +434,7 @@
       tags: editorProduto.obter().join(", "),
       fixo: $("#fFixo").checked,
     };
+    if (api.categoriasDisponiveis()) campos.categoria = $("#fCategoria").value || "-";
 
     const btn = $("#btnSalvar");
     btn.disabled = true;
@@ -387,6 +447,8 @@
       if (i >= 0) estado.produtos[i] = novo;
       else estado.produtos.unshift(novo);
       atualizarSugestoesTags();
+      await carregarCategorias(); // o produto pode ter ativado uma categoria nova
+      atualizarKpis();
       renderizarLista();
       $("#dlgProduto").close();
       aviso(criando ? "Produto criado." : "Produto salvo.");
@@ -423,10 +485,15 @@
     return resultado.join(", ");
   }
 
+  // categoria escolhida na edição em massa: "" = não alterar, "-" = tirar a categoria
+  const categoriaMassa = () => (api.categoriasDisponiveis() ? $("#fMassaCategoria").value : "");
+  const mudaCategoria = (p, cat) => cat !== "" && chaveCat(p.categoria) !== chaveCat(cat);
+
   function atualizarMassa() {
     const sel = produtosSelecionados();
     const add = editorAdd.obter();
     const rem = editorRem.obter();
+    const cat = categoriaMassa();
     const btn = $("#btnAplicarMassa");
 
     const contagem = new Map();
@@ -440,20 +507,27 @@
           .join("")
       : "";
 
-    if (add.length === 0 && rem.length === 0) {
-      $("#massaPreview").innerHTML = `<span class="dica">Escolha tags para adicionar ou remover.</span>`;
+    if (add.length === 0 && rem.length === 0 && cat === "") {
+      $("#massaPreview").innerHTML = `<span class="dica">Escolha tags para adicionar ou remover, ou uma categoria.</span>`;
       btn.disabled = true;
       return;
     }
+    const mudou = (p) => simularTags(p.tags, add, rem) !== separarTags(p.tags).join(", ") || mudaCategoria(p, cat);
     let alterados = 0;
-    for (const p of sel) if (simularTags(p.tags, add, rem) !== separarTags(p.tags).join(", ")) alterados++;
+    for (const p of sel) if (mudou(p)) alterados++;
     const partes = [];
     if (add.length) partes.push(`adicionar <strong>${esc(add.join(", "))}</strong>`);
     if (rem.length) partes.push(`remover <strong>${esc(rem.join(", "))}</strong>`);
-    const ex = sel.find((p) => simularTags(p.tags, add, rem) !== separarTags(p.tags).join(", "));
+    if (cat === "-") partes.push(`<strong>tirar a categoria</strong>`);
+    else if (cat) partes.push(`definir a categoria <strong>${esc(cat)}</strong>`);
+    const ex = sel.find(mudou);
     $("#massaPreview").innerHTML =
       `Vai ${partes.join(" e ")}: <strong>${fmt.format(alterados)}</strong> de ${fmt.format(sel.length)} produto(s) serão alterados.` +
-      (ex ? `<div class="massa-exemplo">Ex.: <strong>${esc(ex.sku)}</strong> → ${esc(simularTags(ex.tags, add, rem) || "(sem tags)")}</div>` : "");
+      (ex
+        ? `<div class="massa-exemplo">Ex.: <strong>${esc(ex.sku)}</strong> → ${esc(simularTags(ex.tags, add, rem) || "(sem tags)")}` +
+          (cat ? ` · categoria: ${esc(cat === "-" ? "(nenhuma)" : cat)}` : "") +
+          `</div>`
+        : "");
     btn.disabled = alterados === 0;
   }
 
@@ -471,11 +545,13 @@
     $("#massaErro").textContent = "";
     editorAdd.definir([]);
     editorRem.definir([]);
+    $("#fMassaCategoria").value = "";
     atualizarMassa();
     $("#dlgMassa").showModal();
     $("#fAddInput").focus();
   }
 
+  $("#fMassaCategoria").addEventListener("change", atualizarMassa);
   $("#btnTagsMassa").addEventListener("click", abrirMassa);
   $("#btnCancelarMassa").addEventListener("click", () => $("#dlgMassa").close());
   $("#btnFecharMassa").addEventListener("click", () => $("#dlgMassa").close());
@@ -490,7 +566,8 @@
     editorRem.pendente();
     const add = editorAdd.obter();
     const rem = editorRem.obter();
-    if (add.length === 0 && rem.length === 0) return;
+    const cat = categoriaMassa();
+    if (add.length === 0 && rem.length === 0 && cat === "") return;
     const skus = [...estado.selecionados];
     const erro = $("#massaErro");
     erro.textContent = "";
@@ -498,16 +575,16 @@
     btn.disabled = true;
     btn.textContent = "Aplicando...";
     try {
-      const r = await api.editarTagsEmMassa(skus, add, rem);
+      const r = await api.editarTagsEmMassa(skus, add, rem, cat === "" ? undefined : cat);
       await carregarProdutos();
       estado.selecionados.clear();
       renderizarLista();
       $("#dlgMassa").close();
-      aviso(`Tags atualizadas em ${fmt.format(r.alterados)} produto(s). Dá para desfazer no Histórico.`);
+      aviso(`${fmt.format(r.alterados)} produto(s) atualizado(s). Dá para desfazer no Histórico.`);
     } catch (err) {
       erro.textContent =
         err.status === 404
-          ? "A função de edição em massa ainda não existe no Supabase. Rode o arquivo supabase/migracoes/002_edicao_tags_em_massa.sql no SQL Editor (veja o SETUP-SUPABASE.md)."
+          ? "A função de edição em massa ainda não existe (ou está desatualizada) no Supabase. Rode os arquivos supabase/migracoes/002 e 005_categorias.sql no SQL Editor (veja o SETUP-SUPABASE.md)."
           : err.message;
     } finally {
       btn.textContent = "Aplicar";
@@ -606,6 +683,12 @@
     ],
   };
 
+  // Colunas opcionais: se existirem no CSV, a importação também trata categoria e tags
+  const ALIASES_OPCIONAIS = {
+    categoria: ["categoria", "categorias"],
+    tags: ["tags", "tag"],
+  };
+
   function limparCabecalho(t) {
     return normalizar(t).replace(/[^a-z0-9]+/g, " ").trim();
   }
@@ -617,6 +700,10 @@
       const idx = nomes.findIndex((n) => aliases.includes(n));
       if (idx === -1) return { erro: campo, encontrados: cabecalho };
       mapa[campo] = idx;
+    }
+    for (const [campo, aliases] of Object.entries(ALIASES_OPCIONAIS)) {
+      const idx = nomes.findIndex((n) => aliases.includes(n));
+      if (idx !== -1) mapa[campo] = idx;
     }
     return { mapa };
   }
@@ -643,6 +730,13 @@
       );
     }
 
+    const lerCat = mapa.categoria !== undefined;
+    const lerTags = mapa.tags !== undefined;
+    if ((lerCat || lerTags) && !api.categoriasDisponiveis()) {
+      throw new Error(
+        "O CSV tem colunas de categoria/tags, mas o banco ainda não foi atualizado. Rode supabase/migracoes/005_categorias.sql no SQL Editor (veja o SETUP-SUPABASE.md) e tente de novo.",
+      );
+    }
     const itens = new Map();
     let semSku = 0;
     let duplicados = 0;
@@ -656,11 +750,19 @@
         duplicados++;
         continue; // mantém a primeira ocorrência
       }
-      itens.set(sku, {
+      const item = {
         sku,
         descricao_tecnica: String(l[mapa.descricao_tecnica] ?? "").trim(),
         referencia: String(l[mapa.referencia] ?? "").trim(),
-      });
+      };
+      // só envia categoria/tags se o CSV tiver essas colunas (senão ficam como estão)
+      if (lerCat) item.categoria = String(l[mapa.categoria] ?? "").trim().replace(/\s+/g, " ");
+      if (lerTags) {
+        item.tags = separarTags(String(l[mapa.tags] ?? "").replace(/\|/g, ","))
+          .map((t) => t.toLocaleUpperCase("pt-BR"))
+          .join(", ");
+      }
+      itens.set(sku, item);
     }
     if (itens.size === 0) throw new Error("Nenhum SKU válido encontrado no arquivo.");
 
@@ -668,14 +770,31 @@
     const novos = [];
     const alterados = [];
     let iguais = 0;
+    let comCategoria = 0; // produtos que terão categoria definida/alterada
+    let comTagsNovas = 0; // produtos que receberão tags novas
+    const categoriasNovas = new Map();
+    const canonica = (nome) => estado.categorias.find((c) => chaveCat(c) === chaveCat(nome)) || nome;
+    const catDoCsv = (item) => (item.categoria && item.categoria !== "-" ? canonica(item.categoria) : null);
+
     for (const item of itens.values()) {
+      const cat = catDoCsv(item);
+      if (cat && !estado.categorias.some((c) => chaveCat(c) === chaveCat(cat))) categoriasNovas.set(chaveCat(cat), cat);
       const atual = atuais.get(item.sku);
-      if (!atual) novos.push(item);
-      else if (
-        atual.descricao_tecnica !== item.descricao_tecnica ||
-        atual.referencia !== item.referencia
-      ) {
-        alterados.push({ item, atual });
+      if (!atual) {
+        novos.push(item);
+        if (cat) comCategoria++;
+        if (item.tags) comTagsNovas++;
+        continue;
+      }
+      const mudaCat = cat !== null && chaveCat(atual.categoria) !== chaveCat(cat);
+      const jaTem = new Set(separarTags(atual.tags).map(chaveTag));
+      const tagsAdd = separarTags(item.tags || "").filter((t) => !jaTem.has(chaveTag(t)));
+      const mudaTexto =
+        atual.descricao_tecnica !== item.descricao_tecnica || atual.referencia !== item.referencia;
+      if (mudaTexto || mudaCat || tagsAdd.length) {
+        alterados.push({ item, atual, mudaTexto, categoria: mudaCat ? cat : null, tagsAdd });
+        if (mudaCat) comCategoria++;
+        if (tagsAdd.length) comTagsNovas++;
       } else iguais++;
     }
     const removidos = estado.produtos.filter((p) => !p.fixo && !itens.has(p.sku));
@@ -690,6 +809,11 @@
       fixosFora,
       semSku,
       duplicados,
+      lerCat,
+      lerTags,
+      comCategoria,
+      comTagsNovas,
+      categoriasNovas: [...categoriasNovas.values()],
     };
   }
 
@@ -714,19 +838,26 @@
     alvo.innerHTML = `
       <div class="resumo">
         <div class="item novos"><div class="num">${fmt.format(a.novos.length)}</div><div class="rot">novos produtos</div></div>
-        <div class="item"><div class="num">${fmt.format(a.alterados.length)}</div><div class="rot">com descrição/ref. alterada</div></div>
+        <div class="item"><div class="num">${fmt.format(a.alterados.length)}</div><div class="rot">com alguma alteração</div></div>
+        ${a.lerCat ? `<div class="item"><div class="num">${fmt.format(a.comCategoria)}</div><div class="rot">com categoria definida</div></div>` : ""}
+        ${a.lerTags ? `<div class="item"><div class="num">${fmt.format(a.comTagsNovas)}</div><div class="rot">recebendo tags novas</div></div>` : ""}
         <div class="item removidos"><div class="num">${fmt.format(a.removidos.length)}</div><div class="rot">descontinuados (não estão no CSV)</div></div>
         <div class="item"><div class="num">${fmt.format(a.iguais)}</div><div class="rot">sem mudança</div></div>
       </div>
       ${a.semSku || a.duplicados ? alerta("alerta", `Ignorados no CSV: ${fmt.format(a.semSku)} linha(s) sem código e ${fmt.format(a.duplicados)} código(s) repetido(s).`) : ""}
+      ${a.lerTags ? alerta("info", "As tags do CSV serão <strong>somente acrescentadas</strong> às que cada produto já tem. Nenhuma tag existente é removida.") : ""}
+      ${a.lerCat && a.categoriasNovas.length ? alerta("info", `Categorias novas que serão criadas: <strong>${a.categoriasNovas.map(esc).join(", ")}</strong>.`) : ""}
       ${a.fixosFora ? alerta("info", `${fmt.format(a.fixosFora)} produto(s) marcado(s) como "fixo" não está(ão) no CSV e será(ão) mantido(s).`) : ""}
-      ${a.novos.length ? `<details><summary>Novos (${fmt.format(a.novos.length)})</summary><div class="conteudo">${listaLimitada(a.novos, (n) => `<div><strong>${esc(n.sku)}</strong> ${esc(n.descricao_tecnica)}</div>`)}</div></details>` : ""}
-      ${a.alterados.length ? `<details><summary>Alterados (${fmt.format(a.alterados.length)})</summary><div class="conteudo">${listaLimitada(a.alterados, ({ item, atual }) => {
+      ${a.novos.length ? `<details><summary>Novos (${fmt.format(a.novos.length)})</summary><div class="conteudo">${listaLimitada(a.novos, (n) => `<div><strong>${esc(n.sku)}</strong> ${esc(n.descricao_tecnica)}${n.categoria && n.categoria !== "-" ? ` <span class="dica">· ${esc(n.categoria)}</span>` : ""}</div>`)}</div></details>` : ""}
+      ${a.alterados.length ? `<details><summary>Alterados (${fmt.format(a.alterados.length)})</summary><div class="conteudo">${listaLimitada(a.alterados, ({ item, atual, categoria, tagsAdd }) => {
         const partes = [];
         if (atual.descricao_tecnica !== item.descricao_tecnica)
           partes.push(`<span class="de">${esc(atual.descricao_tecnica)}</span> → <span class="para">${esc(item.descricao_tecnica)}</span>`);
         if (atual.referencia !== item.referencia)
           partes.push(`ref: <span class="de">${esc(atual.referencia || "(vazio)")}</span> → <span class="para">${esc(item.referencia || "(vazio)")}</span>`);
+        if (categoria)
+          partes.push(`categoria: <span class="de">${esc(atual.categoria === "-" ? "(nenhuma)" : atual.categoria)}</span> → <span class="para">${esc(categoria)}</span>`);
+        if (tagsAdd.length) partes.push(`tags: <span class="para">+ ${esc(tagsAdd.join(", + "))}</span>`);
         return `<div><strong>${esc(item.sku)}</strong> ${partes.join(" · ")}</div>`;
       })}</div></details>` : ""}
       ${a.removidos.length ? `<details><summary>Descontinuados a excluir (${fmt.format(a.removidos.length)})</summary><div class="conteudo">${listaLimitada(a.removidos, (r) => `<div><strong>${esc(r.sku)}</strong> ${esc(r.descricao_tecnica)}</div>`)}</div></details>` : ""}
@@ -771,7 +902,7 @@
         await carregarProdutos();
         estado.importacao = null;
         $("#arquivoCsv").value = "";
-        $("#resultadoImport").innerHTML = alerta("ok", `Importação concluída: ${fmt.format(r.inseridos)} incluído(s), ${fmt.format(r.atualizados)} atualizado(s), ${fmt.format(r.excluidos)} excluído(s). Os excluídos e alterados ficam no Histórico.`);
+        $("#resultadoImport").innerHTML = alerta("ok", `Importação concluída: ${fmt.format(r.inseridos)} incluído(s), ${fmt.format(r.atualizados)} atualizado(s), ${fmt.format(r.excluidos)} excluído(s)` + (a.lerTags ? `; tags novas em ${fmt.format(a.comTagsNovas)} produto(s)` : "") + (a.lerCat ? `; categoria definida em ${fmt.format(a.comCategoria)}` : "") + `. Os excluídos e alterados ficam no Histórico.`);
       } catch (err) {
         renderizarImportacao();
         $("#resultadoImport").insertAdjacentHTML(
@@ -823,9 +954,11 @@
     try {
       // lê de novo do banco: o backup tem que refletir o que está lá agora
       const dados = (await api.listarProdutos()).map(prepararProduto);
-      const linhas = ["Codigo;Descricao;Cod prd forn;Tags;Fixo"];
+      const linhas = ["Codigo;Descricao;Cod prd forn;Categoria;Tags;Fixo"];
       for (const p of dados) {
-        linhas.push([p.sku, p.descricao_tecnica, p.referencia, p.tags, p.fixo ? "sim" : ""].map(campoCsv).join(";"));
+        linhas.push(
+          [p.sku, p.descricao_tecnica, p.referencia, p.categoria, p.tags, p.fixo ? "sim" : ""].map(campoCsv).join(";"),
+        );
       }
       // BOM para o Excel abrir os acentos corretamente
       const blob = new Blob(["﻿" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8" });
@@ -843,6 +976,181 @@
     } finally {
       btn.disabled = false;
     }
+  });
+
+  /* ---------------- aba Categorias (criar / renomear / mesclar / excluir) ---------------- */
+
+  const MSG_FALTA_005 =
+    "As categorias ainda não existem no Supabase. Rode o arquivo supabase/migracoes/005_categorias.sql no SQL Editor (veja o SETUP-SUPABASE.md).";
+
+  function contagemCategorias() {
+    const mapa = new Map(); // chaveCat -> quantidade
+    let sem = 0;
+    for (const p of estado.produtos) {
+      if (p.categoria === "-") sem++;
+      else mapa.set(chaveCat(p.categoria), (mapa.get(chaveCat(p.categoria)) || 0) + 1);
+    }
+    return { mapa, sem };
+  }
+
+  function renderizarCategorias() {
+    const { mapa, sem } = contagemCategorias();
+    $("#infoCategorias").textContent =
+      `${fmt.format(estado.categorias.length)} categorias · ${fmt.format(sem)} produtos sem categoria`;
+    const linhas = [
+      `<tr class="linha-sem-categoria">
+        <td><span class="sem-categoria">Sem categoria (–)</span></td>
+        <td class="c-num">${fmt.format(sem)}</td>
+        <td class="c-acoes"><button class="btn btn--secundario btn--sm" data-cat-acao="ver" data-cat="-">${window.CBSIcon("search", 14)}Ver produtos</button></td>
+      </tr>`,
+    ];
+    for (const nome of estado.categorias) {
+      linhas.push(`<tr>
+        <td><strong>${esc(nome)}</strong></td>
+        <td class="c-num">${fmt.format(mapa.get(chaveCat(nome)) || 0)}</td>
+        <td class="c-acoes">
+          <button class="btn btn--secundario btn--sm" data-cat-acao="ver" data-cat="${esc(nome)}">${window.CBSIcon("search", 14)}Ver produtos</button>
+          <button class="btn btn--secundario btn--sm" data-cat-acao="renomear" data-cat="${esc(nome)}">${window.CBSIcon("pencil", 14)}Renomear</button>
+          <button class="btn btn--secundario btn--sm btn--excluir" data-cat-acao="excluir" data-cat="${esc(nome)}">${window.CBSIcon("trash-2", 14)}Excluir</button>
+        </td>
+      </tr>`);
+    }
+    $("#corpoCategorias").innerHTML = linhas.join("");
+  }
+
+  let categoriaEmEdicao = null;
+
+  const produtosDaCategoria = (nome) => estado.produtos.filter((p) => chaveCat(p.categoria) === chaveCat(nome));
+
+  $("#corpoCategorias").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-cat-acao]");
+    if (!btn) return;
+    const nome = btn.dataset.cat;
+    const acao = btn.dataset.catAcao;
+    if (acao === "ver") {
+      estado.categoria = nome;
+      estado.pagina = 1;
+      $("#filtroCategoria").value = nome;
+      mostrarAba("produtos");
+      renderizarLista();
+    } else if (acao === "renomear") {
+      abrirRenomearCategoria(nome);
+    } else {
+      categoriaEmEdicao = nome;
+      $("#txtCategoriaExcluir").textContent = `${nome} (${fmt.format(produtosDaCategoria(nome).length)} produtos)`;
+      $("#categoriaExcluirErro").textContent = "";
+      $("#dlgCategoriaExcluir").showModal();
+    }
+  });
+
+  function nomeCategoriaValido(texto) {
+    return String(texto ?? "").replace(/,/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  $("#formNovaCategoria").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const erro = $("#novaCategoriaErro");
+    erro.textContent = "";
+    const nome = nomeCategoriaValido($("#novaCategoria").value);
+    if (!nome || nome === "-") {
+      erro.textContent = "Digite o nome da categoria.";
+      return;
+    }
+    const existente = estado.categorias.find((c) => chaveCat(c) === chaveCat(nome));
+    if (existente) {
+      erro.textContent = `A categoria "${existente}" já existe.`;
+      return;
+    }
+    const btn = $("#btnNovaCategoria");
+    btn.disabled = true;
+    try {
+      await api.criarCategoria(nome);
+      await carregarCategorias();
+      atualizarKpis();
+      renderizarCategorias();
+      $("#novaCategoria").value = "";
+      aviso(`Categoria "${nome}" criada.`);
+    } catch (err) {
+      erro.textContent = err.status === 404 ? MSG_FALTA_005 : err.status === 409 ? "Essa categoria já existe." : err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function atualizarPreviaCategoria() {
+    const novo = nomeCategoriaValido($("#categoriaNovoNome").value);
+    const origem = produtosDaCategoria(categoriaEmEdicao);
+    const btn = $("#btnSalvarCategoria");
+    const alvo = $("#categoriaPreview");
+    if (!novo || novo === "-") {
+      alvo.innerHTML = `<span class="dica">Digite o novo nome. Para remover a categoria, use o botão Excluir.</span>`;
+      btn.disabled = true;
+      return;
+    }
+    if (chaveCat(novo) === chaveCat(categoriaEmEdicao)) {
+      const mudaGrafia = novo !== categoriaEmEdicao;
+      alvo.innerHTML = mudaGrafia
+        ? `Vai padronizar a grafia para <strong>${esc(novo)}</strong> em ${fmt.format(origem.length)} produto(s).`
+        : `<span class="dica">O nome é igual ao atual; nada a mudar.</span>`;
+      btn.disabled = !mudaGrafia;
+      return;
+    }
+    const destino = estado.categorias.find((c) => chaveCat(c) === chaveCat(novo));
+    alvo.innerHTML = destino
+      ? `<strong>Mesclar:</strong> a categoria <strong>${esc(destino)}</strong> já existe (${fmt.format(produtosDaCategoria(destino).length)} produtos). ` +
+        `${fmt.format(origem.length)} produto(s) passam a usá-la.`
+      : `Vai trocar por <strong>${esc(novo)}</strong> em ${fmt.format(origem.length)} produto(s).`;
+    btn.disabled = false;
+  }
+
+  function abrirRenomearCategoria(nome) {
+    categoriaEmEdicao = nome;
+    $("#categoriaOrigem").textContent = `Categoria atual: ${nome} (${fmt.format(produtosDaCategoria(nome).length)} produtos)`;
+    $("#categoriaNovoNome").value = nome;
+    $("#categoriaErro").textContent = "";
+    atualizarPreviaCategoria();
+    $("#dlgCategoria").showModal();
+    $("#categoriaNovoNome").focus();
+    $("#categoriaNovoNome").select();
+  }
+
+  $("#categoriaNovoNome").addEventListener("input", atualizarPreviaCategoria);
+  $("#btnCancelarCategoria").addEventListener("click", () => $("#dlgCategoria").close());
+  $("#btnFecharCategoria").addEventListener("click", () => $("#dlgCategoria").close());
+  $("#btnNaoExcluirCategoria").addEventListener("click", () => $("#dlgCategoriaExcluir").close());
+  $("#btnFecharCategoriaExcluir").addEventListener("click", () => $("#dlgCategoriaExcluir").close());
+
+  async function aplicarCategoria(novo, dialogo, botao, erroEl, textoBotao, mensagem) {
+    erroEl.textContent = "";
+    botao.disabled = true;
+    botao.textContent = "Aplicando...";
+    try {
+      const r = await api.renomearCategoria(categoriaEmEdicao, novo);
+      await carregarProdutos();
+      renderizarCategorias();
+      dialogo.close();
+      aviso(mensagem(r.alterados));
+    } catch (err) {
+      erroEl.textContent = err.status === 404 ? MSG_FALTA_005 : err.message;
+    } finally {
+      botao.textContent = textoBotao;
+      botao.disabled = false;
+    }
+  }
+
+  $("#formCategoria").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const novo = nomeCategoriaValido($("#categoriaNovoNome").value);
+    if (!novo || novo === "-") return;
+    aplicarCategoria(novo, $("#dlgCategoria"), $("#btnSalvarCategoria"), $("#categoriaErro"), "Aplicar", (n) =>
+      `Categoria atualizada em ${fmt.format(n)} produto(s). Dá para desfazer no Histórico.`,
+    );
+  });
+  $("#formCategoriaExcluir").addEventListener("submit", (e) => {
+    e.preventDefault();
+    aplicarCategoria("", $("#dlgCategoriaExcluir"), $("#btnSimExcluirCategoria"), $("#categoriaExcluirErro"), "Excluir categoria", (n) =>
+      `Categoria excluída; ${fmt.format(n)} produto(s) ficaram sem categoria. Dá para desfazer no Histórico.`,
+    );
   });
 
   /* ---------------- aba Tags (renomear / mesclar / excluir) ---------------- */
@@ -1067,7 +1375,7 @@
       <td>${esc(fmtData.format(new Date(h.registrado_em)))}</td>
       <td>${h.acao === "DELETE" ? "Excluído" : "Editado"}</td>
       <td class="c-sku">${esc(h.sku)}</td>
-      <td>${esc(h.dados.descricao_tecnica)}</td>
+      <td>${esc(h.dados.descricao_tecnica)}${h.dados.categoria && h.dados.categoria !== "-" ? ` <span class="dica">· categoria: ${esc(h.dados.categoria)}</span>` : ""}</td>
       <td class="c-tags">${separarTags(h.dados.tags).map((t) => `<span class="tag-pill">${esc(t)}</span>`).join("")}</td>
       <td class="c-acoes"><button class="btn btn--secundario btn--sm" data-hid="${h.id}">${window.CBSIcon("rotate-ccw", 14)}Restaurar</button></td>
     </tr>`;

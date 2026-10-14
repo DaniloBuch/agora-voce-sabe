@@ -30,14 +30,17 @@
       <div class="faixa__conteudo">
         <p class="faixa__sobre">Área restrita</p>
         <h1>Gerencie a base de produtos</h1>
-        <p class="faixa__sub">Produtos, tags e importações do <strong>Agora você sabe</strong>, com histórico para desfazer qualquer alteração.</p>
+        <p class="faixa__sub">Produtos, categorias, tags e importações do <strong>Agora você sabe</strong>, com histórico para desfazer qualquer alteração.</p>
         <dl class="kpis" id="kpis">
           <div class="kpi"><dt>Produtos</dt><dd id="kpiProdutos">–</dd></div>
           <div class="kpi"><dt>Sem tags</dt><dd id="kpiSemTags">–</dd></div>
           <div class="kpi"><dt>Tags</dt><dd id="kpiTags">–</dd></div>
+          <div class="kpi so-categorias"><dt>Categorias</dt><dd id="kpiCategorias">–</dd></div>
+          <div class="kpi so-categorias"><dt>Sem categoria</dt><dd id="kpiSemCategoria">–</dd></div>
         </dl>
         <nav class="abas" role="tablist">
           <button class="aba ativa" data-aba="produtos" role="tab" aria-selected="true">Produtos</button>
+          <button class="aba so-categorias" data-aba="categorias" role="tab" aria-selected="false">Categorias</button>
           <button class="aba" data-aba="tags" role="tab" aria-selected="false">Tags</button>
           <button class="aba" data-aba="importar" role="tab" aria-selected="false">Importar CSV</button>
           <button class="aba" data-aba="historico" role="tab" aria-selected="false">Histórico</button>
@@ -54,6 +57,8 @@
           <code>SETUP-SUPABASE.md</code>.
         </div>
       </div>
+
+      <div id="avisoCategorias" class="alerta alerta--alerta" role="status" hidden></div>
 
       <!-- ========== LOGIN ========== -->
       <section id="telaLogin" class="login" hidden>
@@ -88,6 +93,10 @@
               aria-label="Filtrar produtos"
             />
           </div>
+          <div class="campo campo--filtro so-categorias">
+            <label class="sr-only" for="filtroCategoria">Filtrar por categoria</label>
+            <select id="filtroCategoria" aria-label="Filtrar por categoria"></select>
+          </div>
           <label class="check">
             <input type="checkbox" id="filtroSemTags" /> Só sem tags
           </label>
@@ -102,7 +111,7 @@
           <div class="barra-selecao__acoes">
             <button id="btnSelFiltro" class="btn btn--secundario btn--sm" hidden></button>
             <button id="btnLimparSel" class="btn btn--secundario btn--sm" hidden>Limpar seleção</button>
-            <button id="btnTagsMassa" class="btn btn--primario btn--sm" hidden><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg>Editar tags em massa</button>
+            <button id="btnTagsMassa" class="btn btn--primario btn--sm" hidden><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg>Editar em massa</button>
           </div>
         </div>
         <div class="tabela-wrap">
@@ -113,6 +122,7 @@
                 <th class="c-sku">SKU</th>
                 <th class="c-ref">Ref.</th>
                 <th>Descrição</th>
+                <th class="c-cat so-categorias">Categoria</th>
                 <th class="c-tags">Tags</th>
                 <th class="c-acoes"><span class="sr-only">Ações</span></th>
               </tr>
@@ -124,6 +134,38 @@
           <button id="btnAnterior" class="btn btn--secundario btn--sm"><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>Anterior</button>
           <span id="infoPagina"></span>
           <button id="btnProxima" class="btn btn--secundario btn--sm">Próxima<svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+        </div>
+      </section>
+
+      <!-- ========== ABA CATEGORIAS ========== -->
+      <section id="aba-categorias" class="painel" hidden>
+        <p class="ajuda">
+          Cada produto tem no máximo <strong>uma categoria</strong>. Elas aparecem como botões no
+          site para filtrar a busca. <strong>Renomear</strong> troca o nome em todos os produtos;
+          se o novo nome já existir, as duas viram uma só (<strong>mesclar</strong>).
+          <strong>Excluir</strong> deixa os produtos sem categoria. Tudo fica no Histórico.
+          Para mudar a categoria de vários produtos de uma vez, selecione-os na aba Produtos.
+        </p>
+        <form class="barra-ferramentas" id="formNovaCategoria" novalidate>
+          <div class="campo campo--filtro">
+            <label class="sr-only" for="novaCategoria">Nome da nova categoria</label>
+            <input id="novaCategoria" maxlength="60" autocomplete="off" placeholder="Nome da nova categoria..." />
+          </div>
+          <button type="submit" class="btn btn--primario" id="btnNovaCategoria"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Adicionar categoria</button>
+          <span class="dica" id="infoCategorias"></span>
+        </form>
+        <p class="erro" id="novaCategoriaErro" role="alert"></p>
+        <div class="tabela-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th class="c-num">Produtos</th>
+                <th class="c-acoes"><span class="sr-only">Ações</span></th>
+              </tr>
+            </thead>
+            <tbody id="corpoCategorias"></tbody>
+          </table>
         </div>
       </section>
 
@@ -162,8 +204,14 @@
         <p class="ajuda">
           Envie o CSV do sistema com as colunas <strong>Codigo</strong>,
           <strong>Descricao</strong> e <strong>Cod prd forn</strong>. Nada é
-          gravado antes da sua confirmação, e as <strong>tags nunca são
-          alteradas</strong> pela importação.
+          gravado antes da sua confirmação.
+        </p>
+        <p class="ajuda">
+          Colunas opcionais: <strong>Categoria</strong> (define a categoria do produto;
+          célula vazia ou "-" mantém a atual) e <strong>Tags</strong> (separadas por vírgula).
+          As tags do CSV são <strong>somente acrescentadas</strong> às que o produto já tem:
+          a importação <strong>nunca remove tags</strong>. Sem essas colunas, categorias e tags
+          ficam como estão.
         </p>
         <label class="upload" id="areaUpload">
           <input type="file" id="arquivoCsv" accept=".csv,.txt,text/csv" />
@@ -230,6 +278,10 @@
             <label for="fRef">Referência (Cod prd forn)</label>
             <input id="fRef" autocomplete="off" />
           </div>
+          <div class="campo so-categorias">
+            <label for="fCategoria">Categoria</label>
+            <select id="fCategoria"></select>
+          </div>
           <div class="campo">
             <label for="fTagInput">Tags</label>
             <div class="chips" id="chips">
@@ -255,11 +307,15 @@
     <dialog id="dlgMassa" class="dialogo dialogo--lg">
       <form id="formMassa" novalidate>
         <div class="dialogo__topo">
-          <h2>Editar tags em massa</h2>
+          <h2>Editar em massa</h2>
           <button type="button" class="btn-icone" id="btnFecharMassa" aria-label="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
         </div>
         <div class="dialogo__corpo">
           <div id="massaResumo" class="massa-resumo"></div>
+          <div class="campo so-categorias">
+            <label for="fMassaCategoria">Categoria</label>
+            <select id="fMassaCategoria"></select>
+          </div>
           <div class="campo">
             <label for="fAddInput">Adicionar estas tags</label>
             <div class="chips" id="chipsAdd">
@@ -279,6 +335,48 @@
         <div class="dialogo__rodape">
           <button type="button" class="btn btn--secundario" id="btnCancelarMassa">Cancelar</button>
           <button type="submit" class="btn btn--primario" id="btnAplicarMassa">Aplicar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ========== DIÁLOGO: RENOMEAR / MESCLAR CATEGORIA ========== -->
+    <dialog id="dlgCategoria" class="dialogo">
+      <form id="formCategoria" novalidate>
+        <div class="dialogo__topo">
+          <h2>Renomear categoria</h2>
+          <button type="button" class="btn-icone" id="btnFecharCategoria" aria-label="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+        </div>
+        <div class="dialogo__corpo">
+          <p class="destaque-texto" id="categoriaOrigem"></p>
+          <div class="campo">
+            <label for="categoriaNovoNome">Novo nome</label>
+            <input id="categoriaNovoNome" maxlength="60" autocomplete="off" />
+          </div>
+          <div id="categoriaPreview" class="massa-preview" aria-live="polite"></div>
+          <p class="erro" id="categoriaErro" role="alert"></p>
+        </div>
+        <div class="dialogo__rodape">
+          <button type="button" class="btn btn--secundario" id="btnCancelarCategoria">Cancelar</button>
+          <button type="submit" class="btn btn--primario" id="btnSalvarCategoria">Aplicar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ========== DIÁLOGO: EXCLUIR CATEGORIA ========== -->
+    <dialog id="dlgCategoriaExcluir" class="dialogo dialogo--sm">
+      <form id="formCategoriaExcluir" novalidate>
+        <div class="dialogo__topo">
+          <h2>Excluir categoria?</h2>
+          <button type="button" class="btn-icone" id="btnFecharCategoriaExcluir" aria-label="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+        </div>
+        <div class="dialogo__corpo">
+          <p class="destaque-texto" id="txtCategoriaExcluir"></p>
+          <p class="ajuda">Os produtos continuam, só ficam sem categoria ("-"). Dá para desfazer no Histórico.</p>
+          <p class="erro" id="categoriaExcluirErro" role="alert"></p>
+        </div>
+        <div class="dialogo__rodape">
+          <button type="button" class="btn btn--secundario" id="btnNaoExcluirCategoria">Cancelar</button>
+          <button type="submit" class="btn btn--perigo" id="btnSimExcluirCategoria">Excluir categoria</button>
         </div>
       </form>
     </dialog>

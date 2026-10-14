@@ -12,6 +12,8 @@
 
   const PAGINA = 1000; // limite padrão de linhas por requisição no Supabase
   const COLUNAS = "sku,descricao_tecnica,referencia,tags,fixo";
+  // Se a migração das categorias ainda não rodou, a coluna não existe: cai para COLUNAS.
+  let semColunaCategoria = false;
 
   /* ---------- Sessão de login (só o painel de administração usa) ---------- */
 
@@ -166,7 +168,19 @@
 
   // Lê TODOS os produtos (o Supabase entrega no máx. 1000 por vez).
   async function listarProdutos() {
-    const base = `produtos?select=${COLUNAS}&order=descricao_tecnica.asc,sku.asc`;
+    if (!semColunaCategoria) {
+      try {
+        return await lerPaginas(`${COLUNAS},categoria`);
+      } catch (erro) {
+        if (erro.status !== 400) throw erro;
+        semColunaCategoria = true; // banco antigo, sem a coluna "categoria"
+      }
+    }
+    return lerPaginas(COLUNAS);
+  }
+
+  async function lerPaginas(colunas) {
+    const base = `produtos?select=${colunas}&order=descricao_tecnica.asc,sku.asc`;
     const primeira = await requisitar(`${base}&limit=${PAGINA}&offset=0`, {
       headers: { Prefer: "count=exact" },
       anonimo: true,
@@ -191,6 +205,30 @@
       todas = todas.concat(pag);
       if (pag.length < PAGINA) return todas;
     }
+  }
+
+  // Lista de categorias cadastradas (inclui as que ainda não têm produtos).
+  // Se a tabela não existe ainda, devolve [] em vez de quebrar a tela.
+  async function listarCategorias() {
+    try {
+      const resp = await requisitar("categorias?select=nome&order=nome.asc", { anonimo: true });
+      return (await resp.json()).map((c) => c.nome);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async function criarCategoria(nome) {
+    await requisitar("categorias", { method: "POST", corpo: { nome } });
+  }
+
+  // Renomeia/mescla (p_novo preenchido) ou exclui (p_novo vazio) uma categoria.
+  async function renomearCategoria(origem, novo) {
+    const resp = await requisitar("rpc/renomear_categoria", {
+      method: "POST",
+      corpo: { p_origem: origem, p_novo: novo },
+    });
+    return resp.json();
   }
 
   async function criar(produto) {
@@ -221,11 +259,11 @@
   }
 
   // Adiciona/remove tags de vários produtos numa transação única (função SQL editar_tags_em_massa).
-  async function editarTagsEmMassa(skus, adicionar, remover) {
-    const resp = await requisitar("rpc/editar_tags_em_massa", {
-      method: "POST",
-      corpo: { p_skus: skus, p_adicionar: adicionar, p_remover: remover },
-    });
+  // categoria: undefined = não mexe; "" ou "-" = tira a categoria; senão define.
+  async function editarTagsEmMassa(skus, adicionar, remover, categoria) {
+    const corpo = { p_skus: skus, p_adicionar: adicionar, p_remover: remover };
+    if (categoria !== undefined) corpo.p_categoria = categoria;
+    const resp = await requisitar("rpc/editar_tags_em_massa", { method: "POST", corpo });
     return resp.json();
   }
 
@@ -289,5 +327,9 @@
     restaurarVarios,
     editarTagsEmMassa,
     renomearTag,
+    listarCategorias,
+    criarCategoria,
+    renomearCategoria,
+    categoriasDisponiveis: () => !semColunaCategoria,
   };
 })();

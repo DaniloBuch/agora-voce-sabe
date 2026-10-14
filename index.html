@@ -49,6 +49,13 @@
               />
             </div>
             <p class="search-hint">Ex.: 000437 sonda · também aceita o código do fornecedor e apelidos comerciais</p>
+
+            <div class="categorias" id="categorias" hidden>
+              <p class="categorias__rotulo" id="categoriasRotulo">
+                Categoria <span>· opcional: escolha uma e depois refine no campo de busca</span>
+              </p>
+              <div class="categorias__lista" id="categoriasLista" role="group" aria-labelledby="categoriasRotulo"></div>
+            </div>
           </div>
       </div>
     </section>
@@ -83,7 +90,7 @@
               <tr>
                 <th class="col-sku">SKU</th>
                 <th class="col-desc">Descrição do produto</th>
-                <th class="col-tags">Tags / categorias</th>
+                <th class="col-tags">Tags</th>
                 <th class="col-ref">Ref.</th>
               </tr>
             </thead>
