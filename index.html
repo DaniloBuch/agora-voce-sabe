@@ -49,18 +49,21 @@
               />
             </div>
             <p class="search-hint">Ex.: 000437 sonda · também aceita o código do fornecedor e apelidos comerciais</p>
-
-            <div class="categorias" id="categorias" hidden>
-              <p class="categorias__rotulo" id="categoriasRotulo">
-                Categoria <span>· opcional: escolha uma e depois refine no campo de busca</span>
-              </p>
-              <div class="categorias__lista" id="categoriasLista" role="group" aria-labelledby="categoriasRotulo"></div>
-            </div>
           </div>
       </div>
     </section>
 
     <main class="page">
+     <div class="pagina sem-lateral" id="pagina">
+      <aside class="categorias" id="categorias" aria-label="Categorias de produtos" hidden>
+        <button type="button" class="categorias__toggle" id="categoriasToggle" aria-expanded="false" aria-controls="categoriasLista">
+          <span id="categoriasToggleTexto">Categorias</span>
+          <svg class="categorias__seta" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <p class="categorias__rotulo" id="categoriasRotulo">Categorias</p>
+        <div class="categorias__lista" id="categoriasLista" role="group" aria-labelledby="categoriasRotulo"></div>
+      </aside>
+      <div class="pagina__conteudo">
       <div id="heroCards" class="hero-cards">
         <div class="card">
           <svg class="card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"></path><path d="m7 16.5-4.74-2.85"></path><path d="m7 16.5 5-3"></path><path d="M7 16.5v5.17"></path><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z"></path><path d="m17 16.5-5-3"></path><path d="m17 16.5 4.74-2.85"></path><path d="M17 16.5v5.17"></path><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z"></path><path d="M12 8 7.26 5.15"></path><path d="m12 8 4.74-2.85"></path><path d="M12 13.5V8"></path></svg>
@@ -98,6 +101,8 @@
           </table>
         </div>
       </div>
+      </div>
+     </div>
     </main>
 
     <footer class="site-footer">

@@ -22,7 +22,7 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 
 - **Busca por partículas:** os termos podem vir em qualquer ordem. `000437 sonda` e `sonda 04` levam ao mesmo produto.
 - **Ignora acentos e maiúsculas:** `esfigmomanometro` encontra "Esfigmomanômetro".
-- **Categorias:** botões acima da busca (Luvas, Cateteres, Fraldas…) filtram a base por tipo de produto; depois é só digitar no campo para refinar dentro da categoria. Clicar de novo na categoria desfaz o filtro, e o link compartilhado guarda categoria e busca (`?cat=Luvas&q=nitril`).
+- **Categorias:** barra lateral à esquerda (Luvas, Cateteres, Fraldas…, da mais cheia para a menos cheia) filtra a base por tipo de produto; depois é só digitar no campo para refinar dentro da categoria. "Todos os produtos" ou um novo clique na categoria desfaz o filtro. No celular a barra vira um seletor "Categorias" que abre e recolhe, e o link compartilhado guarda categoria e busca (`?cat=Luvas&q=nitril`).
 - **Quatro campos ao mesmo tempo:** SKU, descrição técnica, referência (Ref.) e tags.
 - **Ordenado por relevância:** código exato, referência exata e tags vêm antes de coincidências soltas na descrição.
 - **Termos destacados** nos resultados; tags que casaram com a busca aparecem primeiro.

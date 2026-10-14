@@ -6,7 +6,6 @@ let timeoutFade = null;
 let vocabulario = null; // palavras da base, para sugerir correções de digitação
 let categoriaAtual = ""; // categoria escolhida nos botões ("" = todas)
 let categoriasLista = []; // [[nome, quantidade]], da mais usada para a menos usada
-let categoriasExpandidas = false;
 let categoriaDoLink = new URLSearchParams(location.search).get("cat") || "";
 
 const input = document.getElementById("searchInput");
@@ -17,8 +16,10 @@ const tbody = document.getElementById("tableBody");
 const btnLink = document.getElementById("btnLink");
 const caixaCategorias = document.getElementById("categorias");
 const listaCategorias = document.getElementById("categoriasLista");
+const paginaLayout = document.getElementById("pagina");
+const botaoCategorias = document.getElementById("categoriasToggle");
+const textoBotaoCategorias = document.getElementById("categoriasToggleTexto");
 const PLACEHOLDER_PADRAO = input.placeholder;
-const CATEGORIAS_VISIVEIS = 10;
 
 // URL do seu JSON
 const DATA_URL = "./db.json";
@@ -540,7 +541,6 @@ function montarCategorias() {
     const achada = categoriasLista.find(([nome]) => normalizar(nome) === normalizar(categoriaDoLink));
     if (achada) {
       categoriaAtual = achada[0];
-      if (categoriasLista.indexOf(achada) >= CATEGORIAS_VISIVEIS) categoriasExpandidas = true;
     }
     categoriaDoLink = "";
   }
@@ -550,29 +550,21 @@ function montarCategorias() {
 function renderizarCategorias() {
   if (categoriasLista.length === 0) {
     caixaCategorias.hidden = true;
+    paginaLayout.classList.add("sem-lateral");
     categoriaAtual = "";
     return;
   }
   caixaCategorias.hidden = false;
+  paginaLayout.classList.remove("sem-lateral");
 
-  let visiveis = categoriasExpandidas ? categoriasLista : categoriasLista.slice(0, CATEGORIAS_VISIVEIS);
-  if (categoriaAtual && !visiveis.some(([nome]) => nome === categoriaAtual)) {
-    visiveis = [...visiveis, categoriasLista.find(([nome]) => nome === categoriaAtual)];
-  }
+  const item = (nome, n, rotulo) =>
+    `<button type="button" class="cat-item${nome ? "" : " cat-item--todas"}" data-categoria="${escaparHtml(nome)}" aria-pressed="${nome === categoriaAtual}">` +
+    `<span>${escaparHtml(rotulo)}</span><span class="cat-item__n">${n}</span></button>`;
+  listaCategorias.innerHTML =
+    item("", database.length, "Todos os produtos") +
+    categoriasLista.map(([nome, n]) => item(nome, n, nome)).join("");
 
-  let html = visiveis
-    .map(
-      ([nome, n]) =>
-        `<button type="button" class="cat-chip" data-categoria="${escaparHtml(nome)}" aria-pressed="${nome === categoriaAtual}">${escaparHtml(nome)}<span class="cat-chip__n">${n}</span></button>`,
-    )
-    .join("");
-  if (categoriasLista.length > CATEGORIAS_VISIVEIS) {
-    html += categoriasExpandidas
-      ? `<button type="button" class="cat-chip cat-chip--mais" data-categorias-menos>Mostrar menos</button>`
-      : `<button type="button" class="cat-chip cat-chip--mais" data-categorias-mais>+${categoriasLista.length - CATEGORIAS_VISIVEIS} categorias</button>`;
-  }
-  listaCategorias.innerHTML = html;
-
+  textoBotaoCategorias.textContent = categoriaAtual ? `Categoria: ${categoriaAtual}` : "Categorias";
   input.placeholder = categoriaAtual
     ? `Refine em ${categoriaAtual}: tamanho, marca, código...`
     : PLACEHOLDER_PADRAO;
@@ -593,15 +585,17 @@ function escolherCategoria(nome) {
 }
 
 listaCategorias.addEventListener("click", (e) => {
-  const chip = e.target.closest("button");
-  if (!chip) return;
-  if ("categoriasMais" in chip.dataset || "categoriasMenos" in chip.dataset) {
-    categoriasExpandidas = "categoriasMais" in chip.dataset;
-    renderizarCategorias();
-    return;
-  }
-  const nome = chip.dataset.categoria;
-  escolherCategoria(nome === categoriaAtual ? "" : nome); // clicar de novo desmarca
+  const botao = e.target.closest("button[data-categoria]");
+  if (!botao) return;
+  const nome = botao.dataset.categoria;
+  escolherCategoria(nome === categoriaAtual ? "" : nome); // clicar de novo desmarca; "Todos" limpa o filtro
+  caixaCategorias.classList.remove("is-aberta"); // no celular a lista recolhe depois de escolher
+  botaoCategorias.setAttribute("aria-expanded", "false");
+});
+
+botaoCategorias.addEventListener("click", () => {
+  const aberta = caixaCategorias.classList.toggle("is-aberta");
+  botaoCategorias.setAttribute("aria-expanded", String(aberta));
 });
 
 // Abre já com a busca do link (?q=... e/ou ?cat=...)
