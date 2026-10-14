@@ -93,13 +93,51 @@ body { font-weight: var(--fw-medium); }
 .site-header__login:active { transform: translateY(1px); }
 .site-header__login svg { flex: 0 0 auto; }
 
-/* --- Página ----------------------------------------------------------- */
-.page {
+/* --- Página: barra lateral + conteúdo (layout em duas colunas) ----------- */
+html, body { overflow-x: clip; }
+.pagina {
   flex: 1;
   width: 100%;
   max-width: var(--max-content);
   margin: 0 auto;
-  padding: var(--sp-10) var(--gutter-page) var(--sp-16);
+  padding: 0 var(--gutter-page) var(--sp-16);
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "lateral busca"
+    "lateral conteudo";
+  column-gap: var(--sp-8);
+  align-items: start;
+}
+.pagina.sem-lateral {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "busca"
+    "conteudo";
+}
+.pagina__conteudo {
+  grid-area: conteudo;
+  min-width: 0;
+  padding-top: var(--sp-10);
+}
+/* A base cinza ocupa a largura toda da tela, só atrás da linha da busca */
+.pagina__faixa {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  align-self: stretch;
+  position: relative;
+}
+.pagina__faixa-fundo {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  overflow: hidden;
+  background: var(--cbs-neutro-050);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .hero {
@@ -130,10 +168,14 @@ body { font-weight: var(--fw-medium); }
 
 /* Faixa de abertura: base cinza + grafismo "sorriso" (pilar pessoas) como marca d'água, 8% */
 .faixa-busca {
+  grid-area: busca;
   position: relative;
-  overflow: hidden;
-  background: var(--cbs-neutro-050);
-  border-bottom: 1px solid var(--border-subtle);
+  z-index: 1;
+  padding: var(--sp-12) 0;
+}
+.faixa-busca .hero {
+  max-width: 720px; /* bloco da busca centralizado na coluna, como a página inicial do Google */
+  margin: 0 auto;
 }
 .faixa-busca__grafismo {
   position: absolute;
@@ -142,12 +184,6 @@ body { font-weight: var(--fw-medium); }
   height: 460px;
   opacity: 0.08;
   pointer-events: none;
-}
-.faixa-busca__conteudo {
-  position: relative;
-  max-width: var(--max-content);
-  margin: 0 auto;
-  padding: var(--sp-12) var(--gutter-page);
 }
 .faixa-busca .eyebrow { color: var(--cbs-azul-700); }
 .faixa-busca .hero h1 {
@@ -168,18 +204,14 @@ body { font-weight: var(--fw-medium); }
 
 /* --- Campo de busca (Input do DS, tamanho lg) -------------------------- */
 /* --- Barra lateral de categorias ------------------------------------------ */
-.pagina {
-  display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
-  gap: var(--sp-8);
-  align-items: start;
-}
-.pagina.sem-lateral { grid-template-columns: minmax(0, 1fr); }
-.pagina__conteudo { min-width: 0; }
 .categorias {
+  grid-area: lateral;
+  grid-row: 1 / -1;
+  z-index: 2;
+  margin-top: var(--sp-8);
   position: sticky;
   top: calc(var(--topo-h) + var(--sp-4));
-  max-height: calc(100vh - var(--topo-h) - var(--sp-8));
+  max-height: calc(100vh - var(--topo-h) - var(--sp-8) - var(--sp-8));
   display: flex;
   flex-direction: column;
   padding: var(--sp-4) var(--sp-2) var(--sp-3);
@@ -603,16 +635,22 @@ mark {
 }
 
 /* --- Responsivo --------------------------------------------------------- */
-@media (max-width: 1366px) {
-  .page {
-    padding-top: var(--sp-10);
-  }
-}
 @media (max-width: 900px) {
-  .pagina { grid-template-columns: minmax(0, 1fr); gap: var(--sp-5); }
+  .pagina,
+  .pagina.sem-lateral {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "busca"
+      "lateral"
+      "conteudo";
+  }
+  .pagina__conteudo { padding-top: var(--sp-5); }
   .categorias {
+    grid-row: auto;
     position: static;
     max-height: none;
+    margin-top: var(--sp-5);
     padding: 0;
   }
   .categorias__rotulo { display: none; }
@@ -649,18 +687,14 @@ mark {
   .faixa-busca .hero h1 {
     font-size: var(--fs-xl);
   }
-  .faixa-busca__conteudo {
-    padding-top: var(--sp-8);
-    padding-bottom: var(--sp-8);
+  .faixa-busca {
+    padding: var(--sp-8) 0;
   }
   .site-header__label {
     display: none;
   }
   .site-header__login {
     margin-left: auto;
-  }
-  .page {
-    padding-top: var(--sp-8);
   }
   .hero-cards {
     flex-direction: column;

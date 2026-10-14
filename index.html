@@ -25,9 +25,14 @@
       </div>
     </header>
 
-    <section class="faixa-busca">
-      <img class="faixa-busca__grafismo" src="design-system/assets/brand/grafismo-sorriso-roxo.svg" alt="" aria-hidden="true" />
-      <div class="faixa-busca__conteudo">
+    <main class="pagina sem-lateral" id="pagina">
+      <div class="pagina__faixa" aria-hidden="true">
+        <div class="pagina__faixa-fundo">
+          <img class="faixa-busca__grafismo" src="design-system/assets/brand/grafismo-sorriso-roxo.svg" alt="" />
+        </div>
+      </div>
+
+      <section class="faixa-busca">
           <div class="hero">
             <p class="eyebrow">Agora você sabe</p>
             <h1>Busca inteligente de produtos</h1>
@@ -50,11 +55,8 @@
             </div>
             <p class="search-hint">Ex.: 000437 sonda · também aceita o código do fornecedor e apelidos comerciais</p>
           </div>
-      </div>
-    </section>
+      </section>
 
-    <main class="page">
-     <div class="pagina sem-lateral" id="pagina">
       <aside class="categorias" id="categorias" aria-label="Categorias de produtos" hidden>
         <button type="button" class="categorias__toggle" id="categoriasToggle" aria-expanded="false" aria-controls="categoriasLista">
           <span id="categoriasToggleTexto">Categorias</span>
@@ -63,6 +65,7 @@
         <p class="categorias__rotulo" id="categoriasRotulo">Categorias</p>
         <div class="categorias__lista" id="categoriasLista" role="group" aria-labelledby="categoriasRotulo"></div>
       </aside>
+
       <div class="pagina__conteudo">
       <div id="heroCards" class="hero-cards">
         <div class="card">
@@ -102,7 +105,6 @@
         </div>
       </div>
       </div>
-     </div>
     </main>
 
     <footer class="site-footer">
