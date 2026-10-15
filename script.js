@@ -194,6 +194,7 @@ async function carregarDados() {
   } catch (erro) {
     console.error("Erro Fatal:", erro);
     erroCarga = true;
+    esconderCategorias();
     if (cardInfo) {
       cardInfo.innerText = "Não conseguimos carregar a base de produtos. Tente novamente em instantes.";
       cardInfo.classList.add("is-erro");
@@ -549,14 +550,21 @@ function montarCategorias() {
   renderizarCategorias();
 }
 
+// O botão de categorias já nasce visível; se a base não tiver categorias (ou falhar ao carregar), some
+function esconderCategorias() {
+  botaoCategorias.hidden = true;
+  filtroAtivo.hidden = true;
+  categoriaAtual = "";
+  definirGavetaAberta(false, false);
+}
+
 function renderizarCategorias() {
   if (categoriasLista.length === 0) {
-    botaoCategorias.hidden = true; // banco sem categorias: o botão do cabeçalho some
-    filtroAtivo.hidden = true;
-    categoriaAtual = "";
+    esconderCategorias(); // banco sem categorias: o botão do cabeçalho some
     return;
   }
   botaoCategorias.hidden = false;
+  listaCategorias.removeAttribute("aria-busy");
 
   const item = (nome, n, rotulo) =>
     `<button type="button" class="cat-item${nome ? "" : " cat-item--todas"}" data-categoria="${escaparHtml(nome)}" aria-pressed="${nome === categoriaAtual}">` +

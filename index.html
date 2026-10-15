@@ -13,7 +13,7 @@
   <body>
     <header class="site-header">
       <div class="site-header__inner">
-        <button type="button" class="menu-categorias" id="categoriasToggle" aria-expanded="false" aria-controls="categorias" aria-label="Abrir categorias" title="Categorias" hidden>
+        <button type="button" class="menu-categorias" id="categoriasToggle" aria-expanded="false" aria-controls="categorias" aria-label="Abrir categorias" title="Categorias">
           <svg class="icone" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16"/><path d="M4 18h16"/><path d="M4 6h16"/></svg><span class="menu-categorias__texto">Categorias</span>
         </button>
         <a class="brand" href="./" aria-label="CBS Médico Científica, página inicial">
@@ -35,7 +35,11 @@
         <p class="gaveta__titulo" id="gavetaTitulo">Categorias</p>
         <button type="button" class="gaveta__fechar" id="gavetaFechar" aria-label="Fechar categorias" title="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg></button>
       </div>
-      <div class="categorias__lista" id="categoriasLista" role="group" aria-labelledby="gavetaTitulo"></div>
+      <div class="categorias__lista" id="categoriasLista" role="group" aria-labelledby="gavetaTitulo" aria-busy="true">
+        <!-- esqueleto: aparece se a pessoa abrir a gaveta antes de a base terminar de carregar -->
+        <span class="sr-only" role="status">Carregando categorias...</span>
+        <div class="cat-skel" aria-hidden="true"><span></span><span></span></div><div class="cat-skel" aria-hidden="true"><span></span><span></span></div><div class="cat-skel" aria-hidden="true"><span></span><span></span></div><div class="cat-skel" aria-hidden="true"><span></span><span></span></div><div class="cat-skel" aria-hidden="true"><span></span><span></span></div><div class="cat-skel" aria-hidden="true"><span></span><span></span></div><div class="cat-skel" aria-hidden="true"><span></span><span></span></div><div class="cat-skel" aria-hidden="true"><span></span><span></span></div><div class="cat-skel" aria-hidden="true"><span></span><span></span></div><div class="cat-skel" aria-hidden="true"><span></span><span></span></div><div class="cat-skel" aria-hidden="true"><span></span><span></span></div><div class="cat-skel" aria-hidden="true"><span></span><span></span></div>
+      </div>
     </aside>
 
     <section class="faixa-busca">

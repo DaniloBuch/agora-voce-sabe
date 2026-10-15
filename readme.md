@@ -22,7 +22,7 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 
 - **Busca por partículas:** os termos podem vir em qualquer ordem. `000437 sonda` e `sonda 04` levam ao mesmo produto.
 - **Ignora acentos e maiúsculas:** `esfigmomanometro` encontra "Esfigmomanômetro".
-- **Categorias:** o botão **Categorias** no cabeçalho abre uma gaveta lateral (por cima da página, fecha com Esc, clique fora, « ou ao escolher) com Luvas, Cateteres, Fraldas…, da mais cheia para a menos cheia. A categoria filtra a base por tipo de produto e aparece como um selo abaixo do campo de busca (com × para remover); depois é só digitar para refinar dentro dela. O link compartilhado guarda categoria e busca (`?cat=Luvas&q=nitril`).
+- **Categorias:** o botão **Categorias** no cabeçalho abre uma gaveta lateral (por cima da página, fecha com Esc, clique fora, « ou ao escolher) com Luvas, Cateteres, Fraldas…, da mais cheia para a menos cheia. A categoria filtra a base por tipo de produto e aparece como um selo abaixo do campo de busca (com × para remover); depois é só digitar para refinar dentro dela. O botão já aparece ao abrir a página; se a gaveta for aberta antes de a base terminar de carregar, mostra um esqueleto animado no lugar da lista. O link compartilhado guarda categoria e busca (`?cat=Luvas&q=nitril`).
 - **Quatro campos ao mesmo tempo:** SKU, descrição técnica, referência (Ref.) e tags.
 - **Ordenado por relevância:** código exato, referência exata e tags vêm antes de coincidências soltas na descrição.
 - **Termos destacados** nos resultados; tags que casaram com a busca aparecem primeiro.
