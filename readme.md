@@ -42,7 +42,7 @@ Painel para manter a base sem mexer em arquivos JSON. O acesso é pelo botão **
 - **Categorias:** uma por produto (`-` quando não há), com aba própria para criar, renomear, mesclar e excluir, filtro na lista e campo no cadastro e na edição em massa;
 - **Gerenciamento de tags:** lista com contagem, renomear, mesclar e excluir em todos os produtos, com alerta de possíveis duplicadas;
 - **Edição de tags em massa**, com seleção múltipla e prévia do resultado;
-- **Importação de CSV** do sistema (inclui novos SKUs, atualiza descrição e referência e remove descontinuados), com resumo e confirmação antes de gravar. Colunas opcionais **Categoria** e **Tags**: as tags do CSV são só **acrescentadas** às existentes, nunca removidas; referências que o Excel estragou (notação científica, pontos de milhar, zeros perdidos) são detectadas e não sobrescrevem o banco;
+- **Importação de CSV** do sistema (inclui novos SKUs, atualiza descrição e referência e remove descontinuados), com resumo e confirmação antes de gravar. Colunas opcionais **Categoria** e **Tags**: as tags do CSV são só **acrescentadas** às existentes, nunca removidas; CSV enxuto só com `Codigo` + `Categoria`/`Tags` (botão **Exportar p/ categorizar**) e opção de não alterar referências; referências que o Excel estragou (notação científica, pontos de milhar, zeros perdidos) são detectadas e não sobrescrevem o banco;
 - **Histórico** de edições e exclusões, com restauração (inclusive em lote) e filtro por data;
 - **Exportação em CSV** de toda a base, para backup.
 

@@ -696,14 +696,18 @@
   function mapearColunas(cabecalho) {
     const nomes = cabecalho.map(limparCabecalho);
     const mapa = {};
-    for (const [campo, aliases] of Object.entries(ALIASES)) {
-      const idx = nomes.findIndex((n) => aliases.includes(n));
-      if (idx === -1) return { erro: campo, encontrados: cabecalho };
-      mapa[campo] = idx;
-    }
-    for (const [campo, aliases] of Object.entries(ALIASES_OPCIONAIS)) {
+    for (const [campo, aliases] of Object.entries({ ...ALIASES, ...ALIASES_OPCIONAIS })) {
       const idx = nomes.findIndex((n) => aliases.includes(n));
       if (idx !== -1) mapa[campo] = idx;
+    }
+    if (mapa.sku === undefined) return { erro: "sku", encontrados: cabecalho };
+    // Descricao e Cod prd forn só são obrigatórias num CSV completo. Se o arquivo traz Categoria
+    // e/ou Tags, dá para importar só isso (útil porque o Excel estraga a coluna de referência).
+    const soCategoriaTags = mapa.categoria !== undefined || mapa.tags !== undefined;
+    if (!soCategoriaTags) {
+      for (const campo of ["descricao_tecnica", "referencia"]) {
+        if (mapa[campo] === undefined) return { erro: campo, encontrados: cabecalho };
+      }
     }
     return { mapa };
   }
@@ -746,7 +750,7 @@
     zeros: "zeros à esquerda perdidos",
   };
 
-  function analisarCsv(texto) {
+  function analisarCsv(texto, opcoes = {}) {
     const linhas = parseCsv(texto);
     if (linhas.length < 2) throw new Error("O arquivo está vazio ou só tem o cabeçalho.");
     const { mapa, erro, encontrados } = mapearColunas(linhas[0]);
@@ -756,6 +760,10 @@
       );
     }
 
+    const temDescricao = mapa.descricao_tecnica !== undefined;
+    const temRef = mapa.referencia !== undefined;
+    const catalogoCompleto = temDescricao && temRef; // só nesse caso faz sentido "descontinuados"
+    const ignorarRef = Boolean(opcoes.ignorarRef) && temRef;
     const lerCat = mapa.categoria !== undefined;
     const lerTags = mapa.tags !== undefined;
     if ((lerCat || lerTags) && !api.categoriasDisponiveis()) {
@@ -778,8 +786,8 @@
       }
       const item = {
         sku,
-        descricao_tecnica: String(l[mapa.descricao_tecnica] ?? "").trim(),
-        referencia: String(l[mapa.referencia] ?? "").trim(),
+        descricao_tecnica: temDescricao ? String(l[mapa.descricao_tecnica] ?? "").trim() : undefined,
+        referencia: temRef ? String(l[mapa.referencia] ?? "").trim() : undefined,
       };
       // só envia categoria/tags se o CSV tiver essas colunas (senão ficam como estão)
       if (lerCat) item.categoria = String(l[mapa.categoria] ?? "").trim().replace(/\s+/g, " ");
@@ -793,15 +801,28 @@
     if (itens.size === 0) throw new Error("Nenhum SKU válido encontrado no arquivo.");
 
     const atuais = new Map(estado.produtos.map((p) => [p.sku, p]));
-    // protege as referências que o Excel estragou (veja diagnosticarReferencia)
+    // completa o que o CSV não trouxe com o que já está no banco e protege as referências
+    // que o Excel estragou (veja diagnosticarReferencia)
     const refsPreservadas = [];
-    for (const item of itens.values()) {
+    let semCadastro = 0;
+    for (const item of [...itens.values()]) {
       const atual = atuais.get(item.sku);
+      if (!atual && !temDescricao) {
+        semCadastro++; // sem Descricao não dá para cadastrar um produto novo
+        itens.delete(item.sku);
+        continue;
+      }
+      if (!temDescricao) item.descricao_tecnica = atual.descricao_tecnica;
+      if (!temRef || (ignorarRef && atual)) {
+        item.referencia = atual ? atual.referencia : "";
+        continue;
+      }
       const dano = diagnosticarReferencia(item.referencia, atual ? atual.referencia : undefined);
       if (!dano) continue;
       refsPreservadas.push({ sku: item.sku, csv: item.referencia, dano, mantida: atual ? atual.referencia : "" });
       item.referencia = atual ? atual.referencia : "";
     }
+    if (itens.size === 0) throw new Error("Nenhum dos códigos do CSV existe no banco (e sem a coluna Descricao não dá para cadastrar produtos novos).");
     const novos = [];
     const alterados = [];
     let iguais = 0;
@@ -832,8 +853,8 @@
         if (tagsAdd.length) comTagsNovas++;
       } else iguais++;
     }
-    const removidos = estado.produtos.filter((p) => !p.fixo && !itens.has(p.sku));
-    const fixosFora = estado.produtos.filter((p) => p.fixo && !itens.has(p.sku)).length;
+    const removidos = catalogoCompleto ? estado.produtos.filter((p) => !p.fixo && !itens.has(p.sku)) : [];
+    const fixosFora = catalogoCompleto ? estado.produtos.filter((p) => p.fixo && !itens.has(p.sku)).length : 0;
 
     return {
       itens: [...itens.values()],
@@ -850,6 +871,10 @@
       comTagsNovas,
       categoriasNovas: [...categoriasNovas.values()],
       refsPreservadas,
+      catalogoCompleto,
+      semCadastro,
+      temRef,
+      ignorarRef,
     };
   }
 
@@ -881,6 +906,8 @@
         <div class="item"><div class="num">${fmt.format(a.iguais)}</div><div class="rot">sem mudança</div></div>
       </div>
       ${a.semSku || a.duplicados ? alerta("alerta", `Ignorados no CSV: ${fmt.format(a.semSku)} linha(s) sem código e ${fmt.format(a.duplicados)} código(s) repetido(s).`) : ""}
+      ${!a.catalogoCompleto ? alerta("info", "Este CSV não traz as colunas <strong>Descricao</strong> e <strong>Cod prd forn</strong>: só <strong>categoria e tags</strong> serão atualizadas, as referências e descrições ficam como estão e <strong>nada será excluído</strong>.") : ""}
+      ${a.semCadastro ? alerta("alerta", `${fmt.format(a.semCadastro)} código(s) do CSV não existem no banco e foram ignorados (para cadastrar produto novo, o CSV precisa da coluna Descricao).`) : ""}
       ${a.refsPreservadas.length ? alerta("alerta", `<strong>${fmt.format(a.refsPreservadas.length)} referência(s) vieram alteradas pelo Excel</strong> (notação científica, pontos de milhar ou zeros perdidos) e <strong>não serão importadas</strong>: produtos que já existem mantêm a referência atual; produtos novos ficam sem referência.
         <details><summary>Ver quais</summary><div class="conteudo">${listaLimitada(a.refsPreservadas, (r) => `<div><strong>${esc(r.sku)}</strong> no CSV: <span class="de">${esc(r.csv)}</span> (${ROTULO_DANO[r.dano]}) → ${r.mantida ? `fica <span class="para">${esc(r.mantida)}</span>` : "fica sem referência"}</div>`)}</div></details>
         <span class="dica">Dica: ao editar no Excel, não salve de volta as colunas que você não mudou, ou abra o arquivo por Dados → De Texto/CSV e marque "Cod prd forn" como Texto.</span>`) : ""}
@@ -902,6 +929,7 @@
       ${a.removidos.length ? `<details><summary>Descontinuados a excluir (${fmt.format(a.removidos.length)})</summary><div class="conteudo">${listaLimitada(a.removidos, (r) => `<div><strong>${esc(r.sku)}</strong> ${esc(r.descricao_tecnica)}</div>`)}</div></details>` : ""}
 
       <div class="opcoes">
+        ${a.temRef ? `<label class="check"><input type="checkbox" id="optIgnorarRef" ${a.ignorarRef ? "checked" : ""} /> Não alterar as referências (Cod prd forn) dos produtos que já existem</label>` : ""}
         ${a.removidos.length ? `<label class="check"><input type="checkbox" id="optExcluir" checked /> Excluir os ${fmt.format(a.removidos.length)} produtos que não estão no CSV</label>` : ""}
         ${perigoso ? alerta("erro", `Atenção: a importação removeria ${fmt.format(a.removidos.length)} produtos (${Math.round(pctRemovidos * 100)}% da base). Confira se o CSV está completo.
           <br /><label class="check"><input type="checkbox" id="optConfirmaPerigo" /> Confirmo que o CSV está completo e quero excluir esses produtos</label>`, "avisoPerigo") : ""}
@@ -922,6 +950,14 @@
       const aviso = $("#avisoPerigo");
       if (aviso) aviso.hidden = !excluindo;
     };
+    $("#optIgnorarRef")?.addEventListener("change", (e) => {
+      try {
+        estado.importacao = analisarCsv(estado.csvTexto, { ignorarRef: e.target.checked });
+        renderizarImportacao();
+      } catch (err) {
+        $("#resultadoImport").innerHTML = alerta("erro", esc(err.message));
+      }
+    });
     optExcluir?.addEventListener("change", atualizarBotao);
     optPerigo?.addEventListener("change", atualizarBotao);
     atualizarBotao();
@@ -956,6 +992,7 @@
     if (!arquivo) return;
     try {
       const texto = decodificar(await arquivo.arrayBuffer());
+      estado.csvTexto = texto;
       estado.importacao = analisarCsv(texto);
       renderizarImportacao();
     } catch (err) {
@@ -987,24 +1024,19 @@
     return /[";\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
   }
 
-  $("#btnExportar").addEventListener("click", async () => {
-    const btn = $("#btnExportar");
-    btn.disabled = true;
+  async function exportarCsv(botao, cabecalho, extrair, prefixoArquivo) {
+    botao.disabled = true;
     try {
       // lê de novo do banco: o backup tem que refletir o que está lá agora
       const dados = (await api.listarProdutos()).map(prepararProduto);
-      const linhas = ["Codigo;Descricao;Cod prd forn;Categoria;Tags;Fixo"];
-      for (const p of dados) {
-        linhas.push(
-          [p.sku, p.descricao_tecnica, p.referencia, p.categoria, p.tags, p.fixo ? "sim" : ""].map(campoCsv).join(";"),
-        );
-      }
+      const linhas = [cabecalho];
+      for (const p of dados) linhas.push(extrair(p).map(campoCsv).join(";"));
       // BOM para o Excel abrir os acentos corretamente
       const blob = new Blob(["﻿" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8" });
       const hoje = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `cbs-produtos-${hoje}.csv`;
+      a.download = `${prefixoArquivo}-${hoje}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -1013,9 +1045,27 @@
     } catch (err) {
       aviso(err.message, true);
     } finally {
-      btn.disabled = false;
+      botao.disabled = false;
     }
-  });
+  }
+
+  $("#btnExportar").addEventListener("click", () =>
+    exportarCsv(
+      $("#btnExportar"),
+      "Codigo;Descricao;Cod prd forn;Categoria;Tags;Fixo",
+      (p) => [p.sku, p.descricao_tecnica, p.referencia, p.categoria, p.tags, p.fixo ? "sim" : ""],
+      "cbs-produtos",
+    ),
+  );
+  // Versão sem a referência: dá para editar no Excel sem risco de ele estragar o Cod prd forn
+  $("#btnExportarLeve").addEventListener("click", () =>
+    exportarCsv(
+      $("#btnExportarLeve"),
+      "Codigo;Descricao;Categoria;Tags",
+      (p) => [p.sku, p.descricao_tecnica, p.categoria, p.tags],
+      "cbs-categorizar",
+    ),
+  );
 
   /* ---------------- aba Categorias (criar / renomear / mesclar / excluir) ---------------- */
 
@@ -1578,7 +1628,7 @@
       $("#avisoConfig").hidden = false;
       $("#areaAdmin").hidden = false;
       document.body.classList.add("logado");
-      document.querySelectorAll("#btnNovo, #arquivoCsv, #btnExportar").forEach((el) => (el.disabled = true));
+      document.querySelectorAll("#btnNovo, #arquivoCsv, #btnExportar, #btnExportarLeve").forEach((el) => (el.disabled = true));
       $("#infoLista").textContent = "Supabase não configurado.";
       return;
     }

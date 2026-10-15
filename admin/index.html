@@ -101,6 +101,7 @@
             <input type="checkbox" id="filtroSemTags" /> Só sem tags
           </label>
           <button id="btnExportar" class="btn btn--secundario" title="Baixa todos os produtos em CSV (backup)"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>Exportar CSV</button>
+          <button id="btnExportarLeve" class="btn btn--secundario" title="Baixa só Código, Descrição, Categoria e Tags, sem a referência. Ideal para categorizar no Excel sem risco de estragar o Cod prd forn"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>Exportar p/ categorizar</button>
           <button id="btnNovo" class="btn btn--primario"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Novo produto</button>
         </div>
         <div id="barraSelecao" class="barra-selecao">
@@ -205,6 +206,11 @@
           Envie o CSV do sistema com as colunas <strong>Codigo</strong>,
           <strong>Descricao</strong> e <strong>Cod prd forn</strong>. Nada é
           gravado antes da sua confirmação.
+        </p>
+        <p class="ajuda">
+          <strong>Dica:</strong> para só categorizar ou etiquetar, use <strong>Exportar p/ categorizar</strong>
+          (aba Produtos): o arquivo vem sem a referência, então o Excel não tem como estragá-la, e
+          pode voltar com apenas <strong>Codigo</strong> e <strong>Categoria</strong>/<strong>Tags</strong>.
         </p>
         <p class="ajuda">
           Colunas opcionais: <strong>Categoria</strong> (define a categoria do produto;

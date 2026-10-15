@@ -101,6 +101,13 @@ Para bancos já criados. Em banco novo, o `schema.sql` já traz tudo.
 
 ### Importação de CSV
 
+**Atalho para só categorizar/etiquetar (sem risco para as referências):** na aba **Produtos**, use
+**Exportar p/ categorizar** (colunas `Codigo;Descricao;Categoria;Tags`, sem `Cod prd forn`). Edite no
+Excel e importe de volta. Um CSV sem `Descricao` e/ou `Cod prd forn` mas com `Categoria` e/ou `Tags`
+(pode ser só `Codigo;Categoria;Tags`) atualiza somente categoria e tags: não mexe em descrição nem
+referência, não exclui nada e ignora códigos que não existem no banco. Na importação completa, a caixa
+**"Não alterar as referências dos produtos que já existem"** ignora a coluna `Cod prd forn`.
+
 O arquivo precisa ter as colunas **Codigo**, **Descricao** e **Cod prd forn** (qualquer ordem;
 aceita `;` ou `,` e acentos em UTF-8 ou Windows-1252). A importação:
 
