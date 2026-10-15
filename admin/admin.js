@@ -720,6 +720,32 @@
     return /^\d+$/.test(sku) && sku.length < 6 ? sku.padStart(6, "0") : sku;
   }
 
+  /* Referências que o Excel costuma estragar ao abrir/salvar o CSV:
+     - notação científica: 693879921078 vira "6,9388E+11" (os dígitos se perdem, não tem volta);
+     - pontuação de milhar: 10.1112 vira "101.112" e 51.002.00026 vira "5.100.200.026";
+     - zeros à esquerda: 000000000038833014 vira "38833014".
+     Se o produto já existe, mantemos a referência que está no banco; se é novo e veio em
+     notação científica, a referência fica vazia (melhor vazio do que errado). */
+  const RE_CIENTIFICA = /^\d+(?:[.,]\d+)?E\+?\d+$/i;
+  const RE_MILHAR = /^\d{1,3}(?:\.\d{3})+$/;
+  function diagnosticarReferencia(csv, atual) {
+    const c = String(csv ?? "").trim();
+    if (!c) return null;
+    if (RE_CIENTIFICA.test(c)) return "cientifica";
+    if (atual === undefined || atual === c) return null;
+    const digitos = (t) => t.replace(/\D/g, "");
+    const soNumero = /^[\d.,]+$/.test(atual);
+    if (RE_MILHAR.test(c) && soNumero && !RE_MILHAR.test(atual) && digitos(c) === digitos(atual)) return "pontuacao";
+    if (soNumero && /^[\d.,]+$/.test(c) && /^0/.test(atual) && !/^0/.test(c) && digitos(c) === digitos(atual).replace(/^0+/, ""))
+      return "zeros";
+    return null;
+  }
+  const ROTULO_DANO = {
+    cientifica: "notação científica",
+    pontuacao: "pontos de milhar",
+    zeros: "zeros à esquerda perdidos",
+  };
+
   function analisarCsv(texto) {
     const linhas = parseCsv(texto);
     if (linhas.length < 2) throw new Error("O arquivo está vazio ou só tem o cabeçalho.");
@@ -767,6 +793,15 @@
     if (itens.size === 0) throw new Error("Nenhum SKU válido encontrado no arquivo.");
 
     const atuais = new Map(estado.produtos.map((p) => [p.sku, p]));
+    // protege as referências que o Excel estragou (veja diagnosticarReferencia)
+    const refsPreservadas = [];
+    for (const item of itens.values()) {
+      const atual = atuais.get(item.sku);
+      const dano = diagnosticarReferencia(item.referencia, atual ? atual.referencia : undefined);
+      if (!dano) continue;
+      refsPreservadas.push({ sku: item.sku, csv: item.referencia, dano, mantida: atual ? atual.referencia : "" });
+      item.referencia = atual ? atual.referencia : "";
+    }
     const novos = [];
     const alterados = [];
     let iguais = 0;
@@ -814,6 +849,7 @@
       comCategoria,
       comTagsNovas,
       categoriasNovas: [...categoriasNovas.values()],
+      refsPreservadas,
     };
   }
 
@@ -845,6 +881,9 @@
         <div class="item"><div class="num">${fmt.format(a.iguais)}</div><div class="rot">sem mudança</div></div>
       </div>
       ${a.semSku || a.duplicados ? alerta("alerta", `Ignorados no CSV: ${fmt.format(a.semSku)} linha(s) sem código e ${fmt.format(a.duplicados)} código(s) repetido(s).`) : ""}
+      ${a.refsPreservadas.length ? alerta("alerta", `<strong>${fmt.format(a.refsPreservadas.length)} referência(s) vieram alteradas pelo Excel</strong> (notação científica, pontos de milhar ou zeros perdidos) e <strong>não serão importadas</strong>: produtos que já existem mantêm a referência atual; produtos novos ficam sem referência.
+        <details><summary>Ver quais</summary><div class="conteudo">${listaLimitada(a.refsPreservadas, (r) => `<div><strong>${esc(r.sku)}</strong> no CSV: <span class="de">${esc(r.csv)}</span> (${ROTULO_DANO[r.dano]}) → ${r.mantida ? `fica <span class="para">${esc(r.mantida)}</span>` : "fica sem referência"}</div>`)}</div></details>
+        <span class="dica">Dica: ao editar no Excel, não salve de volta as colunas que você não mudou, ou abra o arquivo por Dados → De Texto/CSV e marque "Cod prd forn" como Texto.</span>`) : ""}
       ${a.lerTags ? alerta("info", "As tags do CSV serão <strong>somente acrescentadas</strong> às que cada produto já tem. Nenhuma tag existente é removida.") : ""}
       ${a.lerCat && a.categoriasNovas.length ? alerta("info", `Categorias novas que serão criadas: <strong>${a.categoriasNovas.map(esc).join(", ")}</strong>.`) : ""}
       ${a.fixosFora ? alerta("info", `${fmt.format(a.fixosFora)} produto(s) marcado(s) como "fixo" não está(ão) no CSV e será(ão) mantido(s).`) : ""}

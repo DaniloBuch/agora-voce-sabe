@@ -111,6 +111,15 @@ aceita `;` ou `,` e acentos em UTF-8 ou Windows-1252). A importação:
   as listas. Se a exclusão for grande (mais de 20% da base ou 200 itens) o sistema pede uma
   confirmação extra, para evitar apagar tudo por engano com um CSV incompleto.
 - Zeros à esquerda perdidos pelo Excel são recuperados (`462` vira `000462`).
+- **Referências estragadas pelo Excel são protegidas.** O Excel costuma alterar a coluna `Cod prd forn`
+  ao abrir e salvar o CSV: `693879921078` vira `6,9388E+11` (notação científica, os dígitos se perdem),
+  `10.1112` vira `101.112` (ponto de milhar) e `000000000038833014` perde os zeros. A importação
+  reconhece esses casos, **não grava o valor alterado** (o produto mantém a referência do banco; um
+  produto novo fica sem referência) e lista tudo na prévia, em "Ver quais". Para editar o CSV sem
+  risco, abra por **Dados → De Texto/CSV** e marque a coluna `Cod prd forn` como **Texto**, ou
+  use o Google Planilhas/LibreOffice. Se uma importação antiga já gravou referências erradas, rode
+  `supabase/migracoes/007_corrigir_referencias_excel.sql` (restaura as 83 referências afetadas na
+  importação de 15/10/2026; só altera se o valor no banco ainda estiver estragado).
 - É **tudo ou nada**: se algo falhar, nada é alterado.
 
 Produtos marcados como **Fixo** (ex.: `999999 – NAO FAZ PARTE DO NOSSO PORTIFOLIO`) nunca são
