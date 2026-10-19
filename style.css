@@ -841,7 +841,7 @@ mark {
 .col-lista { display: none; }
 body.com-lista .col-lista { display: table-cell; }
 .col-saldo { width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
-.col-preco { width: 118px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.col-preco { width: 150px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 body.com-lista .col-tags { width: 22%; }
 .saldo-ok { font-weight: var(--fw-semibold); color: var(--text-body); }
 .saldo-zero { font-weight: var(--fw-semibold); color: var(--cbs-erro, #b3261e); }

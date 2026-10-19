@@ -31,7 +31,7 @@
   let timer = null;
 
   const fmtSaldo = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 });
-  const fmtPreco = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const fmtPreco = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 4, maximumFractionDigits: 4 });
   const fmtData = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
   const fmtHora = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
