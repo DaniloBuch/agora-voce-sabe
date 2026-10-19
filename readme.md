@@ -30,6 +30,7 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 - **Tolera erros de digitação:** se nada for encontrado, sugere palavras parecidas da própria base (`esfigmomanomtero` → `esfigmomanometro`) e avisa o que foi buscado.
 - **Praticidade:** clique no código para copiar o SKU e use "Copiar link desta busca" para compartilhar (`?q=sonda`); a busca do link abre já executada.
 - **Leve e seguro:** debounce na digitação, máximo de 100 linhas renderizadas e escape de HTML nos dados.
+- **Lista Diária (saldo e preço campanha):** qualquer usuário, sem login, pode carregar a planilha Excel da Lista Diária (botão **Carregar Lista Diária**; aceita `.xlsx`, `.xls`, `.xlsm` e `.csv`). O site lê as colunas **Saldo disponível** e **Preco campanha** e mostra os valores na tabela (colunas *Saldo* e *Preço camp.*; no celular, uma linha sob a descrição) conforme as buscas são feitas. **Esses dados nunca vão para o banco nem para nenhum servidor:** a leitura é feita no navegador e o resultado fica só no `localStorage` do próprio usuário, que é apagado automaticamente após **24 horas**. Um aviso ao lado do botão mostra quando a lista foi atualizada e em quanto tempo ela se apaga, e o **(?)** explica que os valores são meramente consultivos e que, para maior exatidão, deve-se consultar o Protheus (TOTVS). O botão **×** apaga a lista na hora (útil em computador compartilhado). Linhas repetidas do mesmo SKU somam o saldo e usam o primeiro preço diferente de zero; SKUs que não estão no catálogo são ignorados.
 - **Modo contingência:** se o banco estiver fora do ar, o site lê o `db.json` e avisa na tela.
 
 ### Painel de administração (`/admin/`)
@@ -58,6 +59,7 @@ Supabase (PostgreSQL + PostgREST)
 | Arquivo / pasta | Função |
 | --- | --- |
 | `index.html`, `script.js`, `style.css` | Site público de busca |
+| `lista-diaria.js`, `vendor/xlsx.full.min.js` | Lista Diária: leitura local do Excel (SheetJS 0.18.5, Apache-2.0, carregado só quando alguém envia uma planilha) e armazenamento de 24 h no navegador |
 | `admin/` | Painel de administração (`index.html`, `admin.js`, `admin.css`), acessado por `/admin/` |
 | `api.js` | Camada de acesso ao Supabase (login, listar, CRUD, importar, histórico, tags) |
 | `config.js` | Endereço do projeto e chave pública (`anon`) do Supabase |
@@ -89,6 +91,7 @@ O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/
 
 - A **leitura** dos produtos é pública (é o que o site usa); **qualquer alteração** exige login (Supabase Auth) e é protegida por regras de acesso no próprio banco (RLS), não só pela interface.
 - O cadastro público de usuários deve ficar **desativado** no Supabase, para que só as contas criadas por você existam.
+- **Saldo e preço campanha da Lista Diária não são gravados no banco.** Ficam só no navegador de quem carregou a lista, por no máximo 24 horas, e são apenas consultivos (a fonte oficial é o Protheus/TOTVS). Se um dia esses dados precisarem ficar no servidor, será necessário separar usuários por privilégio.
 - A chave `anon` no `config.js` é pública por natureza e não dá permissão de gravação.
 - O **Histórico** guarda a versão anterior de tudo o que for alterado ou excluído, e a exportação em CSV serve de backup extra.
 

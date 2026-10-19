@@ -723,6 +723,140 @@ mark {
   }
 }
 
+
+/* --- Lista Diária (saldo e preço campanha, só neste navegador) ------------- */
+.lista-diaria {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+.btn-lista {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 36px;
+  padding: 0 var(--sp-4);
+  font-family: var(--font-core);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--cbs-roxo);
+  background: var(--surface-card);
+  border: 1px solid var(--cbs-roxo-200);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.btn-lista:hover { background: var(--cbs-roxo-050); border-color: var(--cbs-roxo); }
+.btn-lista:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.btn-lista:disabled { opacity: 0.6; cursor: progress; }
+.lista-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+}
+.lista-status strong { color: var(--text-body); font-weight: var(--fw-semibold); }
+.lista-status__ponto {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cbs-neutro-400, #9aa8ae);
+}
+.lista-status--ativa .lista-status__ponto { background: var(--cbs-sucesso); }
+.lista-status--acabando .lista-status__ponto { background: var(--cbs-amarelo); }
+.lista-status--acabando .lista-status__resta { color: var(--cbs-amarelo-700); font-weight: var(--fw-semibold); }
+.lista-ajuda-wrap { position: relative; display: inline-flex; }
+.lista-ajuda {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-family: var(--font-core);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold, 700);
+  line-height: 1;
+  color: var(--cbs-azul-700);
+  background: var(--surface-card);
+  border: 1.5px solid var(--cbs-azul-700);
+  border-radius: 50%;
+  cursor: help;
+  transition: var(--transition-control);
+}
+.lista-ajuda:hover, .lista-ajuda[aria-expanded="true"] { background: var(--cbs-azul-700); color: var(--text-on-brand); }
+.lista-ajuda:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.lista-ajuda__texto {
+  position: absolute;
+  bottom: calc(100% + 8px); /* abre para cima: a faixa cinza corta o que passa da borda de baixo */
+  left: -12px;
+  z-index: 20;
+  width: min(340px, 82vw);
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  line-height: 1.55;
+  color: var(--text-body);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-left: var(--border-width-rule) solid var(--cbs-amarelo);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+.lista-ajuda__texto[hidden] { display: none; }
+.lista-limpar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.lista-limpar[hidden] { display: none; }
+.lista-limpar:hover { color: var(--cbs-erro, #b3261e); background: var(--surface-card); border-color: var(--border-default); }
+.lista-limpar:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.lista-msg {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+}
+.lista-msg[hidden] { display: none; }
+.lista-msg--ok { color: var(--cbs-sucesso); }
+.lista-msg--erro { color: var(--cbs-erro, #b3261e); }
+.lista-msg--alerta { color: var(--cbs-amarelo-700); }
+
+/* colunas Saldo e Preço campanha: só aparecem com a Lista Diária carregada */
+.col-lista { display: none; }
+body.com-lista .col-lista { display: table-cell; }
+.col-saldo { width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
+.col-preco { width: 118px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+body.com-lista .col-tags { width: 22%; }
+.saldo-ok { font-weight: var(--fw-semibold); color: var(--text-body); }
+.saldo-zero { font-weight: var(--fw-semibold); color: var(--cbs-erro, #b3261e); }
+.preco-camp { font-weight: var(--fw-semibold); color: var(--cbs-roxo); }
+.lista-nd { color: var(--text-faint); }
+.desc-extra { display: none; }
+.lista-nota {
+  margin: var(--sp-3) 0 0;
+  padding-left: var(--sp-1);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+}
+.lista-nota[hidden] { display: none; }
+
 /* --- Responsivo --------------------------------------------------------- */
 @media (max-width: 1366px) {
   .page {
@@ -730,6 +864,7 @@ mark {
   }
 }
 @media (max-width: 768px) {
+  .lista-status { order: 5; flex: 1 0 100%; }
   .table-wrap { overflow-x: auto; }
   th { position: static; }
   .faixa-busca .hero h1 {
@@ -755,6 +890,14 @@ mark {
   }
   .card {
     min-width: 0;
+  }
+  body.com-lista .col-lista { display: none; }
+  .desc-extra {
+    display: block;
+    margin-top: 4px;
+    font-size: var(--fs-2xs);
+    color: var(--text-muted);
+    white-space: normal;
   }
   .col-tags,
   .col-ref {

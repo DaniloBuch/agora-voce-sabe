@@ -70,6 +70,25 @@
               <button type="button" id="filtroAtivoLimpar" aria-label="Remover filtro de categoria"><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
             </div>
             <p class="search-hint">Ex.: 000437 sonda · também aceita o código do fornecedor e apelidos comerciais</p>
+
+            <!-- Lista Diária: saldo e preço campanha, só neste navegador (24 h) -->
+            <div class="lista-diaria" id="listaDiaria">
+              <input type="file" id="listaArquivo" accept=".xlsx,.xls,.csv,.xlsm" hidden />
+              <button type="button" class="btn-lista" id="listaBotao">
+                <svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg><span class="btn-lista__rotulo">Carregar Lista Diária</span>
+              </button>
+              <span class="lista-status" id="listaStatus"><span class="lista-status__ponto" aria-hidden="true"></span><span>Sem Lista Diária carregada</span></span>
+              <span class="lista-ajuda-wrap">
+                <button type="button" class="lista-ajuda" id="listaAjuda" aria-expanded="false" aria-controls="listaAjudaTexto" aria-label="Sobre o saldo e o preço da Lista Diária">?</button>
+                <span class="lista-ajuda__texto" id="listaAjudaTexto" role="tooltip" hidden>
+                  <strong>Valores meramente consultivos.</strong> O saldo e o preço campanha vêm da Lista Diária
+                  que você carregou. Para maior exatidão, consulte o <strong>Protheus (TOTVS)</strong>.
+                  Os dados ficam só neste navegador (não vão para nenhum servidor) e são apagados depois de 24 horas.
+                </span>
+              </span>
+              <button type="button" class="lista-limpar" id="listaLimpar" aria-label="Remover Lista Diária deste navegador" title="Remover Lista Diária" hidden><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+            </div>
+            <p class="lista-msg" id="listaMsg" role="status" hidden></p>
           </div>
       </div>
     </section>
@@ -104,6 +123,8 @@
               <tr>
                 <th class="col-sku">SKU</th>
                 <th class="col-desc">Descrição do produto</th>
+                <th class="col-lista col-saldo" title="Saldo disponível (Lista Diária, consultivo)">Saldo</th>
+                <th class="col-lista col-preco" title="Preço campanha (Lista Diária, consultivo)">Preço camp.</th>
                 <th class="col-tags">Tags</th>
                 <th class="col-ref">Ref.</th>
               </tr>
@@ -111,6 +132,7 @@
             <tbody id="tableBody"></tbody>
           </table>
         </div>
+        <p class="lista-nota" id="listaNota" hidden></p>
       </div>
     </main>
 
@@ -133,6 +155,7 @@
 
     <script src="config.js"></script>
     <script src="api.js"></script>
+    <script src="lista-diaria.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

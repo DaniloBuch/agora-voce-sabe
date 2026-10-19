@@ -205,6 +205,16 @@ async function carregarDados() {
 
 carregarDados();
 
+// A Lista Diária (lista-diaria.js) precisa saber quais códigos existem no catálogo
+window.CBS_skusCatalogo = () => database.map((item) => item.sku);
+
+// Quando a Lista Diária é carregada, atualizada, removida ou expira, redesenha os resultados na tela
+window.addEventListener("listadiaria:mudou", () => {
+  if (!carregado) return;
+  const termo = input.value.trim();
+  if (termo || categoriaAtual) executarBusca(termo);
+});
+
 /* ---------- Estado visual (Home <-> Busca) ---------- */
 
 function mostrarHome() {
@@ -330,12 +340,12 @@ function sugerirPalavras(termo) {
 
 function executarBusca(termoOriginal) {
   if (erroCarga) {
-    tbody.innerHTML = `<tr><td colspan="4" class="msg-erro">Não conseguimos carregar a base de produtos. Tente novamente em instantes.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${numColunas()}" class="msg-erro">Não conseguimos carregar a base de produtos. Tente novamente em instantes.</td></tr>`;
     resultsInfo.innerText = "";
     return;
   }
   if (!carregado) {
-    tbody.innerHTML = `<tr><td colspan="4" class="msg-vazio">Carregando a base de produtos...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${numColunas()}" class="msg-vazio">Carregando a base de produtos...</td></tr>`;
     resultsInfo.innerText = "";
     return;
   }
@@ -387,13 +397,34 @@ function ordenar(lista, termos) {
     .map((r) => r.item);
 }
 
+// 4 colunas normais; 6 quando há Lista Diária (Saldo e Preço campanha)
+function numColunas() {
+  return window.ListaDiaria && window.ListaDiaria.ativa() ? 6 : 4;
+}
+
+// Células de saldo e preço vindas da Lista Diária (consulta local, nunca vão ao banco)
+function celulasLista(sku) {
+  if (!window.ListaDiaria || !window.ListaDiaria.ativa()) return { colunas: "", resumoMobile: "" };
+  const v = window.ListaDiaria.obter(sku);
+  const saldo = v ? window.ListaDiaria.formatarSaldo(v.saldo) : null;
+  const preco = v ? window.ListaDiaria.formatarPreco(v.preco) : null;
+  const zero = v && v.saldo === 0;
+  const saldoHtml = saldo === null ? `<span class="lista-nd" title="Não consta na Lista Diária">—</span>` : `<span class="${zero ? "saldo-zero" : "saldo-ok"}">${saldo}</span>`;
+  const precoHtml = preco === null ? `<span class="lista-nd" title="Sem preço campanha na Lista Diária">—</span>` : `<span class="preco-camp">${preco}</span>`;
+  return {
+    colunas: `<td class="col-lista col-saldo">${saldoHtml}</td><td class="col-lista col-preco">${precoHtml}</td>`,
+    // no celular as colunas somem e o resumo aparece sob a descrição
+    resumoMobile: `<span class="desc-extra">Saldo: ${saldoHtml} · Preço camp.: ${precoHtml}</span>`,
+  };
+}
+
 function renderizarTabela(lista, total, termos, correcao = null) {
   const emCategoria = categoriaAtual ? ` em <strong>${escaparHtml(categoriaAtual)}</strong>` : "";
 
   if (lista.length === 0) {
     tbody.innerHTML = categoriaAtual
-      ? `<tr><td colspan="4" class="msg-erro">Não encontramos nenhum produto em <strong>${escaparHtml(categoriaAtual)}</strong> com esse termo. <button type="button" class="btn-link" data-limpar-categoria>Buscar em todas as categorias</button></td></tr>`
-      : `<tr><td colspan="4" class="msg-erro">Não encontramos nenhum produto com esse termo. Tente o código, o nome técnico ou um apelido.</td></tr>`;
+      ? `<tr><td colspan="${numColunas()}" class="msg-erro">Não encontramos nenhum produto em <strong>${escaparHtml(categoriaAtual)}</strong> com esse termo. <button type="button" class="btn-link" data-limpar-categoria>Buscar em todas as categorias</button></td></tr>`
+      : `<tr><td colspan="${numColunas()}" class="msg-erro">Não encontramos nenhum produto com esse termo. Tente o código, o nome técnico ou um apelido.</td></tr>`;
     resultsInfo.innerText = "";
     return;
   }
@@ -443,10 +474,12 @@ function renderizarTabela(lista, total, termos, correcao = null) {
         }
       }
 
+      const lista = celulasLista(item.sku);
       return `
         <tr>
           <td class="col-sku"><button type="button" class="sku-copiar" data-sku="${escaparHtml(item.sku)}" title="Clique para copiar o código" aria-label="Copiar código ${escaparHtml(item.sku)}">${destacar(item.sku, termos)}</button></td>
-          <td class="col-desc">${destacar(item.descricao, termos)}</td>
+          <td class="col-desc">${destacar(item.descricao, termos)}${lista.resumoMobile}</td>
+          ${lista.colunas}
           <td class="col-tags">${tagsHtml}</td>
           <td class="col-ref">${destacar(item.referenciaOriginal, termos, item.referenciaOriginal.length - item.referencia.length)}</td>
         </tr>
