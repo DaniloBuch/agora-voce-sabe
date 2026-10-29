@@ -231,6 +231,39 @@
     return resp.json();
   }
 
+  /* ---------- Sinônimos (dicionário da busca) ---------- */
+
+  // Grupos de sinônimos: [{ id, palavras: ["cx", "caixa"] }].
+  // Se a migração 008 ainda não rodou (tabela não existe), lança erro com status 404.
+  async function listarSinonimos() {
+    const resp = await requisitar("sinonimos?select=id,palavras&order=id.asc", { anonimo: true });
+    return resp.json();
+  }
+
+  async function criarSinonimo(palavras) {
+    const resp = await requisitar("sinonimos", {
+      method: "POST",
+      corpo: { palavras },
+      headers: { Prefer: "return=representation" },
+    });
+    return (await resp.json())[0];
+  }
+
+  async function atualizarSinonimo(id, palavras) {
+    const resp = await requisitar(`sinonimos?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      corpo: { palavras },
+      headers: { Prefer: "return=representation" },
+    });
+    const linhas = await resp.json();
+    if (linhas.length === 0) throw new Error("Grupo não encontrado (talvez já tenha sido excluído).");
+    return linhas[0];
+  }
+
+  async function excluirSinonimo(id) {
+    await requisitar(`sinonimos?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
+  }
+
   async function criar(produto) {
     await requisitar("produtos", { method: "POST", corpo: produto });
   }
@@ -331,5 +364,9 @@
     criarCategoria,
     renomearCategoria,
     categoriasDisponiveis: () => !semColunaCategoria,
+    listarSinonimos,
+    criarSinonimo,
+    atualizarSinonimo,
+    excluirSinonimo,
   };
 })();

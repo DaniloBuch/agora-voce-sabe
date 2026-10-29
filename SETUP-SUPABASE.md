@@ -89,6 +89,19 @@ Para bancos já criados. Em banco novo, o `schema.sql` já traz tudo.
 4. Abra o painel, confira a aba **Categorias** e ajuste o que precisar (renomear, mesclar, mover
    produtos pela edição em massa). Produtos sem categoria ficam com `-`.
 
+## 8. Sinônimos da busca (migração 008)
+
+Para bancos já criados. Em banco novo, o `schema.sql` já traz tudo.
+
+1. **Publique no GitHub** os arquivos novos (o site funciona antes do SQL, só sem os sinônimos;
+   a aba **Sinônimos** do painel avisa que falta a migração).
+2. No **SQL Editor**, rode `supabase/migracoes/008_sinonimos.sql`. Ele cria a tabela `sinonimos`
+   (o site lê; só quem tem login altera) e já cadastra alguns grupos tirados das abreviações da
+   base: `cx = caixa`, `pct = pacote`, `cir = cirurgico = cirurgica`, `hosp = hospitalar`,
+   `valv = valvula`, `desc = descart = descartavel` e `est = esteril`. Pode rodar de novo: os
+   grupos iniciais só entram se a tabela estiver vazia.
+3. Abra o painel, aba **Sinônimos**, e ajuste a lista.
+
 ## Como usar o painel de administração
 
 | Aba | Para quê |
@@ -96,6 +109,7 @@ Para bancos já criados. Em banco novo, o `schema.sql` já traz tudo.
 | **Produtos** | Buscar, criar, editar (inclusive tags) e excluir. O botão **Exportar CSV** baixa todos os produtos, com Categoria e Tags (use como backup). O filtro **"Só sem tags"** mostra o que falta etiquetar. |
 | **Tags** | Lista todas as tags com a contagem de produtos. **Renomear** troca a tag em todos os produtos; se o novo nome já existir, as duas viram uma só (mescla). **Excluir** tira a tag de todos. Marca possíveis duplicadas (acento, plural, maiúscula). Tudo vai para o Histórico. |
 | **Categorias** | Lista as categorias com a contagem de produtos. Permite **criar**, **renomear** (se o nome já existir, mescla) e **excluir** (os produtos voltam para `-`). "Ver produtos" abre a lista já filtrada. Categoria de um produto: no cadastro dele ou na **Edição em massa**. |
+| **Sinônimos** | Dicionário de abreviações e jargões da busca do site. Cada grupo (ex.: `cx, caixa`) faz a busca tratar as palavras como iguais, nos dois sentidos. Mostra quantos produtos têm cada palavra. Palavras de até 4 letras só valem como palavra inteira. Uma palavra só pode estar em um grupo. |
 | **Importar CSV** | Atualiza a base em massa (veja abaixo). |
 | **Histórico** | Mostra versões anteriores de qualquer edição/exclusão, com botão **Restaurar**. Alterações em massa aparecem agrupadas, com **Restaurar todos**; dá para filtrar por data (De/Até). |
 

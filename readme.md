@@ -21,15 +21,19 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 ### Busca (site público)
 
 - **Busca por partículas:** os termos podem vir em qualquer ordem. `000437 sonda` e `sonda 04` levam ao mesmo produto.
+- **Busca avançada:** `"luva procedimento"` entre aspas busca o **trecho exato**, nessa ordem; `luva -latex` (hífen antes da palavra) **tira** da lista quem tem "latex" (também vale `-"trecho"`). O hífen só conta no começo da palavra, então referências como `AR-420` continuam funcionando.
+- **Sinônimos:** um dicionário editável no painel (aba **Sinônimos**) faz abreviações e jargões valerem como a palavra por extenso, nos dois sentidos: quem busca `caixa` também acha "CX", quem busca `cirurgica` acha "AVENTAL CIR". Abreviações de até 4 letras só contam como palavra inteira (`est` não pega "estilo").
 - **Ignora acentos e maiúsculas:** `esfigmomanometro` encontra "Esfigmomanômetro".
-- **Categorias:** o botão **Categorias** no cabeçalho abre uma gaveta lateral (por cima da página, fecha com Esc, clique fora, « ou ao escolher) com Luvas, Cateteres, Fraldas…, da mais cheia para a menos cheia. A categoria filtra a base por tipo de produto e aparece como um selo abaixo do campo de busca (com × para remover); depois é só digitar para refinar dentro dela. O botão já aparece ao abrir a página; se a gaveta for aberta antes de a base terminar de carregar, mostra um esqueleto animado no lugar da lista. O link compartilhado guarda categoria e busca (`?cat=Luvas&q=nitril`).
+- **Categorias:** o botão **Categorias** no cabeçalho abre uma gaveta lateral (por cima da página, fecha com Esc, clique fora, « ou ao escolher) com Luvas, Cateteres, Fraldas…, da mais cheia para a menos cheia. O campo **Buscar categoria...** no topo da gaveta filtra a lista enquanto você digita (Enter escolhe a primeira; limpa ao fechar). A categoria filtra a base por tipo de produto e aparece como um selo abaixo do campo de busca (com × para remover); depois é só digitar para refinar dentro dela. O botão já aparece ao abrir a página; se a gaveta for aberta antes de a base terminar de carregar, mostra um esqueleto animado no lugar da lista. O link compartilhado guarda categoria e busca (`?cat=Luvas&q=nitril`).
 - **Quatro campos ao mesmo tempo:** SKU, descrição técnica, referência (Ref.) e tags.
 - **Ordenado por relevância:** código exato, referência exata e tags vêm antes de coincidências soltas na descrição.
 - **Termos destacados** nos resultados; tags que casaram com a busca aparecem primeiro.
 - **Referência legível:** referências só numéricas aparecem sem zeros à esquerda (`000000000038833014` → `38833014`); as com letras ficam como estão (`AR420`). A busca aceita as duas formas.
-- **Tolera erros de digitação:** se nada for encontrado, sugere palavras parecidas da própria base (`esfigmomanomtero` → `esfigmomanometro`) e avisa o que foi buscado.
+- **Tolera erros de digitação:** se nada for encontrado, sugere palavras parecidas da própria base (`esfigmomanomtero` → `esfigmomanometro`) e avisa o que foi buscado. Quando a busca traz poucos resultados (menos de 50), os produtos com palavras de grafia parecida aparecem **depois** dos exatos, numa seção "Parecidos com a sua busca" (só para termos de 5 letras ou mais).
+- **Paginação e catálogo completo:** os resultados vêm em páginas de 50 (antes a lista parava em 100). O botão **Explorar catálogo completo** (ou "Todos os produtos" na gaveta) lista a base inteira em ordem alfabética; categoria sem termo também fica em ordem alfabética. A página atual vai no link (`?q=luva&p=2`, `?ver=todos`).
+- **Buscas recentes:** as últimas 8 buscas que trouxeram resultado ficam **só neste navegador**. Aparecem ao clicar no campo vazio (ou com ↓), como no Google; o foco automático ao abrir a página não abre a lista. Uma busca entra no histórico com Enter, ao copiar um código ou o link, ou depois de 2,5 s parada; cada item pode ser removido, e há "Limpar histórico".
 - **Praticidade:** clique no código para copiar o SKU e use "Copiar link desta busca" para compartilhar (`?q=sonda`); a busca do link abre já executada.
-- **Leve e seguro:** debounce na digitação, máximo de 100 linhas renderizadas e escape de HTML nos dados.
+- **Leve e seguro:** debounce na digitação, 50 linhas por página e escape de HTML nos dados.
 - **Lista Diária (saldo e preço campanha):** qualquer usuário, sem login, pode carregar a planilha Excel da Lista Diária (botão **Carregar Lista Diária**; aceita `.xlsx`, `.xls`, `.xlsm` e `.csv`). O site lê as colunas **Saldo disponível** e **Preco campanha** e mostra os valores na tabela (colunas *Saldo* e *Preço camp.*; no celular, uma linha sob a descrição) conforme as buscas são feitas. **Esses dados nunca vão para o banco nem para nenhum servidor:** a leitura é feita no navegador e o resultado fica só no `localStorage` do próprio usuário, que é apagado automaticamente após **24 horas**. Um aviso ao lado do botão mostra quando a lista foi atualizada e em quanto tempo ela se apaga, e o **(?)** explica que os valores são meramente consultivos e que, para maior exatidão, deve-se consultar o Protheus (TOTVS). O botão **×** apaga a lista na hora (útil em computador compartilhado). Linhas repetidas do mesmo SKU somam o saldo e usam o primeiro preço diferente de zero (o preço campanha sempre é mostrado com 4 casas decimais, ex.: R$ 12,5000); SKUs que não estão no catálogo são ignorados.
 - **Modo contingência:** se o banco estiver fora do ar, o site lê o `db.json` e avisa na tela.
 
@@ -40,6 +44,7 @@ Painel para manter a base sem mexer em arquivos JSON. O acesso é pelo botão **
 - **Visão geral** no topo, com o total de produtos, quantos estão sem tags e quantas tags existem;
 - **Acesso com login** (Supabase Auth): só quem tem usuário e senha altera a base; o site público só lê;
 - **CRUD de produtos e tags**, com chips, sugestões e filtro de produtos sem tags;
+- **Sinônimos:** grupos de palavras equivalentes para a busca do site (`cx, caixa`), com a contagem de produtos de cada palavra;
 - **Categorias:** uma por produto (`-` quando não há), com aba própria para criar, renomear, mesclar e excluir, filtro na lista e campo no cadastro e na edição em massa;
 - **Gerenciamento de tags:** lista com contagem, renomear, mesclar e excluir em todos os produtos, com alerta de possíveis duplicadas;
 - **Edição de tags em massa**, com seleção múltipla e prévia do resultado;
@@ -64,12 +69,12 @@ Supabase (PostgreSQL + PostgREST)
 | `api.js` | Camada de acesso ao Supabase (login, listar, CRUD, importar, histórico, tags) |
 | `config.js` | Endereço do projeto e chave pública (`anon`) do Supabase |
 | `supabase/schema.sql` | Tabelas, políticas, triggers e funções do banco |
-| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags, `005` categorias, `006` categorias iniciais, `007` correção de referências estragadas pelo Excel) |
+| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags, `005` categorias, `006` categorias iniciais, `007` correção de referências estragadas pelo Excel, `008` sinônimos da busca) |
 | `supabase/produtos_seed.csv` | Carga inicial dos produtos |
 | `db.json` | Cópia estática usada como contingência |
 | `design-system/` | CBS Design System vendorizado ([detalhes](design-system/README.md)) |
 
-**Banco de dados:** tabela `produtos` (`sku`, `descricao_tecnica`, `referencia`, `tags`, `categoria`, `fixo`), tabela `categorias` e `produtos_historico` (preenchida por trigger a cada edição/exclusão). A importação de CSV e a edição de tags em massa são funções SQL (RPC), então rodam de forma atômica: ou tudo é gravado ou nada. Produtos marcados como **fixo** nunca são excluídos pela importação.
+**Banco de dados:** tabela `produtos` (`sku`, `descricao_tecnica`, `referencia`, `tags`, `categoria`, `fixo`), tabela `categorias`, tabela `sinonimos` (grupos de palavras equivalentes) e `produtos_historico` (preenchida por trigger a cada edição/exclusão). A importação de CSV e a edição de tags em massa são funções SQL (RPC), então rodam de forma atômica: ou tudo é gravado ou nada. Produtos marcados como **fixo** nunca são excluídos pela importação.
 
 ## 🎨 Identidade visual
 

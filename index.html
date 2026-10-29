@@ -35,6 +35,11 @@
         <p class="gaveta__titulo" id="gavetaTitulo">Categorias</p>
         <button type="button" class="gaveta__fechar" id="gavetaFechar" aria-label="Fechar categorias" title="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg></button>
       </div>
+      <div class="gaveta__busca">
+        <svg class="gaveta__busca-icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+        <input type="search" id="filtroCategoria" placeholder="Buscar categoria..." autocomplete="off" aria-label="Buscar categoria" aria-controls="categoriasLista" disabled />
+      </div>
+      <p class="gaveta__vazio" id="categoriasVazio" role="status" hidden></p>
       <div class="categorias__lista" id="categoriasLista" role="group" aria-labelledby="gavetaTitulo" aria-busy="true">
         <!-- esqueleto: aparece se a pessoa abrir a gaveta antes de a base terminar de carregar -->
         <span class="sr-only" role="status">Carregando categorias...</span>
@@ -43,7 +48,9 @@
     </aside>
 
     <section class="faixa-busca">
-      <img class="faixa-busca__grafismo" src="design-system/assets/brand/grafismo-sorriso-roxo.svg" alt="" aria-hidden="true" />
+      <div class="faixa-busca__fundo" aria-hidden="true">
+        <img class="faixa-busca__grafismo" src="design-system/assets/brand/grafismo-sorriso-roxo.svg" alt="" />
+      </div>
       <div class="faixa-busca__conteudo">
           <div class="hero">
             <p class="eyebrow">Agora você sabe</p>
@@ -63,13 +70,25 @@
                 placeholder="Busque por SKU, descrição, referência ou apelido..."
                 autocomplete="off"
                 autofocus
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded="false"
+                aria-controls="historicoLista"
               />
+              <!-- Buscas recentes: ficam só neste navegador -->
+              <div class="historico" id="historico" hidden>
+                <div class="historico__topo">
+                  <span class="historico__titulo" id="historicoTitulo">Buscas recentes</span>
+                  <button type="button" class="historico__limpar" id="historicoLimpar">Limpar histórico</button>
+                </div>
+                <ul class="historico__lista" id="historicoLista" role="listbox" aria-labelledby="historicoTitulo"></ul>
+              </div>
             </div>
             <div class="filtro-ativo" id="filtroAtivo" hidden>
               <span>Categoria: <strong id="filtroAtivoNome"></strong></span>
               <button type="button" id="filtroAtivoLimpar" aria-label="Remover filtro de categoria"><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
             </div>
-            <p class="search-hint">Ex.: 000437 sonda · também aceita o código do fornecedor e apelidos comerciais</p>
+            <p class="search-hint">Ex.: <code>000437 sonda</code> · <code>"trecho exato"</code> entre aspas · <code>-palavra</code> para excluir</p>
 
             <!-- Lista Diária: saldo e preço campanha, só neste navegador (24 h) -->
             <div class="lista-diaria" id="listaDiaria">
@@ -94,22 +113,23 @@
     </section>
 
     <main class="page">
-      <div id="heroCards" class="hero-cards">
-        <div class="card">
-          <svg class="card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"></path><path d="m7 16.5-4.74-2.85"></path><path d="m7 16.5 5-3"></path><path d="M7 16.5v5.17"></path><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z"></path><path d="m17 16.5-5-3"></path><path d="m17 16.5 4.74-2.85"></path><path d="M17 16.5v5.17"></path><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z"></path><path d="M12 8 7.26 5.15"></path><path d="m12 8 4.74-2.85"></path><path d="M12 13.5V8"></path></svg>
-          <h3>Base atualizada</h3>
-          <p>Carregando a base de produtos...</p>
-        </div>
-        <div class="card">
-          <svg class="card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
-          <h3>Busca inteligente</h3>
-          <p>Entende "Transofix", "Jelco" e outros apelidos comerciais.</p>
-        </div>
-        <div class="card">
-          <svg class="card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
-          <h3>Dados técnicos</h3>
-          <p>SKU, descrição, referência e tags.</p>
-        </div>
+      <div id="heroCards" class="painel-info">
+        <section class="painel-info__bloco painel-info__base" aria-labelledby="infoBaseTitulo">
+          <h2 class="painel-info__titulo" id="infoBaseTitulo"><svg class="painel-info__icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z"></path><path d="m7 16.5-4.74-2.85"></path><path d="m7 16.5 5-3"></path><path d="M7 16.5v5.17"></path><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z"></path><path d="m17 16.5-5-3"></path><path d="m17 16.5 4.74-2.85"></path><path d="M17 16.5v5.17"></path><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z"></path><path d="M12 8 7.26 5.15"></path><path d="m12 8 4.74-2.85"></path><path d="M12 13.5V8"></path></svg>Base de produtos</h2>
+          <p class="painel-info__numero"><strong id="infoBaseNumero">…</strong> <span id="infoBaseTexto">carregando a base de produtos...</span></p>
+          <p class="painel-info__texto">Cada produto traz SKU, descrição técnica, referência do fornecedor, categoria e tags (apelidos comerciais).</p>
+          <button type="button" class="btn-explorar" id="btnExplorar"><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>Explorar catálogo completo</button>
+        </section>
+        <section class="painel-info__bloco painel-info__dicas" aria-labelledby="infoDicasTitulo">
+          <h2 class="painel-info__titulo" id="infoDicasTitulo"><svg class="painel-info__icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path></svg>Como buscar</h2>
+          <dl class="dicas">
+            <div class="dica-busca"><dt><code>sonda 12</code></dt><dd>Palavras em qualquer ordem: aparecem os produtos que têm <strong>todas</strong> elas.</dd></div>
+            <div class="dica-busca"><dt><code>"luva de procedimento"</code></dt><dd>Entre aspas: só o <strong>trecho exato</strong>, nessa ordem.</dd></div>
+            <div class="dica-busca"><dt><code>luva -latex</code></dt><dd>Hífen antes da palavra: <strong>tira</strong> da lista quem tem essa palavra.</dd></div>
+            <div class="dica-busca"><dt><code>cx</code> <code>Transofix</code></dt><dd>Abreviações (<em>cx</em> = caixa) e apelidos comerciais também funcionam.</dd></div>
+            <div class="dica-busca"><dt><svg class="dica-busca__icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg><span class="sr-only">Histórico</span></dt><dd>Clique no campo de busca vazio para ver suas <strong>buscas recentes</strong> (ficam só neste navegador).</dd></div>
+          </dl>
+        </section>
       </div>
 
       <div id="resultsContainer" class="results-container">
@@ -132,6 +152,7 @@
             <tbody id="tableBody"></tbody>
           </table>
         </div>
+        <nav class="paginacao" id="paginacao" aria-label="Páginas de resultados" hidden></nav>
         <p class="lista-nota" id="listaNota" hidden></p>
       </div>
     </main>

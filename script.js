@@ -4,9 +4,17 @@ let erroCarga = false;
 let timeoutBusca = null;
 let timeoutFade = null;
 let vocabulario = null; // palavras da base, para sugerir correções de digitação
-let categoriaAtual = ""; // categoria escolhida nos botões ("" = todas)
+let categoriaAtual = ""; // categoria escolhida na gaveta ("" = todas)
 let categoriasLista = []; // [[nome, quantidade]], da mais usada para a menos usada
-let categoriaDoLink = new URLSearchParams(location.search).get("cat") || "";
+const parametrosIniciais = new URLSearchParams(location.search);
+let categoriaDoLink = parametrosIniciais.get("cat") || "";
+let paginaDoLink = Math.max(1, parseInt(parametrosIniciais.get("p"), 10) || 1);
+let modoExplorar = parametrosIniciais.get("ver") === "todos"; // catálogo completo, em ordem alfabética
+let paginaAtual = 1;
+let estadoLista = null; // resultado completo da última busca (trocar de página não refaz a busca)
+let indiceSinonimos = new Map(); // palavra -> palavras equivalentes (dicionário do painel)
+let frasesSinonimo = []; // sinônimos com mais de uma palavra ("soro fisiologico"), da maior para a menor
+const cacheParecidas = new Map();
 
 const input = document.getElementById("searchInput");
 const heroCards = document.getElementById("heroCards");
@@ -14,19 +22,27 @@ const resultsContainer = document.getElementById("resultsContainer");
 const resultsInfo = document.getElementById("resultsInfo");
 const tbody = document.getElementById("tableBody");
 const btnLink = document.getElementById("btnLink");
+const paginacao = document.getElementById("paginacao");
 const caixaCategorias = document.getElementById("categorias");
 const listaCategorias = document.getElementById("categoriasLista");
+const filtroCategoria = document.getElementById("filtroCategoria");
+const categoriasVazio = document.getElementById("categoriasVazio");
 const botaoCategorias = document.getElementById("categoriasToggle");
 const gavetaFundo = document.getElementById("gavetaFundo");
 const botaoFecharGaveta = document.getElementById("gavetaFechar");
 const filtroAtivo = document.getElementById("filtroAtivo");
 const filtroAtivoNome = document.getElementById("filtroAtivoNome");
+const historicoCaixa = document.getElementById("historico");
+const historicoLista = document.getElementById("historicoLista");
 const PLACEHOLDER_PADRAO = input.placeholder;
 
 // URL do seu JSON
 const DATA_URL = "./db.json";
-const MAX_RESULTADOS = 100;
+const ITENS_POR_PAGINA = 50;
+const MAX_PARECIDOS = 50; // resultados "parecidos" (possível erro de digitação) mostrados depois dos exatos
 const MAX_TAGS_VISIVEIS = 6;
+const fmtNum = new Intl.NumberFormat("pt-BR");
+const ordemAlfabetica = new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true });
 
 /* ---------- Utilitários ---------- */
 
@@ -36,6 +52,11 @@ function normalizar(texto) {
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
     .toLowerCase();
+}
+
+// Igual ao normalizar, mas com os espaços repetidos reduzidos a um só
+function normalizarEspacos(texto) {
+  return normalizar(texto).replace(/\s+/g, " ").trim();
 }
 
 // Referência: se for só número, mostra o valor sem zeros à esquerda
@@ -55,7 +76,32 @@ function escaparHtml(texto) {
     .replace(/'/g, "&#39;");
 }
 
-// Escapa o texto e destaca os termos buscados (ignorando acentos/maiúsculas).
+function escaparRegex(texto) {
+  return texto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const ehLetraOuNumero = (c) => c !== undefined && /[a-z0-9]/.test(c);
+
+/* ---------- Alternativas de um termo ----------
+   Cada termo da busca vira um grupo de "alternativas"; o produto precisa casar com
+   pelo menos uma alternativa de cada grupo. Modos:
+     trecho  -> aparece em qualquer lugar (o que a pessoa digitou: "sond" acha "sonda")
+     palavra -> palavra inteira (sinônimos curtos: "cx" não acha "cxa")
+     inicio  -> começo de palavra (sinônimos longos: "caixa" acha "caixas")          */
+
+function alternativa(texto, modo = "trecho") {
+  const alt = { texto, modo };
+  if (modo !== "trecho") {
+    alt.re = new RegExp(`(^|[^a-z0-9])${escaparRegex(texto)}${modo === "palavra" ? "(?![a-z0-9])" : ""}`);
+  }
+  return alt;
+}
+
+function casaAlternativa(textoNormalizado, alt) {
+  return alt.modo === "trecho" ? textoNormalizado.includes(alt.texto) : alt.re.test(textoNormalizado);
+}
+
+// Escapa o texto e destaca os termos buscados (ignorando acentos/maiúsculas e espaços repetidos).
 // "deslocamento" = quantos caracteres do começo NÃO são exibidos (os zeros à esquerda
 // da Ref.): a busca é feita no texto completo, mas só a parte visível é mostrada.
 function destacar(texto, termos, deslocamento = 0) {
@@ -66,18 +112,26 @@ function destacar(texto, termos, deslocamento = 0) {
   let norm = "";
   const mapa = [];
   for (let i = 0; i < original.length; i++) {
-    const n = normalizar(original[i]);
+    let n = normalizar(original[i]);
+    if (/\s/.test(n)) {
+      if (norm.endsWith(" ")) continue; // espaços repetidos contam como um só
+      n = " ";
+    }
     for (let k = 0; k < n.length; k++) mapa.push(i);
     norm += n;
   }
 
   const faixas = [];
-  for (const t of termos) {
+  for (const termo of termos) {
+    const alt = typeof termo === "string" ? { texto: termo, modo: "trecho" } : termo;
+    const t = alt.texto;
     if (!t) continue;
     let pos = norm.indexOf(t);
     while (pos !== -1) {
-      faixas.push([mapa[pos], mapa[pos + t.length - 1] + 1]);
-      pos = norm.indexOf(t, pos + t.length);
+      const inicioOk = alt.modo === "trecho" || !ehLetraOuNumero(norm[pos - 1]);
+      const fimOk = alt.modo !== "palavra" || !ehLetraOuNumero(norm[pos + t.length]);
+      if (inicioOk && fimOk) faixas.push([mapa[pos], mapa[pos + t.length - 1] + 1]);
+      pos = norm.indexOf(t, pos + 1);
     }
   }
   if (faixas.length === 0) return escaparHtml(original.slice(deslocamento));
@@ -131,10 +185,36 @@ async function lerDbJson() {
   return dadosBrutos;
 }
 
-async function carregarDados() {
-  const cardInfo = document.querySelector(".hero-cards .card:first-child p");
+// Dicionário de sinônimos (aba "Sinônimos" do painel). Sem ele (banco antigo ou fora do ar), a busca segue normal.
+async function lerSinonimos() {
+  if (!window.CBS_API || !CBS_API.configurado || !CBS_API.listarSinonimos) return [];
   try {
-    const { dados: dadosBrutos, contingencia } = await lerDb();
+    return await CBS_API.listarSinonimos();
+  } catch (_) {
+    return [];
+  }
+}
+
+function montarSinonimos(grupos) {
+  indiceSinonimos = new Map();
+  for (const g of grupos || []) {
+    const palavras = [...new Set((g.palavras || []).map(normalizarEspacos).filter(Boolean))];
+    if (palavras.length < 2) continue;
+    for (const p of palavras) {
+      const equivalentes = indiceSinonimos.get(p) || new Set();
+      palavras.forEach((outra) => outra !== p && equivalentes.add(outra));
+      indiceSinonimos.set(p, equivalentes);
+    }
+  }
+  frasesSinonimo = [...indiceSinonimos.keys()].filter((p) => p.includes(" ")).sort((a, b) => b.length - a.length);
+}
+
+async function carregarDados() {
+  const infoNumero = document.getElementById("infoBaseNumero");
+  const infoTexto = document.getElementById("infoBaseTexto");
+  try {
+    const [{ dados: dadosBrutos, contingencia }, grupos] = await Promise.all([lerDb(), lerSinonimos()]);
+    montarSinonimos(grupos);
 
     database = dadosBrutos
       .filter((item) => String(item.sku ?? "").trim() !== "")
@@ -160,45 +240,52 @@ async function carregarDados() {
           categoria: String(item.categoria ?? "").trim() || "-", // "-" = sem categoria
           tags: tagsArray,
           _sku: normalizar(sku),
-          _desc: normalizar(descricao),
+          _desc: normalizarEspacos(descricao),
           _ref: normalizar(referencia),
           _refOriginal: normalizar(referenciaOriginal), // a busca aceita as duas formas
-          _tags: tagsArray.map(normalizar),
-          _buscaFull: normalizar(
+          _tags: tagsArray.map(normalizarEspacos),
+          _buscaFull: normalizarEspacos(
             [sku, descricao, referencia, referenciaOriginal, tagsArray.join(" ")].join(" "),
           ),
         };
       });
+    // posição de cada produto em ordem alfabética (navegar pelo catálogo / por categoria)
+    [...database]
+      .sort((a, b) => ordemAlfabetica.compare(a.descricao, b.descricao) || ordemAlfabetica.compare(a.sku, b.sku))
+      .forEach((item, i) => (item._alfa = i));
     vocabulario = null;
+    cacheParecidas.clear();
     carregado = true;
     console.log("Sistema CBS Online. Itens:", database.length);
     montarCategorias();
 
-    // Atualiza o card com o numero real
-    if (cardInfo) {
-      cardInfo.innerText = contingencia
-        ? `Modo contingência: ${database.length} produtos do arquivo local, que pode estar desatualizado.`
-        : `${database.length} produtos carregados`;
-      cardInfo.classList.toggle("is-erro", contingencia);
-    }
+    // Atualiza o painel com o número real
+    infoNumero.textContent = fmtNum.format(database.length);
+    infoTexto.textContent = contingencia
+      ? "produtos do arquivo local (modo contingência: pode estar desatualizado)."
+      : "produtos carregados";
+    infoTexto.classList.toggle("is-erro", contingencia);
+    heroCards.classList.add("is-carregado");
 
-    // Se o usuário já digitou algo (ou abriu um link com categoria) enquanto carregava, busca agora
+    // Se o usuário já digitou algo (ou abriu um link com categoria/catálogo) enquanto carregava, busca agora
     const termo = input.value.trim();
-    if (termo || categoriaAtual) {
+    if (termo || categoriaAtual || modoExplorar) {
+      if (!termo && !categoriaAtual) modoExplorar = true;
       mostrarBusca();
+      executarBusca(termo, paginaDoLink);
       atualizarEndereco();
-      executarBusca(termo);
     } else {
       mostrarHome(); // link com categoria que não existe mais: volta para o início
     }
+    paginaDoLink = 1;
   } catch (erro) {
     console.error("Erro Fatal:", erro);
     erroCarga = true;
     esconderCategorias();
-    if (cardInfo) {
-      cardInfo.innerText = "Não conseguimos carregar a base de produtos. Tente novamente em instantes.";
-      cardInfo.classList.add("is-erro");
-    }
+    infoNumero.textContent = "";
+    infoTexto.textContent = "Não conseguimos carregar a base de produtos. Tente novamente em instantes.";
+    infoTexto.classList.add("is-erro");
+    document.getElementById("btnExplorar").hidden = true;
     if (input.value.trim()) executarBusca(input.value.trim());
   }
 }
@@ -208,19 +295,20 @@ carregarDados();
 // A Lista Diária (lista-diaria.js) precisa saber quais códigos existem no catálogo
 window.CBS_skusCatalogo = () => database.map((item) => item.sku);
 
-// Quando a Lista Diária é carregada, atualizada, removida ou expira, redesenha os resultados na tela
+// Quando a Lista Diária é carregada, atualizada, removida ou expira, redesenha a página atual
 window.addEventListener("listadiaria:mudou", () => {
-  if (!carregado) return;
-  const termo = input.value.trim();
-  if (termo || categoriaAtual) executarBusca(termo);
+  if (carregado && estadoLista && resultsContainer.style.display === "block") renderizarPagina();
 });
 
 /* ---------- Estado visual (Home <-> Busca) ---------- */
 
 function mostrarHome() {
   clearTimeout(timeoutFade);
+  modoExplorar = false;
+  estadoLista = null;
+  paginacao.hidden = true;
   resultsContainer.style.display = "none";
-  heroCards.style.display = "flex";
+  heroCards.style.display = "";
   // pequeno atraso para a transição de opacidade acontecer
   timeoutFade = setTimeout(() => (heroCards.style.opacity = "1"), 10);
 }
@@ -236,9 +324,16 @@ input.addEventListener("input", function (e) {
   const termo = e.target.value.trim();
 
   clearTimeout(timeoutBusca);
+  cancelarRegistroHistorico();
+  if (termo) {
+    modoExplorar = false; // digitou: volta para a busca normal
+    fecharHistorico();
+  }
 
   if (termo === "" && !categoriaAtual) {
     mostrarHome();
+    atualizarEndereco();
+    abrirHistorico(); // campo limpo: mostra as buscas recentes (como no Google)
     return;
   }
   mostrarBusca();
@@ -246,36 +341,106 @@ input.addEventListener("input", function (e) {
   // Debounce
   timeoutBusca = setTimeout(() => {
     executarBusca(termo);
+    atualizarEndereco();
+    agendarRegistroHistorico();
   }, 300);
 });
 
-/* ---------- Busca ---------- */
+/* ---------- Interpretação da busca ---------- */
+
+// Separa o texto digitado em: termos soltos, trechos exatos ("entre aspas") e excluídos (-palavra ou -"trecho").
+function interpretarConsulta(texto) {
+  let resto = ` ${normalizar(texto).replace(/[“”„″«»]/g, '"').replace(/\s+/g, " ")} `;
+  const exatos = [];
+  const excluidos = [];
+
+  // trechos entre aspas; a aspa final pode faltar enquanto a pessoa ainda digita
+  resto = resto.replace(/(?:(\s)-)?"([^"]*)("|$)/g, (_, menos, frase) => {
+    const f = frase.replace(/\s+/g, " ").trim();
+    if (f) (menos !== undefined ? excluidos : exatos).push(f);
+    return " ";
+  });
+
+  // sinônimos de mais de uma palavra ("soro fisiologico") ficam juntos, como um termo só
+  const termos = [];
+  for (const frase of frasesSinonimo) {
+    const marca = ` ${frase} `;
+    while (resto.includes(marca)) {
+      termos.push(frase);
+      resto = resto.replace(marca, " ");
+    }
+  }
+
+  for (const t of resto.split(" ")) {
+    if (!t) continue;
+    if (t.startsWith("-")) {
+      if (t.length > 1) excluidos.push(t.slice(1)); // "-" sozinho é ignorado
+      continue;
+    }
+    termos.push(t);
+  }
+  return { termos, exatos, excluidos };
+}
+
+// Termo que pode ter erro de digitação: só letras, 4+ caracteres
+const podeTerErro = (t) => t.length >= 4 && /^[a-z]+$/.test(t);
+
+function montarGrupos(consulta) {
+  const grupos = consulta.termos.map((t) => {
+    const alternativas = [alternativa(t)];
+    for (const s of indiceSinonimos.get(t) || []) {
+      alternativas.push(alternativa(s, s.length <= 4 ? "palavra" : "inicio"));
+    }
+    return { termo: t, alternativas, tolerante: podeTerErro(t) };
+  });
+  for (const f of consulta.exatos) grupos.push({ termo: f, alternativas: [alternativa(f)], tolerante: false });
+  return grupos;
+}
+
+const casaGrupo = (item, g) => g.alternativas.some((alt) => casaAlternativa(item._buscaFull, alt));
+
+/* ---------- Relevância ---------- */
 
 // Quanto maior a pontuação, mais relevante o resultado
-function pontuar(item, termos) {
+function pontuarTermo(item, t) {
   let pontos = 0;
-  for (const t of termos) {
-    if (item._sku === t) pontos += 100;
-    else if (item._sku.startsWith(t)) pontos += 60;
-    else if (item._sku.includes(t)) pontos += 5;
+  if (item._sku === t) pontos += 100;
+  else if (item._sku.startsWith(t)) pontos += 60;
+  else if (item._sku.includes(t)) pontos += 5;
 
-    if (item._ref === t || item._refOriginal === t) pontos += 80;
-    else if (item._ref.includes(t) || item._refOriginal.includes(t)) pontos += 15;
+  if (item._ref === t || item._refOriginal === t) pontos += 80;
+  else if (item._ref.includes(t) || item._refOriginal.includes(t)) pontos += 15;
 
-    if (item._tags.some((tag) => tag === t)) pontos += 50;
-    else if (item._tags.some((tag) => tag.includes(t))) pontos += 30;
+  if (item._tags.some((tag) => tag === t)) pontos += 50;
+  else if (item._tags.some((tag) => tag.includes(t))) pontos += 30;
 
-    if (new RegExp(`(^|[^a-z0-9])${escaparRegex(t)}`).test(item._desc)) {
-      pontos += 20; // começo de palavra na descrição
-    } else if (item._desc.includes(t)) {
-      pontos += 10;
-    }
+  if (new RegExp(`(^|[^a-z0-9])${escaparRegex(t)}`).test(item._desc)) {
+    pontos += 20; // começo de palavra na descrição
+  } else if (item._desc.includes(t)) {
+    pontos += 10;
   }
   return pontos;
 }
 
-function escaparRegex(texto) {
-  return texto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// Cada grupo vale a melhor das suas alternativas (o termo digitado ou um sinônimo)
+function pontuar(item, grupos) {
+  let pontos = 0;
+  for (const g of grupos) {
+    let melhor = 0;
+    for (const alt of g.alternativas) {
+      if (casaAlternativa(item._buscaFull, alt)) melhor = Math.max(melhor, pontuarTermo(item, alt.texto));
+    }
+    pontos += melhor;
+  }
+  return pontos;
+}
+
+// Mais relevante primeiro; empate mantém a ordem original da base
+function ordenar(lista, grupos) {
+  return lista
+    .map((item, indice) => ({ item, indice, pontos: pontuar(item, grupos) }))
+    .sort((a, b) => b.pontos - a.pontos || a.indice - b.indice)
+    .map((r) => r.item);
 }
 
 /* ---------- Tolerância a erro de digitação ---------- */
@@ -320,11 +485,15 @@ function obterVocabulario() {
 }
 
 // Palavras da base parecidas com o termo digitado (as mais próximas e mais usadas primeiro).
-function sugerirPalavras(termo) {
-  if (termo.length < 4 || !/[a-z]/.test(termo) || /\d/.test(termo)) return [];
-  const max = termo.length <= 5 ? 1 : 2;
+// estrito = usado com resultados exatos na tela: só 1 erro até 8 letras, 2 a partir de 9.
+function sugerirPalavras(termo, { estrito = false, limite = 3 } = {}) {
+  if (!podeTerErro(termo) || (estrito && termo.length < 5)) return [];
+  const chave = `${estrito ? 1 : 0}:${limite}:${termo}`;
+  if (cacheParecidas.has(chave)) return cacheParecidas.get(chave);
+  const max = estrito ? (termo.length <= 8 ? 1 : 2) : termo.length <= 5 ? 1 : 2;
   const achadas = [];
   for (const [palavra, usos] of obterVocabulario()) {
+    if (estrito && palavra.includes(termo)) continue; // essa já aparece nos resultados exatos
     let d = distancia(termo, palavra, max);
     // quem digita só o começo da palavra ("esfigmmo"): compara com o início dela
     if (d > max && termo.length >= 5 && palavra.length > termo.length) {
@@ -333,68 +502,103 @@ function sugerirPalavras(termo) {
     if (d <= max) achadas.push({ palavra, d, usos });
   }
   achadas.sort((a, b) => a.d - b.d || b.usos - a.usos);
-  return achadas.slice(0, 3).map((x) => x.palavra);
+  const resultado = achadas.slice(0, limite).map((x) => x.palavra);
+  cacheParecidas.set(chave, resultado);
+  return resultado;
 }
 
 /* ---------- Execução da busca ---------- */
 
-function executarBusca(termoOriginal) {
+function mensagemNaTabela(classe, html) {
+  tbody.innerHTML = `<tr><td colspan="${numColunas()}" class="${classe}">${html}</td></tr>`;
+  resultsInfo.innerText = "";
+  paginacao.hidden = true;
+}
+
+function executarBusca(termoOriginal, pagina = 1) {
   if (erroCarga) {
-    tbody.innerHTML = `<tr><td colspan="${numColunas()}" class="msg-erro">Não conseguimos carregar a base de produtos. Tente novamente em instantes.</td></tr>`;
-    resultsInfo.innerText = "";
+    estadoLista = null;
+    mensagemNaTabela("msg-erro", "Não conseguimos carregar a base de produtos. Tente novamente em instantes.");
     return;
   }
   if (!carregado) {
-    tbody.innerHTML = `<tr><td colspan="${numColunas()}" class="msg-vazio">Carregando a base de produtos...</td></tr>`;
-    resultsInfo.innerText = "";
+    estadoLista = null;
+    mensagemNaTabela("msg-vazio", "Carregando a base de produtos...");
     return;
   }
 
-  const termosBusca = normalizar(termoOriginal)
-    .split(/\s+/)
-    .filter((t) => t !== "");
+  const consulta = interpretarConsulta(termoOriginal);
+  const grupos = montarGrupos(consulta);
 
-  // com categoria escolhida, a busca acontece só dentro dela
-  const base = categoriaAtual ? database.filter((item) => item.categoria === categoriaAtual) : database;
+  // com categoria escolhida, a busca acontece só dentro dela; "-palavra" tira produtos da base
+  let base = categoriaAtual ? database.filter((item) => item.categoria === categoriaAtual) : database;
+  if (consulta.excluidos.length) {
+    base = base.filter((item) => !consulta.excluidos.some((e) => item._buscaFull.includes(e)));
+  }
 
-  let resultados = ordenar(
-    base.filter((item) => termosBusca.every((t) => item._buscaFull.includes(t))),
-    termosBusca,
-  );
-  let correcao = null;
+  const estado = {
+    original: termoOriginal.trim(),
+    consulta,
+    itens: [],
+    nExatos: 0,
+    destaque: grupos.flatMap((g) => g.alternativas),
+    destaqueParecidos: [],
+    correcao: null,
+    modo: "busca",
+  };
 
-  // Sem nada encontrado: tenta corrigir erros de digitação nos termos que não existem na base
-  if (resultados.length === 0 && termosBusca.length > 0) {
-    const grupos = termosBusca.map((t) =>
-      base.some((item) => item._buscaFull.includes(t)) ? [t] : sugerirPalavras(t),
-    );
-    if (grupos.every((g) => g.length > 0) && grupos.some((g, i) => g[0] !== termosBusca[i])) {
-      const filtrados = base.filter((item) =>
-        grupos.every((g) => g.some((alt) => item._buscaFull.includes(alt))),
-      );
-      if (filtrados.length > 0) {
-        const principais = grupos.map((g) => g[0]);
-        resultados = ordenar(filtrados, principais);
-        correcao = { original: termoOriginal.trim(), sugeridos: principais, termos: grupos.flat() };
+  if (grupos.length === 0) {
+    // sem termos: navega pela categoria (ou pelo catálogo inteiro) em ordem alfabética
+    estado.modo = categoriaAtual ? "categoria" : modoExplorar && !consulta.excluidos.length ? "explorar" : "navegar";
+    estado.itens = [...base].sort((a, b) => a._alfa - b._alfa);
+    estado.nExatos = estado.itens.length;
+  } else {
+    const exatos = ordenar(base.filter((item) => grupos.every((g) => casaGrupo(item, g))), grupos);
+    estado.itens = exatos;
+    estado.nExatos = exatos.length;
+
+    if (exatos.length === 0) {
+      // Nada encontrado: tenta corrigir erros de digitação nos termos que não existem na base
+      const corrigidos = grupos.map((g) => {
+        if (base.some((item) => casaGrupo(item, g))) return g;
+        if (!g.tolerante) return null;
+        const sugestoes = sugerirPalavras(g.termo);
+        return sugestoes.length ? { ...g, alternativas: sugestoes.map((s) => alternativa(s)), sugestoes } : null;
+      });
+      if (corrigidos.every(Boolean) && corrigidos.some((g) => g.sugestoes)) {
+        const filtrados = base.filter((item) => corrigidos.every((g) => casaGrupo(item, g)));
+        if (filtrados.length > 0) {
+          const principais = corrigidos.map((g) => ({ ...g, alternativas: [g.alternativas[0]] }));
+          estado.itens = ordenar(filtrados, principais);
+          estado.nExatos = estado.itens.length;
+          estado.destaque = corrigidos.flatMap((g) => g.alternativas);
+          estado.correcao = { original: estado.original, sugeridos: principais.map((g) => g.alternativas[0].texto) };
+        }
+      }
+    } else if (exatos.length < ITENS_POR_PAGINA) {
+      // Poucos resultados exatos: acrescenta, depois deles, os produtos com palavras PARECIDAS
+      // (o termo pode ter sido digitado errado). Ficam numa seção separada e com menos relevância.
+      const extras = grupos.map((g) => (g.tolerante ? sugerirPalavras(g.termo, { estrito: true, limite: 5 }) : []));
+      if (extras.some((e) => e.length)) {
+        const ampliados = grupos.map((g, i) =>
+          extras[i].length ? { ...g, alternativas: g.alternativas.concat(extras[i].map((p) => alternativa(p))) } : g,
+        );
+        const jaListados = new Set(exatos);
+        const parecidos = ordenar(
+          base.filter((item) => !jaListados.has(item) && ampliados.every((g) => casaGrupo(item, g))),
+          ampliados,
+        ).slice(0, MAX_PARECIDOS);
+        if (parecidos.length) {
+          estado.itens = exatos.concat(parecidos);
+          estado.destaqueParecidos = extras.flat().map((p) => alternativa(p));
+        }
       }
     }
   }
 
-  // Limita a 100 itens
-  renderizarTabela(
-    resultados.slice(0, MAX_RESULTADOS),
-    resultados.length,
-    correcao ? correcao.termos : termosBusca,
-    correcao,
-  );
-}
-
-// Mais relevante primeiro; empate mantém a ordem original da base
-function ordenar(lista, termos) {
-  return lista
-    .map((item, indice) => ({ item, indice, pontos: pontuar(item, termos) }))
-    .sort((a, b) => b.pontos - a.pontos || a.indice - b.indice)
-    .map((r) => r.item);
+  estadoLista = estado;
+  paginaAtual = pagina;
+  renderizarPagina();
 }
 
 // 4 colunas normais; 6 quando há Lista Diária (Saldo e Preço campanha)
@@ -418,64 +622,26 @@ function celulasLista(sku) {
   };
 }
 
-function renderizarTabela(lista, total, termos, correcao = null) {
-  const emCategoria = categoriaAtual ? ` em <strong>${escaparHtml(categoriaAtual)}</strong>` : "";
+function linhaProduto(item, termos) {
+  let tagsHtml = "";
 
-  if (lista.length === 0) {
-    tbody.innerHTML = categoriaAtual
-      ? `<tr><td colspan="${numColunas()}" class="msg-erro">Não encontramos nenhum produto em <strong>${escaparHtml(categoriaAtual)}</strong> com esse termo. <button type="button" class="btn-link" data-limpar-categoria>Buscar em todas as categorias</button></td></tr>`
-      : `<tr><td colspan="${numColunas()}" class="msg-erro">Não encontramos nenhum produto com esse termo. Tente o código, o nome técnico ou um apelido.</td></tr>`;
-    resultsInfo.innerText = "";
-    return;
-  }
-
-  if (correcao) {
-    resultsInfo.innerHTML =
-      `Nenhum resultado exato para <strong>${escaparHtml(correcao.original)}</strong>. ` +
-      `Mostrando ${total > lista.length ? `${lista.length} de ${total}` : total} resultado(s)${emCategoria} para ` +
-      `<strong>${escaparHtml(correcao.sugeridos.join(" "))}</strong>.`;
-    resultsInfo.className = "results-info results-info--alerta";
-  } else if (termos.length === 0) {
-    // só a categoria escolhida, ainda sem texto na busca
-    resultsInfo.innerHTML =
-      `Mostrando <strong>${lista.length}</strong> de <strong>${total}</strong> produtos${emCategoria}.` +
-      (total > lista.length ? " Digite no campo de busca para refinar." : "");
-    resultsInfo.className = total > lista.length ? "results-info results-info--alerta" : "results-info";
-  } else if (total > lista.length) {
-    resultsInfo.innerHTML = `Mostrando <strong>${lista.length}</strong> de <strong>${total}</strong> resultados${emCategoria}. Refine sua busca para ver os demais.`;
-    resultsInfo.className = "results-info results-info--alerta";
+  if (item.tags.length === 0) {
+    tagsHtml = `<span class="tag-empty"></span>`;
   } else {
-    resultsInfo.innerHTML = `Mostrando ${lista.length} de ${total} resultados encontrados${emCategoria}.`;
-    resultsInfo.className = "results-info";
+    // Tags que casaram com a busca vêm primeiro, para nunca ficarem escondidas
+    const casou = (tag) => termos.some((alt) => casaAlternativa(normalizarEspacos(tag), alt));
+    const ordenadas = [...item.tags.filter(casou), ...item.tags.filter((tag) => !casou(tag))];
+    const visiveis = ordenadas.slice(0, MAX_TAGS_VISIVEIS);
+    const ocultas = ordenadas.slice(MAX_TAGS_VISIVEIS);
+
+    tagsHtml = visiveis.map((tag) => `<span class="tag-pill">${destacar(tag, termos)}</span>`).join("");
+    if (ocultas.length > 0) {
+      tagsHtml += `<span class="tag-pill tag-more" title="${escaparHtml(ocultas.join(", "))}">+${ocultas.length}</span>`;
+    }
   }
 
-  const html = lista
-    .map((item) => {
-      let tagsHtml = "";
-
-      // LÓGICA DO EMPTY STATE
-      if (item.tags.length === 0) {
-        tagsHtml = `<span class="tag-empty"></span>`;
-      } else {
-        // Tags que casaram com a busca vêm primeiro, para nunca ficarem escondidas
-        const casou = (tag) => termos.some((t) => normalizar(tag).includes(t));
-        const ordenadas = [
-          ...item.tags.filter(casou),
-          ...item.tags.filter((tag) => !casou(tag)),
-        ];
-        const visiveis = ordenadas.slice(0, MAX_TAGS_VISIVEIS);
-        const ocultas = ordenadas.slice(MAX_TAGS_VISIVEIS);
-
-        tagsHtml = visiveis
-          .map((tag) => `<span class="tag-pill">${destacar(tag, termos)}</span>`)
-          .join("");
-        if (ocultas.length > 0) {
-          tagsHtml += `<span class="tag-pill tag-more" title="${escaparHtml(ocultas.join(", "))}">+${ocultas.length}</span>`;
-        }
-      }
-
-      const lista = celulasLista(item.sku);
-      return `
+  const lista = celulasLista(item.sku);
+  return `
         <tr>
           <td class="col-sku"><button type="button" class="sku-copiar" data-sku="${escaparHtml(item.sku)}" title="Clique para copiar o código" aria-label="Copiar código ${escaparHtml(item.sku)}">${destacar(item.sku, termos)}</button></td>
           <td class="col-desc">${destacar(item.descricao, termos)}${lista.resumoMobile}</td>
@@ -484,11 +650,157 @@ function renderizarTabela(lista, total, termos, correcao = null) {
           <td class="col-ref">${destacar(item.referenciaOriginal, termos, item.referenciaOriginal.length - item.referencia.length)}</td>
         </tr>
       `;
-    })
-    .join("");
-
-  tbody.innerHTML = html;
 }
+
+// Texto "Mostrando 51–100 de 312" (só quando há mais de uma página)
+function faixaDaPagina(total, inicio, fim) {
+  return total > ITENS_POR_PAGINA ? ` Mostrando <strong>${fmtNum.format(inicio + 1)}–${fmtNum.format(fim)}</strong>.` : "";
+}
+
+function textoExcluidos(consulta) {
+  if (!consulta.excluidos.length) return "";
+  return ` Sem: ${consulta.excluidos.map((e) => `<strong>${escaparHtml(e)}</strong>`).join(", ")}.`;
+}
+
+function renderizarPagina() {
+  const estado = estadoLista;
+  if (!estado) return;
+  const total = estado.itens.length;
+  const emCategoria = categoriaAtual ? ` em <strong>${escaparHtml(categoriaAtual)}</strong>` : "";
+
+  if (total === 0) {
+    let msg;
+    if (categoriaAtual) {
+      msg = `Não encontramos nenhum produto em <strong>${escaparHtml(categoriaAtual)}</strong> com esse termo. <button type="button" class="btn-link" data-limpar-categoria>Buscar em todas as categorias</button>`;
+    } else if (estado.consulta.exatos.length || estado.consulta.excluidos.length) {
+      msg = "Não encontramos nenhum produto com esse termo. Confira o trecho entre aspas e as palavras com hífen (-), que tiram produtos da lista.";
+    } else {
+      msg = "Não encontramos nenhum produto com esse termo. Tente o código, o nome técnico ou um apelido.";
+    }
+    mensagemNaTabela("msg-erro", msg);
+    return;
+  }
+
+  const totalPaginas = Math.ceil(total / ITENS_POR_PAGINA);
+  paginaAtual = Math.min(Math.max(1, paginaAtual), totalPaginas);
+  const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
+  const fim = Math.min(inicio + ITENS_POR_PAGINA, total);
+  const nParecidos = total - estado.nExatos;
+  const faixa = faixaDaPagina(total, inicio, fim);
+  const excl = textoExcluidos(estado.consulta);
+  let classeInfo = "results-info";
+
+  if (estado.correcao) {
+    resultsInfo.innerHTML =
+      `Nenhum resultado exato para <strong>${escaparHtml(estado.correcao.original)}</strong>. ` +
+      `Mostrando ${fmtNum.format(total)} resultado(s)${emCategoria} para ` +
+      `<strong>${escaparHtml(estado.correcao.sugeridos.join(" "))}</strong>.${faixa}`;
+    classeInfo += " results-info--alerta";
+  } else if (estado.modo === "explorar") {
+    resultsInfo.innerHTML = `<strong>Catálogo completo:</strong> ${fmtNum.format(total)} produtos em ordem alfabética.${faixa}`;
+  } else if (estado.modo === "categoria" || estado.modo === "navegar") {
+    resultsInfo.innerHTML = `<strong>${fmtNum.format(total)}</strong> produtos${emCategoria}, em ordem alfabética.${excl}${faixa}` +
+      (estado.modo === "categoria" && total > ITENS_POR_PAGINA ? " Digite no campo de busca para refinar." : "");
+  } else {
+    const parecidos = nParecidos ? ` + <strong>${fmtNum.format(nParecidos)}</strong> parecido(s)` : "";
+    resultsInfo.innerHTML = `<strong>${fmtNum.format(estado.nExatos)}</strong> resultado(s) encontrado(s)${emCategoria}${parecidos}.${excl}${faixa}`;
+  }
+  resultsInfo.className = classeInfo;
+
+  const destaqueParecidos = estado.destaque.concat(estado.destaqueParecidos);
+  let html = "";
+  for (let i = inicio; i < fim; i++) {
+    if (i >= estado.nExatos && (i === estado.nExatos || i === inicio)) {
+      html += `<tr class="linha-divisoria"><td colspan="${numColunas()}">` +
+        `<strong>Parecidos com a sua busca${i > estado.nExatos ? " (continuação)" : ""}</strong>` +
+        `<span> · palavras com grafia próxima, caso algo tenha sido digitado diferente</span></td></tr>`;
+    }
+    html += linhaProduto(estado.itens[i], i >= estado.nExatos ? destaqueParecidos : estado.destaque);
+  }
+  tbody.innerHTML = html;
+  renderizarPaginacao(totalPaginas);
+}
+
+/* ---------- Paginação ---------- */
+
+// Números visíveis: 1 … 4 5 6 … 20
+function paginasVisiveis(atual, total) {
+  const set = new Set([1, total, atual - 1, atual, atual + 1]);
+  if (atual <= 3) [2, 3, 4].forEach((n) => set.add(n));
+  if (atual >= total - 2) [total - 1, total - 2, total - 3].forEach((n) => set.add(n));
+  const nums = [...set].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
+  const saida = [];
+  nums.forEach((n, i) => {
+    if (i > 0 && n - nums[i - 1] > 1) saida.push(null);
+    saida.push(n);
+  });
+  return saida;
+}
+
+function renderizarPaginacao(totalPaginas) {
+  if (totalPaginas <= 1) {
+    paginacao.hidden = true;
+    paginacao.innerHTML = "";
+    return;
+  }
+  const botao = (rotulo, pagina, extra = "") =>
+    `<button type="button" class="pag-btn${extra}" data-pagina="${pagina}"${pagina === paginaAtual && !extra ? ' aria-current="page"' : ""}` +
+    `${extra && (pagina < 1 || pagina > totalPaginas) ? " disabled" : ""}>${rotulo}</button>`;
+  paginacao.innerHTML =
+    botao(`<span aria-hidden="true">‹</span> Anterior`, paginaAtual - 1, " pag-btn--seta") +
+    `<span class="pag-numeros">` +
+    paginasVisiveis(paginaAtual, totalPaginas)
+      .map((n) => (n === null ? `<span class="pag-reticencias" aria-hidden="true">…</span>` : botao(String(n), n)))
+      .join("") +
+    `</span>` +
+    `<span class="pag-resumo">Página ${paginaAtual} de ${totalPaginas}</span>` +
+    botao(`Próxima <span aria-hidden="true">›</span>`, paginaAtual + 1, " pag-btn--seta");
+  paginacao.hidden = false;
+}
+
+function irParaPagina(pagina) {
+  if (!estadoLista) return;
+  paginaAtual = pagina;
+  renderizarPagina();
+  atualizarEndereco();
+  // volta ao topo da lista (logo abaixo do cabeçalho fixo)
+  const topo = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topo-h")) || 77;
+  const y = resultsContainer.getBoundingClientRect().top + window.scrollY - topo - 16;
+  const suave = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: Math.max(0, y), behavior: suave ? "smooth" : "auto" });
+}
+
+paginacao.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-pagina]");
+  if (!btn || btn.disabled) return;
+  irParaPagina(Number(btn.dataset.pagina));
+});
+
+/* ---------- Explorar o catálogo completo ---------- */
+
+function abrirCatalogo() {
+  clearTimeout(timeoutBusca);
+  fecharHistorico();
+  input.value = "";
+  categoriaAtual = "";
+  modoExplorar = true;
+  renderizarCategorias();
+  mostrarBusca();
+  executarBusca("");
+  atualizarEndereco();
+}
+
+document.getElementById("btnExplorar").addEventListener("click", () => {
+  if (!carregado && !erroCarga) {
+    // ainda carregando: abre já com o aviso e completa quando a base chegar
+    modoExplorar = true;
+    input.value = "";
+    mostrarBusca();
+    executarBusca("");
+    return;
+  }
+  abrirCatalogo();
+});
 
 /* ---------- Copiar SKU e link da busca ---------- */
 
@@ -529,15 +841,20 @@ tbody.addEventListener("click", async (e) => {
     return;
   }
   const btn = e.target.closest("button.sku-copiar");
-  if (btn && (await copiarTexto(btn.dataset.sku))) sinalizarCopiado(btn);
+  if (btn && (await copiarTexto(btn.dataset.sku))) {
+    sinalizarCopiado(btn);
+    registrarBuscaAtual(); // copiou um código: a busca foi útil, entra no histórico
+  }
 });
 
-// Endereço da busca atual: ?cat=...&q=...
+// Endereço da busca atual: ?cat=...&q=...&p=2 (ou ?ver=todos para o catálogo completo)
 function parametrosDaBusca() {
   const params = new URLSearchParams();
   if (categoriaAtual) params.set("cat", categoriaAtual);
   const termo = input.value.trim();
   if (termo) params.set("q", termo);
+  if (modoExplorar && !termo && !categoriaAtual) params.set("ver", "todos");
+  if (estadoLista && paginaAtual > 1 && params.toString()) params.set("p", String(paginaAtual));
   return params.toString();
 }
 
@@ -548,7 +865,10 @@ function linkDaBusca() {
 
 btnLink.addEventListener("click", async () => {
   const link = linkDaBusca();
-  if (link && (await copiarTexto(link))) sinalizarCopiado(btnLink, "Copiar link desta busca");
+  if (link && (await copiarTexto(link))) {
+    sinalizarCopiado(btnLink, "Copiar link desta busca");
+    registrarBuscaAtual();
+  }
 });
 
 // Mantém o endereço da página igual à busca (dá para compartilhar ou recarregar)
@@ -559,9 +879,180 @@ function atualizarEndereco() {
     history.replaceState(null, "", params ? `?${params}` : location.pathname);
   } catch (_) {}
 }
-input.addEventListener("input", atualizarEndereco);
 
-/* ---------- Categorias (botões de filtro) ---------- */
+/* ---------- Histórico de buscas (só neste navegador) ---------- */
+
+const CHAVE_HISTORICO = "cbs_historico_busca_v1";
+const MAX_HISTORICO = 8;
+const ESPERA_HISTORICO_MS = 2500; // parou de digitar por 2,5 s com resultados: conta como busca feita
+const JANELA_DIGITACAO_MS = 2 * 60 * 1000;
+let timeoutHistorico = null;
+let historicoAtivo = -1; // item destacado com as setas
+
+function obterHistorico() {
+  try {
+    const lista = JSON.parse(localStorage.getItem(CHAVE_HISTORICO));
+    return Array.isArray(lista) ? lista.filter((h) => h && typeof h.q === "string" && h.q.trim()) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function gravarHistorico(lista) {
+  try {
+    if (lista.length) localStorage.setItem(CHAVE_HISTORICO, JSON.stringify(lista));
+    else localStorage.removeItem(CHAVE_HISTORICO);
+  } catch (_) {}
+}
+
+function salvarNoHistorico(termo, categoria = "") {
+  const q = String(termo ?? "").replace(/\s+/g, " ").trim();
+  if (!q) return;
+  const chave = normalizar(q);
+  const agora = Date.now();
+  const lista = obterHistorico().filter((h) => {
+    if ((h.cat || "") !== categoria) return true;
+    const hq = normalizar(h.q);
+    if (hq === chave) return false; // repetida: sobe para o topo
+    // "sond" salvo há pouco e agora "sonda 12": era a mesma busca ainda sendo digitada
+    return !(chave.startsWith(hq) && agora - (h.em || 0) < JANELA_DIGITACAO_MS);
+  });
+  lista.unshift({ q, cat: categoria, em: agora });
+  gravarHistorico(lista.slice(0, MAX_HISTORICO));
+}
+
+const buscaTemResultado = () => Boolean(estadoLista && estadoLista.itens.length > 0 && estadoLista.modo === "busca");
+
+function registrarBuscaAtual() {
+  cancelarRegistroHistorico();
+  const termo = input.value.trim();
+  if (termo && buscaTemResultado()) salvarNoHistorico(termo, categoriaAtual);
+}
+
+function agendarRegistroHistorico() {
+  cancelarRegistroHistorico();
+  const termo = input.value.trim();
+  if (!termo || !buscaTemResultado()) return;
+  timeoutHistorico = setTimeout(() => {
+    if (input.value.trim() === termo) registrarBuscaAtual();
+  }, ESPERA_HISTORICO_MS);
+}
+
+function cancelarRegistroHistorico() {
+  clearTimeout(timeoutHistorico);
+}
+
+const ICONE_RELOGIO =
+  '<svg class="historico__icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>';
+
+function abrirHistorico() {
+  const lista = obterHistorico();
+  if (!lista.length || input.value.trim() || document.activeElement !== input) {
+    fecharHistorico();
+    return;
+  }
+  historicoAtivo = -1;
+  historicoLista.innerHTML = lista
+    .map(
+      (h, i) =>
+        `<li class="historico__item" role="option" id="hist-${i}" data-i="${i}" aria-selected="false">` +
+        `${ICONE_RELOGIO}<span class="historico__texto">${escaparHtml(h.q)}</span>` +
+        (h.cat ? `<span class="historico__cat">em ${escaparHtml(h.cat)}</span>` : "") +
+        `<button type="button" class="historico__remover" data-remover="${i}" tabindex="-1" aria-label="Remover ${escaparHtml(h.q)} do histórico" title="Remover do histórico">` +
+        `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></li>`,
+    )
+    .join("");
+  historicoCaixa.hidden = false;
+  input.setAttribute("aria-expanded", "true");
+  input.removeAttribute("aria-activedescendant");
+}
+
+function fecharHistorico() {
+  historicoCaixa.hidden = true;
+  historicoAtivo = -1;
+  input.setAttribute("aria-expanded", "false");
+  input.removeAttribute("aria-activedescendant");
+}
+
+function destacarHistorico(indice) {
+  const itens = [...historicoLista.querySelectorAll(".historico__item")];
+  if (!itens.length) return;
+  historicoAtivo = (indice + itens.length) % itens.length;
+  itens.forEach((li, i) => li.setAttribute("aria-selected", String(i === historicoAtivo)));
+  input.setAttribute("aria-activedescendant", itens[historicoAtivo].id);
+  itens[historicoAtivo].scrollIntoView({ block: "nearest" });
+}
+
+function usarHistorico(indice) {
+  const h = obterHistorico()[indice];
+  if (!h) return;
+  fecharHistorico();
+  input.value = h.q;
+  modoExplorar = false;
+  // a categoria só volta se ainda existir
+  categoriaAtual = h.cat && categoriasLista.some(([nome]) => nome === h.cat) ? h.cat : "";
+  renderizarCategorias();
+  clearTimeout(timeoutBusca);
+  mostrarBusca();
+  executarBusca(h.q);
+  atualizarEndereco();
+  if (buscaTemResultado()) salvarNoHistorico(h.q, categoriaAtual); // sobe para o topo
+}
+
+// Como no Google: o campo já abre com foco, mas o histórico só aparece quando a pessoa clica nele vazio ou aperta ↓
+input.addEventListener("click", () => {
+  if (!input.value.trim() && historicoCaixa.hidden) abrirHistorico();
+});
+input.addEventListener("blur", fecharHistorico);
+input.addEventListener("keydown", (e) => {
+  const aberto = !historicoCaixa.hidden;
+  if (e.key === "ArrowDown") {
+    if (!aberto && !input.value.trim()) abrirHistorico();
+    if (!historicoCaixa.hidden) {
+      e.preventDefault();
+      destacarHistorico(historicoAtivo + 1);
+    }
+  } else if (e.key === "ArrowUp" && aberto) {
+    e.preventDefault();
+    destacarHistorico(historicoAtivo - 1);
+  } else if (e.key === "Enter") {
+    if (aberto && historicoAtivo >= 0) {
+      e.preventDefault();
+      usarHistorico(historicoAtivo);
+    } else if (input.value.trim()) {
+      // Enter confirma a busca na hora (sem esperar o debounce) e a guarda no histórico
+      clearTimeout(timeoutBusca);
+      mostrarBusca();
+      executarBusca(input.value.trim());
+      atualizarEndereco();
+      registrarBuscaAtual();
+    }
+  } else if (e.key === "Escape" && aberto) {
+    e.preventDefault();
+    e.stopPropagation();
+    fecharHistorico();
+  }
+});
+// clicar dentro da lista não tira o foco do campo
+historicoCaixa.addEventListener("mousedown", (e) => e.preventDefault());
+historicoLista.addEventListener("click", (e) => {
+  const remover = e.target.closest("[data-remover]");
+  if (remover) {
+    const lista = obterHistorico();
+    lista.splice(Number(remover.dataset.remover), 1);
+    gravarHistorico(lista);
+    abrirHistorico();
+    return;
+  }
+  const item = e.target.closest(".historico__item");
+  if (item) usarHistorico(Number(item.dataset.i));
+});
+document.getElementById("historicoLimpar").addEventListener("click", () => {
+  gravarHistorico([]);
+  fecharHistorico();
+});
+
+/* ---------- Categorias (gaveta) ---------- */
 
 function montarCategorias() {
   const contagem = new Map();
@@ -598,6 +1089,7 @@ function renderizarCategorias() {
   }
   botaoCategorias.hidden = false;
   listaCategorias.removeAttribute("aria-busy");
+  filtroCategoria.disabled = false;
 
   const item = (nome, n, rotulo) =>
     `<button type="button" class="cat-item${nome ? "" : " cat-item--todas"}" data-categoria="${escaparHtml(nome)}" aria-pressed="${nome === categoriaAtual}">` +
@@ -605,6 +1097,7 @@ function renderizarCategorias() {
   listaCategorias.innerHTML =
     item("", database.length, "Todos os produtos") +
     categoriasLista.map(([nome, n]) => item(nome, n, nome)).join("");
+  filtrarCategorias();
 
   botaoCategorias.classList.toggle("tem-selecao", Boolean(categoriaAtual));
   botaoCategorias.setAttribute("aria-label", categoriaAtual ? `Abrir categorias (selecionada: ${categoriaAtual})` : "Abrir categorias");
@@ -617,24 +1110,66 @@ function renderizarCategorias() {
 
 function escolherCategoria(nome) {
   categoriaAtual = nome;
+  modoExplorar = false;
   renderizarCategorias();
   clearTimeout(timeoutBusca);
   const termo = input.value.trim();
-  atualizarEndereco();
   if (!termo && !categoriaAtual) {
     mostrarHome();
+    atualizarEndereco();
     return;
   }
   mostrarBusca();
   executarBusca(termo);
+  atualizarEndereco();
 }
 
 listaCategorias.addEventListener("click", (e) => {
   const botao = e.target.closest("button[data-categoria]");
   if (!botao) return;
   const nome = botao.dataset.categoria;
-  escolherCategoria(nome === categoriaAtual ? "" : nome); // clicar de novo desmarca; "Todos" limpa o filtro
+  const novo = nome === categoriaAtual ? "" : nome; // clicar de novo desmarca
+  // "Todos os produtos" (ou desmarcar) sem nada digitado: abre o catálogo completo
+  if (!novo && !input.value.trim() && nome === "") abrirCatalogo();
+  else escolherCategoria(novo);
   definirGavetaAberta(false); // depois de escolher, a gaveta fecha e os resultados aparecem
+});
+
+// Campo "Buscar categoria..." da gaveta: filtra a lista enquanto digita
+function filtrarCategorias() {
+  const termo = normalizarEspacos(filtroCategoria.value);
+  let visiveis = 0;
+  listaCategorias.querySelectorAll(".cat-item").forEach((btn) => {
+    const nome = btn.dataset.categoria;
+    const mostra = termo ? nome !== "" && normalizar(nome).includes(termo) : true;
+    btn.hidden = !mostra;
+    if (mostra) visiveis++;
+  });
+  categoriasVazio.hidden = visiveis > 0;
+  categoriasVazio.textContent = visiveis ? "" : `Nenhuma categoria encontrada para "${filtroCategoria.value.trim()}".`;
+}
+
+filtroCategoria.addEventListener("input", filtrarCategorias);
+filtroCategoria.addEventListener("keydown", (e) => {
+  const primeira = listaCategorias.querySelector(".cat-item:not([hidden])");
+  if (e.key === "Enter" && primeira && filtroCategoria.value.trim()) {
+    e.preventDefault();
+    primeira.click(); // Enter escolhe a primeira categoria da lista filtrada
+  } else if (e.key === "ArrowDown" && primeira) {
+    e.preventDefault();
+    primeira.focus();
+  }
+});
+// setas para andar pela lista (e voltar ao campo de busca do topo)
+listaCategorias.addEventListener("keydown", (e) => {
+  if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+  const itens = [...listaCategorias.querySelectorAll(".cat-item:not([hidden])")];
+  const i = itens.indexOf(document.activeElement);
+  if (i === -1) return;
+  e.preventDefault();
+  if (e.key === "ArrowDown") (itens[i + 1] || itens[i]).focus();
+  else if (i === 0 && !filtroCategoria.disabled) filtroCategoria.focus();
+  else itens[i - 1].focus();
 });
 
 // Gaveta de categorias (off-canvas): abre pelo botão do cabeçalho, fecha com Esc, fundo, « ou ao escolher
@@ -645,9 +1180,22 @@ function definirGavetaAberta(aberta, devolverFoco = true) {
   botaoCategorias.setAttribute("aria-expanded", String(aberta));
   gavetaFundo.hidden = false;
   requestAnimationFrame(() => gavetaFundo.classList.toggle("is-visivel", aberta));
-  if (!aberta) setTimeout(() => { if (!caixaCategorias.classList.contains("is-aberta")) gavetaFundo.hidden = true; }, 250);
+  if (!aberta) {
+    setTimeout(() => { if (!caixaCategorias.classList.contains("is-aberta")) gavetaFundo.hidden = true; }, 250);
+    // ao fechar, o filtro da gaveta é limpo para a próxima vez
+    if (filtroCategoria.value) {
+      filtroCategoria.value = "";
+      filtrarCategorias();
+    }
+  }
   if (aberta) {
-    const alvo = listaCategorias.querySelector('[aria-pressed="true"]') || botaoFecharGaveta;
+    fecharHistorico();
+    // com mouse/teclado, o foco vai para o campo de busca da gaveta; no celular, não (o teclado cobriria a lista)
+    const pontoFino = window.matchMedia("(pointer: fine)").matches;
+    const alvo =
+      listaCategorias.querySelector('.cat-item[aria-pressed="true"]:not(.cat-item--todas)') ||
+      (pontoFino && !filtroCategoria.disabled ? filtroCategoria : null) ||
+      botaoFecharGaveta;
     setTimeout(() => alvo.focus({ preventScroll: true }), 50);
   } else if (devolverFoco) {
     botaoCategorias.focus({ preventScroll: true });
@@ -665,16 +1213,18 @@ document.getElementById("filtroAtivoLimpar").addEventListener("click", () => {
   input.focus();
 });
 
-// Abre já com a busca do link (?q=... e/ou ?cat=...)
+// Abre já com a busca do link (?q=..., ?cat=..., ?p=... ou ?ver=todos)
 (function buscaDoLink() {
-  const q = new URLSearchParams(location.search).get("q");
+  const q = parametrosIniciais.get("q");
   if (q && q.trim()) {
     input.value = q.trim();
+    modoExplorar = false;
     mostrarBusca();
     btnLink.hidden = false;
-    executarBusca(q.trim());
-  } else if (categoriaDoLink) {
+    executarBusca(q.trim(), paginaDoLink);
+  } else if (categoriaDoLink || modoExplorar) {
     mostrarBusca();
     btnLink.hidden = false;
+    executarBusca("");
   }
 })();

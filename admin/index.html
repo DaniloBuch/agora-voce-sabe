@@ -42,6 +42,7 @@
           <button class="aba ativa" data-aba="produtos" role="tab" aria-selected="true">Produtos</button>
           <button class="aba so-categorias" data-aba="categorias" role="tab" aria-selected="false">Categorias</button>
           <button class="aba" data-aba="tags" role="tab" aria-selected="false">Tags</button>
+          <button class="aba" data-aba="sinonimos" role="tab" aria-selected="false">Sinônimos</button>
           <button class="aba" data-aba="importar" role="tab" aria-selected="false">Importar CSV</button>
           <button class="aba" data-aba="historico" role="tab" aria-selected="false">Histórico</button>
         </nav>
@@ -196,6 +197,45 @@
               </tr>
             </thead>
             <tbody id="corpoTags"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========== ABA SINÔNIMOS ========== -->
+      <section id="aba-sinonimos" class="painel" hidden>
+        <p class="ajuda">
+          Ensine a busca do site a entender <strong>abreviações e jargões</strong>. Cada linha é um
+          <strong>grupo</strong>: todas as palavras dele valem como a mesma coisa, nos dois sentidos.
+          Ex.: com o grupo <code>cx, caixa</code>, quem busca "caixa" também encontra os produtos escritos "CX", e vice-versa.
+          Palavras de até 4 letras só contam como <strong>palavra inteira</strong> (assim "est" não pega "estilo").
+          O número ao lado de cada palavra é quantos produtos a têm hoje. As mudanças valem para quem abrir ou recarregar o site.
+        </p>
+        <div id="avisoSinonimos" class="alerta alerta--alerta" role="status" hidden></div>
+        <form class="barra-ferramentas" id="formNovoSinonimo" novalidate>
+          <div class="campo campo--filtro campo--largo">
+            <label class="sr-only" for="novoSinonimo">Palavras do novo grupo, separadas por vírgula</label>
+            <input id="novoSinonimo" maxlength="400" autocomplete="off" placeholder="Palavras separadas por vírgula. Ex.: sf, soro fisiologico" />
+          </div>
+          <button type="submit" class="btn btn--primario" id="btnNovoSinonimo"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Adicionar grupo</button>
+        </form>
+        <p class="erro" id="novoSinonimoErro" role="alert"></p>
+        <div class="barra-ferramentas">
+          <div class="campo-busca">
+            <svg class="campo-busca__icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+            <input type="search" id="filtroSinonimos" placeholder="Filtrar grupos..." autocomplete="off" aria-label="Filtrar grupos de sinônimos" />
+          </div>
+          <span class="dica" id="infoSinonimos"></span>
+        </div>
+        <div class="tabela-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Palavras equivalentes (produtos com cada uma)</th>
+                <th class="c-num">Produtos no grupo</th>
+                <th class="c-acoes"><span class="sr-only">Ações</span></th>
+              </tr>
+            </thead>
+            <tbody id="corpoSinonimos"></tbody>
           </table>
         </div>
       </section>
@@ -383,6 +423,47 @@
         <div class="dialogo__rodape">
           <button type="button" class="btn btn--secundario" id="btnNaoExcluirCategoria">Cancelar</button>
           <button type="submit" class="btn btn--perigo" id="btnSimExcluirCategoria">Excluir categoria</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ========== DIÁLOGO: EDITAR GRUPO DE SINÔNIMOS ========== -->
+    <dialog id="dlgSinonimo" class="dialogo">
+      <form id="formSinonimo" novalidate>
+        <div class="dialogo__topo">
+          <h2>Editar sinônimos</h2>
+          <button type="button" class="btn-icone" id="btnFecharSinonimo" aria-label="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+        </div>
+        <div class="dialogo__corpo">
+          <div class="campo">
+            <label for="sinonimoPalavras">Palavras equivalentes, separadas por vírgula</label>
+            <input id="sinonimoPalavras" maxlength="400" autocomplete="off" />
+          </div>
+          <div id="sinonimoPreview" class="massa-preview" aria-live="polite"></div>
+          <p class="erro" id="sinonimoErro" role="alert"></p>
+        </div>
+        <div class="dialogo__rodape">
+          <button type="button" class="btn btn--secundario" id="btnCancelarSinonimo">Cancelar</button>
+          <button type="submit" class="btn btn--primario" id="btnSalvarSinonimo">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ========== DIÁLOGO: EXCLUIR GRUPO DE SINÔNIMOS ========== -->
+    <dialog id="dlgSinonimoExcluir" class="dialogo dialogo--sm">
+      <form id="formSinonimoExcluir" novalidate>
+        <div class="dialogo__topo">
+          <h2>Excluir grupo?</h2>
+          <button type="button" class="btn-icone" id="btnFecharSinonimoExcluir" aria-label="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+        </div>
+        <div class="dialogo__corpo">
+          <p class="destaque-texto" id="txtSinonimoExcluir"></p>
+          <p class="ajuda">Os produtos não mudam; a busca só deixa de tratar essas palavras como iguais.</p>
+          <p class="erro" id="sinonimoExcluirErro" role="alert"></p>
+        </div>
+        <div class="dialogo__rodape">
+          <button type="button" class="btn btn--secundario" id="btnNaoExcluirSinonimo">Cancelar</button>
+          <button type="submit" class="btn btn--perigo" id="btnSimExcluirSinonimo">Excluir grupo</button>
         </div>
       </form>
     </dialog>

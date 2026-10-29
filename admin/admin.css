@@ -114,13 +114,13 @@ input:not([type="checkbox"]):not([type="file"]) {
 }
 .campo-busca { position: relative; flex: 1; min-width: 240px; }
 .campo-busca__icone { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-faint); pointer-events: none; }
-#filtro, #filtroTags, .campo input:not([type="checkbox"]):not([type="file"]) {
+#filtro, #filtroTags, #filtroSinonimos, .campo input:not([type="checkbox"]):not([type="file"]) {
   width: 100%; height: 40px; padding: 0 12px;
   background: var(--cbs-neutro-000); border: 1px solid var(--border-default); border-radius: var(--radius-control);
   box-shadow: var(--shadow-inset); outline: none; transition: var(--transition-control);
 }
-#filtro, #filtroTags { padding-left: 36px; }
-#filtro:focus, #filtroTags:focus, .campo input:not([type="checkbox"]):focus { border-color: var(--cbs-azul); box-shadow: var(--ring-focus); }
+#filtro, #filtroTags, #filtroSinonimos { padding-left: 36px; }
+#filtro:focus, #filtroTags:focus, #filtroSinonimos:focus, .campo input:not([type="checkbox"]):focus { border-color: var(--cbs-azul); box-shadow: var(--ring-focus); }
 input::placeholder { color: var(--text-faint); }
 input[readonly] { background: var(--cbs-neutro-050); color: var(--text-muted); }
 
@@ -369,7 +369,7 @@ body.logado .faixa .abas { display: flex; margin: var(--sp-6) 0 0; border-bottom
 }
 
 /* --- Hovers (cor, borda e sombra; nunca mudam o tamanho, como pede o DS) -- */
-#filtro:hover:not(:focus), #filtroTags:hover:not(:focus), .campo input:not([type="checkbox"]):not([readonly]):hover:not(:focus) { border-color: var(--cbs-azul-400); }
+#filtro:hover:not(:focus), #filtroTags:hover:not(:focus), #filtroSinonimos:hover:not(:focus), .campo input:not([type="checkbox"]):not([readonly]):hover:not(:focus) { border-color: var(--cbs-azul-400); }
 .chips:hover:not(:focus-within) { border-color: var(--cbs-azul-400); }
 .check:hover { color: var(--cbs-roxo); }
 .tag-pill { transition: border-color var(--dur-fast) var(--ease-standard); }
@@ -382,3 +382,11 @@ details summary:hover { background: var(--cbs-roxo-050); border-radius: var(--ra
 .login__cartao { transition: box-shadow var(--dur-base) var(--ease-standard); }
 .login__cartao:hover { box-shadow: var(--shadow-lg); }
 .link-voltar:hover { color: var(--text-link-hover); }
+
+/* --- Aba Sinônimos ---------------------------------------------------------- */
+.campo--largo { flex: 1; min-width: 280px; }
+.lista-sinonimos { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-pill--sinonimo { margin: 0; text-transform: none; font-size: var(--fs-xs); }
+.tag-pill__n { margin-left: 2px; font-size: var(--fs-3xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+#avisoSinonimos { margin-bottom: var(--sp-4); }
+#aba-sinonimos .ajuda code { padding: 1px 6px; background: var(--cbs-neutro-100); border-radius: var(--radius-xs); }
