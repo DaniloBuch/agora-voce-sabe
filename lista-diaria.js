@@ -167,16 +167,19 @@
   const ehPreco = (n) => n === "preco campanha" || n.startsWith("preco camp") || n === "preco de campanha";
   const ALIASES_SKU = ["codigo", "cod", "sku", "produto", "cod produto", "codigo produto", "codigo do produto", "cod prod", "item", "b1 cod"];
 
-  /** "1.234,50" / "R$ 12,3" / 12.5 -> número; vazio ou inválido -> null */
-  function paraNumero(v) {
+  /** "1.234,50" / "R$ 12,3" / 12.5 -> número; vazio ou inválido -> null.
+      pontoDecimal = CSV separado por vírgula (padrão americano): "4.798" é 4,798 e não 4798. */
+  function paraNumero(v, pontoDecimal = false) {
     if (v === null || v === undefined || v === "") return null;
     if (typeof v === "number") return Number.isFinite(v) ? v : null;
-    let t = String(v).replace(/R\$|\s/g, "");
+    let t = String(v).replace(/R\$|\s|\u00a0/g, "");
     if (!t) return null;
     const virgula = t.includes(","), ponto = t.includes(".");
-    if (virgula && ponto) t = t.replace(/\./g, "").replace(",", ".");
-    else if (virgula) t = t.replace(",", ".");
-    else if (ponto && /^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
+    if (virgula && ponto) {
+      // o último separador é o decimal: "1.234,50" (Brasil) ou "1,234.50" (EUA)
+      t = t.lastIndexOf(",") > t.lastIndexOf(".") ? t.replace(/\./g, "").replace(",", ".") : t.replace(/,/g, "");
+    } else if (virgula) t = t.replace(",", ".");
+    else if (ponto && !pontoDecimal && /^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
     const n = Number(t);
     return Number.isFinite(n) ? n : null;
   }
@@ -187,11 +190,71 @@
     return /^\d+$/.test(s) && s.length < 6 ? s.padStart(6, "0") : s;
   }
 
+  /* ---------- CSV: lido aqui mesmo, célula por célula como TEXTO ----------
+     (o leitor de Excel interpreta "4,7983" no padrão americano e vira 47983) */
+
+  // UTF-8; se não for (CSV salvo pelo Excel no Windows), Windows-1252
+  function decodificarTexto(buffer) {
+    try {
+      return new TextDecoder("utf-8", { fatal: true }).decode(buffer).replace(/^\uFEFF/, "");
+    } catch (_) {
+      return new TextDecoder("windows-1252").decode(buffer);
+    }
+  }
+
+  // Separador mais frequente nas primeiras linhas (fora de aspas): ";" (Excel Brasil), "," ou tab
+  function detectarSeparador(texto) {
+    const amostra = texto.split(/\r?\n/).filter((l) => l.trim()).slice(0, 30).join("\n").replace(/"[^"]*"/g, "");
+    const contagem = [";", ",", "\t"].map((sep) => [sep, amostra.split(sep).length - 1]);
+    contagem.sort((a, b) => b[1] - a[1]);
+    return contagem[0][1] > 0 ? contagem[0][0] : ";";
+  }
+
+  function lerCsv(texto, sep) {
+    const linhas = [];
+    let linha = [], campo = "", aspas = false;
+    for (let i = 0; i < texto.length; i++) {
+      const c = texto[i];
+      if (aspas) {
+        if (c === '"') {
+          if (texto[i + 1] === '"') { campo += '"'; i++; } else aspas = false;
+        } else campo += c;
+      } else if (c === '"') aspas = true;
+      else if (c === sep) { linha.push(campo); campo = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && texto[i + 1] === "\n") i++;
+        linha.push(campo); campo = "";
+        if (linha.some((x) => x.trim() !== "")) linhas.push(linha.map((x) => (x.trim() === "" ? null : x.trim())));
+        linha = [];
+      } else campo += c;
+    }
+    linha.push(campo);
+    if (linha.some((x) => x.trim() !== "")) linhas.push(linha.map((x) => (x.trim() === "" ? null : x.trim())));
+    return linhas;
+  }
+
+  const ehCsv = (arquivo) => /\.(csv|txt)$/i.test(arquivo.name) || /csv|text\/plain/i.test(arquivo.type || "");
+
+  // Abas como [nome, linhas]: do Excel (pelo SheetJS) ou do CSV (leitor próprio)
+  async function lerAbas(arquivo) {
+    const buffer = await arquivo.arrayBuffer();
+    if (ehCsv(arquivo)) {
+      const texto = decodificarTexto(buffer);
+      const sep = detectarSeparador(texto);
+      return { abas: [["CSV", lerCsv(texto, sep)]], pontoDecimal: sep === "," };
+    }
+    await carregarSheetJs();
+    const wb = window.XLSX.read(buffer, { type: "array" });
+    return {
+      abas: wb.SheetNames.map((nome) => [nome, window.XLSX.utils.sheet_to_json(wb.Sheets[nome], { header: 1, raw: true, defval: null, blankrows: false })]),
+      pontoDecimal: false,
+    };
+  }
+
   /** Procura, em cada aba, a linha de cabeçalho que tem "Saldo disponível" e "Preço campanha". */
-  function localizarTabela(wb) {
+  function localizarTabela(abas) {
     const vistos = [];
-    for (const nomeAba of wb.SheetNames) {
-      const linhas = window.XLSX.utils.sheet_to_json(wb.Sheets[nomeAba], { header: 1, raw: true, defval: null, blankrows: false });
+    for (const [nomeAba, linhas] of abas) {
       for (let i = 0; i < Math.min(linhas.length, 60); i++) {
         const nomes = linhas[i].map(limpar);
         const iSaldo = nomes.findIndex(ehSaldo);
@@ -236,9 +299,13 @@
   async function lerLista(arquivo) {
     const catalogo = new Set((window.CBS_skusCatalogo ? window.CBS_skusCatalogo() : []).map(String));
     if (catalogo.size === 0) throw new Error("O catálogo ainda está carregando. Tente de novo em alguns segundos.");
-    await carregarSheetJs();
-    const wb = window.XLSX.read(await arquivo.arrayBuffer(), { type: "array" });
-    const t = localizarTabela(wb);
+    const leitura = await lerAbas(arquivo);
+    const t = localizarTabela(leitura.abas);
+    // CSV separado por vírgula: vale o padrão americano ("4.79"), a não ser que os números
+    // venham entre aspas no padrão brasileiro ("4,79" / "1.234,5")
+    const pontoDecimal =
+      leitura.pontoDecimal &&
+      !t.linhas.slice(t.linhaCab + 1).some((l) => [l[t.iSaldo], l[t.iPreco]].some((v) => typeof v === "string" && /^[^.]*\d,\d{1,4}$|\d\.\d{3},\d/.test(v.replace(/R\$|\s/g, ""))));
     const iSku = escolherColunaSku(t, catalogo);
 
     const mapa = new Map();
@@ -248,8 +315,8 @@
       const bruto = l[iSku];
       if (bruto === null || bruto === undefined || bruto === "") continue;
       const sku = normalizarSku(bruto);
-      const saldo = paraNumero(l[t.iSaldo]);
-      const preco = paraNumero(l[t.iPreco]);
+      const saldo = paraNumero(l[t.iSaldo], pontoDecimal);
+      const preco = paraNumero(l[t.iPreco], pontoDecimal);
       if (saldo === null && preco === null) continue;
       linhasLidas++;
       if (!catalogo.has(sku)) { foraDoCatalogo.add(sku); continue; }
