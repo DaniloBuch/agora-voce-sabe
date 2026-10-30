@@ -40,7 +40,7 @@ const PLACEHOLDER_PADRAO = input.placeholder;
 const DATA_URL = "./db.json";
 const ITENS_POR_PAGINA = 50;
 const MAX_PARECIDOS = 50; // resultados "parecidos" (possível erro de digitação) mostrados depois dos exatos
-const MAX_TAGS_VISIVEIS = 6;
+const MAX_TAGS_LINHA = 4; // no computador: no máximo 4 tags na linha; o resto fica no "…"
 const fmtNum = new Intl.NumberFormat("pt-BR");
 const ordemAlfabetica = new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true });
 
@@ -631,13 +631,12 @@ function linhaProduto(item, termos) {
     // Tags que casaram com a busca vêm primeiro, para nunca ficarem escondidas
     const casou = (tag) => termos.some((alt) => casaAlternativa(normalizarEspacos(tag), alt));
     const ordenadas = [...item.tags.filter(casou), ...item.tags.filter((tag) => !casou(tag))];
-    const visiveis = ordenadas.slice(0, MAX_TAGS_VISIVEIS);
-    const ocultas = ordenadas.slice(MAX_TAGS_VISIVEIS);
-
-    tagsHtml = visiveis.map((tag) => `<span class="tag-pill">${destacar(tag, termos)}</span>`).join("");
-    if (ocultas.length > 0) {
-      tagsHtml += `<span class="tag-pill tag-more" title="${escaparHtml(ocultas.join(", "))}">+${ocultas.length}</span>`;
-    }
+    const pills = ordenadas.map((tag) => `<span class="tag-pill">${destacar(tag, termos)}</span>`).join("");
+    // Uma linha só: ajustarTags() esconde o que não cabe e mostra o "…"; passar o mouse nele mostra todas
+    tagsHtml =
+      `<div class="tags-linha">${pills}` +
+      `<button type="button" class="tag-pill tag-mais" aria-label="Ver todas as ${ordenadas.length} tags" hidden>…</button>` +
+      `<span class="tags-todas" role="tooltip">${pills}</span></div>`;
   }
 
   const lista = celulasLista(item.sku);
@@ -718,8 +717,39 @@ function renderizarPagina() {
     html += linhaProduto(estado.itens[i], i >= estado.nExatos ? destaqueParecidos : estado.destaque);
   }
   tbody.innerHTML = html;
+  ajustarTags();
   renderizarPaginacao(totalPaginas);
 }
+
+/* ---------- Tags em uma linha (computador) ---------- */
+
+// Mostra até 4 tags que caibam na largura da coluna; se sobrar alguma (ou a primeira for
+// longa demais e ficar cortada), aparece a tag "…", que mostra todas ao passar o mouse.
+const mqCelular = window.matchMedia("(max-width: 768px)");
+function ajustarTags() {
+  if (mqCelular.matches) return; // no celular a coluna de tags fica oculta
+  for (const linha of tbody.querySelectorAll(".tags-linha")) {
+    const pills = [...linha.querySelectorAll(":scope > .tag-pill:not(.tag-mais)")];
+    const mais = linha.querySelector(":scope > .tag-mais");
+    let n = Math.min(pills.length, MAX_TAGS_LINHA);
+    const aplicar = () => {
+      pills.forEach((p, i) => (p.hidden = i >= n));
+      mais.hidden = n >= pills.length;
+    };
+    aplicar();
+    while (n > 1 && linha.scrollWidth > linha.clientWidth + 1) {
+      n--;
+      aplicar();
+    }
+    if (pills[0].scrollWidth > pills[0].clientWidth + 1) mais.hidden = false; // primeira cortada com "…"
+  }
+}
+let timeoutAjusteTags = null;
+window.addEventListener("resize", () => {
+  clearTimeout(timeoutAjusteTags);
+  timeoutAjusteTags = setTimeout(ajustarTags, 120);
+});
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarTags);
 
 /* ---------- Paginação ---------- */
 

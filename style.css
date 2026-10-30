@@ -832,7 +832,7 @@ tbody tr:hover {
   color: var(--cbs-roxo);
 }
 .col-ref {
-  width: 150px;
+  width: 130px;
   font-family: var(--font-mono);
   font-size: var(--fs-2xs);
   font-weight: var(--fw-semibold);
@@ -844,7 +844,18 @@ tbody tr:hover {
   color: var(--text-body);
 }
 .col-tags {
-  width: 30%;
+  width: auto; /* fica com o espaço que sobra; as tags se ajustam a ele */
+}
+td.col-tags { position: relative; } /* âncora do balão com todas as tags (o th continua sticky) */
+/* Computador: a descrição (até 60 caracteres) sempre em uma linha só */
+@media (min-width: 769px) {
+  .col-desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (min-width: 1200px) {
+  .col-desc { width: 510px; } /* cabe a descrição mais longa da base (60 caracteres) */
+}
+@media (min-width: 769px) and (max-width: 1199px) {
+  .col-desc { width: 55%; } /* telas menores: se não couber, termina em "…" */
 }
 /* cabeçalho de coluna mantém o estilo de rótulo, não o da célula */
 thead th,
@@ -889,11 +900,68 @@ mark {
   line-height: 1.3;
   text-transform: uppercase;
 }
-.tag-more {
-  background: var(--cbs-roxo-050);
-  color: var(--cbs-roxo-700);
-  cursor: help;
+/* Tags em uma linha: as que não cabem ficam no "…" */
+.tags-linha {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
 }
+.tags-linha > .tag-pill {
+  flex: 0 0 auto;
+  margin: 0;
+  white-space: nowrap;
+}
+.tags-linha > .tag-pill[hidden] { display: none; }
+/* a primeira tag (a que mais combina com a busca) encolhe e corta com "…" se for longa demais */
+.tags-linha > .tag-pill:first-child {
+  flex-shrink: 1;
+  min-width: 48px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tag-mais {
+  font-family: var(--font-core);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+  color: var(--cbs-roxo-700);
+  background: var(--cbs-roxo-050);
+  border-color: var(--cbs-roxo-200);
+  cursor: pointer;
+}
+.tag-mais:hover { border-color: var(--cbs-roxo); }
+.tag-mais:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+/* balão com todas as tags (passar o mouse ou focar no "…") */
+.tags-todas {
+  display: none;
+  position: absolute;
+  z-index: 6;
+  top: calc(100% - 8px);
+  right: 8px;
+  width: max-content;
+  max-width: 380px;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: var(--sp-3);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(20, 16, 50, 0.18));
+}
+.tags-todas::before { /* ponte invisível: o mouse vai do "…" ao balão sem fechá-lo */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -14px;
+  height: 14px;
+}
+.tags-todas .tag-pill { margin: 0; }
+.tag-mais:hover + .tags-todas,
+.tag-mais:focus + .tags-todas,
+.tags-todas:hover { display: flex; }
 .tag-empty {
   display: inline-block;
   width: 24px;
@@ -1072,9 +1140,8 @@ mark {
 /* colunas Saldo e Preço campanha: só aparecem com a Lista Diária carregada */
 .col-lista { display: none; }
 body.com-lista .col-lista { display: table-cell; }
-.col-saldo { width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
+.col-saldo { width: 84px; text-align: right; font-variant-numeric: tabular-nums; }
 .col-preco { width: 150px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-body.com-lista .col-tags { width: 22%; }
 .saldo-ok { font-weight: var(--fw-semibold); color: var(--text-body); }
 .saldo-zero { font-weight: var(--fw-semibold); color: var(--cbs-erro, #b3261e); }
 .preco-camp { font-weight: var(--fw-semibold); color: var(--cbs-roxo); }
