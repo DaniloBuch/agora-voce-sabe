@@ -40,7 +40,7 @@ const PLACEHOLDER_PADRAO = input.placeholder;
 const DATA_URL = "./db.json";
 const ITENS_POR_PAGINA = 50;
 const MAX_PARECIDOS = 50; // resultados "parecidos" (possível erro de digitação) mostrados depois dos exatos
-const MAX_TAGS_LINHA = 4; // no computador: no máximo 4 tags na linha; o resto fica no "…"
+const MAX_TAGS_LINHA = 4; // no computador: no máximo 4 tags (em até 2 linhas); o resto fica no "…"
 const fmtNum = new Intl.NumberFormat("pt-BR");
 const ordemAlfabetica = new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true });
 
@@ -723,9 +723,18 @@ function renderizarPagina() {
 
 /* ---------- Tags em uma linha (computador) ---------- */
 
-// Mostra até 4 tags que caibam na largura da coluna; se sobrar alguma (ou a primeira for
-// longa demais e ficar cortada), aparece a tag "…", que mostra todas ao passar o mouse.
+// Mostra até 4 tags inteiras, em no máximo 2 linhas (as que combinam com a busca vêm primeiro).
+// Se sobrar alguma, aparece a tag "…", que mostra todas ao passar o mouse. Nenhuma palavra é cortada.
 const mqCelular = window.matchMedia("(max-width: 768px)");
+const MAX_LINHAS_TAGS = 2;
+function contarLinhas(el) {
+  const topos = new Set();
+  for (const filho of el.children) {
+    if (filho.hidden || filho.classList.contains("tags-todas")) continue;
+    topos.add(Math.round(filho.offsetTop));
+  }
+  return topos.size;
+}
 function ajustarTags() {
   if (mqCelular.matches) return; // no celular a coluna de tags fica oculta
   for (const linha of tbody.querySelectorAll(".tags-linha")) {
@@ -737,11 +746,11 @@ function ajustarTags() {
       mais.hidden = n >= pills.length;
     };
     aplicar();
-    while (n > 1 && linha.scrollWidth > linha.clientWidth + 1) {
+    while (n > 1 && contarLinhas(linha) > MAX_LINHAS_TAGS) {
       n--;
       aplicar();
     }
-    if (pills[0].scrollWidth > pills[0].clientWidth + 1) mais.hidden = false; // primeira cortada com "…"
+    if (pills[0].scrollWidth > pills[0].clientWidth + 1) mais.hidden = false; // tag gigante, cortada com "…"
   }
 }
 let timeoutAjusteTags = null;

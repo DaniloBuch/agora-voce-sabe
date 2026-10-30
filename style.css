@@ -22,7 +22,7 @@ body {
 }
 
 /* --- Header fixo com blur (DS 5.11) ---------------------------------- */
-:root { --topo-h: 77px; } /* altura do cabeçalho fixo: o cabeçalho da tabela encosta nele */
+:root { --topo-h: 77px; --max-prose: 70ch; } /* --max-prose: largura máxima dos parágrafos (DS: 68ch) */ /* altura do cabeçalho fixo: o cabeçalho da tabela encosta nele */
 
 /* --- Legibilidade: textos mais escuros e mais encorpados -----------------
    Os tokens do DS passam o mínimo de contraste (4.5:1); aqui subimos um degrau
@@ -852,13 +852,13 @@ tbody tr:hover {
 }
 
 .col-sku {
-  width: 96px;
+  width: 80px;
   font-family: var(--font-mono);
   font-weight: var(--fw-medium);
   color: var(--cbs-roxo);
 }
 .col-ref {
-  width: 130px;
+  width: 116px;
   font-family: var(--font-mono);
   font-size: var(--fs-2xs);
   font-weight: var(--fw-semibold);
@@ -878,11 +878,11 @@ td.col-tags { position: relative; } /* âncora do balão com todas as tags (o th
   .col-desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .page { padding-left: 16px; padding-right: 16px; } /* computador: área de resultados mais larga */
 }
-@media (min-width: 1200px) {
-  .col-desc { width: 510px; } /* cabe a descrição mais longa da base (60 caracteres) */
+@media (min-width: 1024px) {
+  .col-desc { width: 496px; } /* cabe a descrição mais longa da base (60 caracteres) */
 }
-@media (min-width: 769px) and (max-width: 1199px) {
-  .col-desc { width: 55%; } /* telas menores: se não couber, termina em "…" */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .col-desc { width: 55%; } /* tablets: se não couber, termina em "…" */
 }
 /* cabeçalho de coluna mantém o estilo de rótulo, não o da célula */
 thead th,
@@ -927,28 +927,23 @@ mark {
   line-height: 1.3;
   text-transform: uppercase;
 }
-/* Tags em uma linha: as que não cabem ficam no "…" */
+/* Tags: até 2 linhas, sem cortar palavra; as que não cabem ficam no "…" */
 .tags-linha {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   min-width: 0;
-  overflow: hidden;
 }
 .tags-linha > .tag-pill {
   flex: 0 0 auto;
+  max-width: 100%;
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis; /* só se UMA tag sozinha for maior que a coluna inteira */
   white-space: nowrap;
 }
 .tags-linha > .tag-pill[hidden] { display: none; }
-/* a primeira tag (a que mais combina com a busca) encolhe e corta com "…" se for longa demais */
-.tags-linha > .tag-pill:first-child {
-  flex-shrink: 1;
-  min-width: 48px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 .tag-mais {
   font-family: var(--font-core);
   font-weight: var(--fw-bold);
@@ -1167,8 +1162,8 @@ mark {
 /* colunas Saldo e Preço campanha: só aparecem com a Lista Diária carregada */
 .col-lista { display: none; }
 body.com-lista .col-lista { display: table-cell; }
-.col-saldo { width: 84px; text-align: right; font-variant-numeric: tabular-nums; }
-.col-preco { width: 150px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.col-saldo { width: 76px; text-align: right; font-variant-numeric: tabular-nums; }
+.col-preco { width: 124px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .saldo-ok { font-weight: var(--fw-semibold); color: var(--text-body); }
 .saldo-zero { font-weight: var(--fw-semibold); color: var(--cbs-erro, #b3261e); }
 .preco-camp { font-weight: var(--fw-semibold); color: var(--cbs-roxo); }
