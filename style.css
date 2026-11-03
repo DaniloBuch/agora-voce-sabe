@@ -978,20 +978,12 @@ tbody tr:hover {
   width: auto;
   color: var(--text-body);
 }
-.col-tags {
-  width: auto; /* fica com o espaço que sobra; as tags se ajustam a ele */
-}
-td.col-tags { position: relative; } /* âncora do balão com todas as tags (o th continua sticky) */
-/* Computador: a descrição (até 60 caracteres) sempre em uma linha só */
+.desc-texto { display: block; }
+/* Computador: a descrição (até 60 caracteres) sempre em uma linha só; a coluna fica com todo o
+   espaço que sobra (a de tags saiu: os nomes agora ficam sob a descrição) */
 @media (min-width: 769px) {
-  .col-desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .desc-texto { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .page { padding-left: 16px; padding-right: 16px; } /* computador: área de resultados mais larga */
-}
-@media (min-width: 1024px) {
-  .col-desc { width: 496px; } /* cabe a descrição mais longa da base (60 caracteres) */
-}
-@media (min-width: 769px) and (max-width: 1023px) {
-  .col-desc { width: 55%; } /* tablets: se não couber, termina em "…" */
 }
 /* cabeçalho de coluna mantém o estilo de rótulo, não o da célula */
 thead th,
@@ -1036,70 +1028,55 @@ mark {
   line-height: 1.3;
   text-transform: uppercase;
 }
-/* Tags: até 2 linhas, sem cortar palavra; as que não cabem ficam no "…" */
-.tags-linha {
+/* "Também conhecido como": os outros nomes do produto, sempre à vista sob a descrição */
+.apelidos {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
+  margin-top: 6px;
   min-width: 0;
 }
-.tags-linha > .tag-pill {
+.apelidos__rotulo {
+  margin-right: 2px;
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.apelidos .tag-pill {
   flex: 0 0 auto;
   max-width: 100%;
   margin: 0;
+  padding: 2px 8px;
   overflow: hidden;
-  text-overflow: ellipsis; /* só se UMA tag sozinha for maior que a coluna inteira */
+  text-overflow: ellipsis; /* só se UM nome sozinho for maior que a linha inteira */
   white-space: nowrap;
 }
-.tags-linha > .tag-pill[hidden] { display: none; }
-.tag-mais {
+.apelidos .tag-pill[hidden],
+.apelidos__mais[hidden] { display: none; }
+/* o nome que fez o produto aparecer na busca: destaque azul (é o "porquê" do resultado) */
+.tag-pill--casou {
+  color: var(--cbs-azul-700);
+  background: var(--cbs-azul-050);
+  border-color: var(--cbs-azul-200);
+}
+.apelidos__mais {
+  padding: 2px 6px;
   font-family: var(--font-core);
-  font-weight: var(--fw-bold);
-  letter-spacing: 0.08em;
-  color: var(--cbs-roxo-700);
-  background: var(--cbs-roxo-050);
-  border-color: var(--cbs-roxo-200);
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  color: var(--cbs-azul-700);
+  background: none;
+  border: none;
+  border-radius: var(--radius-xs);
   cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
 }
-.tag-mais:hover { border-color: var(--cbs-roxo); }
-.tag-mais:focus-visible { outline: none; box-shadow: var(--ring-focus); }
-/* balão com todas as tags (passar o mouse ou focar no "…") */
-.tags-todas {
-  display: none;
-  position: absolute;
-  z-index: 6;
-  top: calc(100% - 8px);
-  right: 8px;
-  width: max-content;
-  max-width: 380px;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: var(--sp-3);
-  background: var(--surface-card);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg, 0 12px 32px rgba(20, 16, 50, 0.18));
-}
-.tags-todas::before { /* ponte invisível: o mouse vai do "…" ao balão sem fechá-lo */
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -14px;
-  height: 14px;
-}
-.tags-todas .tag-pill { margin: 0; }
-.tag-mais:hover + .tags-todas,
-.tag-mais:focus + .tags-todas,
-.tags-todas:hover { display: flex; }
-.tag-empty {
-  display: inline-block;
-  width: 24px;
-  height: 4px;
-  background: var(--cbs-neutro-100);
-  border-radius: var(--radius-pill);
-}
+.apelidos__mais:hover { color: var(--cbs-roxo); }
+.apelidos__mais:focus-visible { outline: none; box-shadow: var(--ring-focus); }
 
 /* --- Rodapé institucional (DS: roxo + grafismo sorriso a 10%) ---------- */
 .site-footer {
@@ -1330,17 +1307,12 @@ body.com-lista .col-lista { display: table-cell; }
     color: var(--text-muted);
     white-space: normal;
   }
-  .col-tags,
   .col-ref {
     display: none;
-  } /* esconde referência e tags no celular para caber a descrição */
+  } /* esconde a referência no celular para caber a descrição */
+  .apelidos__rotulo { flex-basis: 100%; } /* rótulo em cima, nomes embaixo (até 2 linhas) */
   .col-sku {
     width: 84px;
   }
 }
 
-/* Notebook pequeno (até 1099px) com a Lista Diária: não sobra espaço útil para as tags
-   sem quebrar a descrição em duas linhas, então a coluna de tags sai nesse caso */
-@media (min-width: 769px) and (max-width: 1099px) {
-  body.com-lista .col-tags { display: none; }
-}

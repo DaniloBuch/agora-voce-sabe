@@ -40,7 +40,8 @@ const PLACEHOLDER_PADRAO = input.placeholder;
 const DATA_URL = "./db.json";
 const ITENS_POR_PAGINA = 50;
 const MAX_PARECIDOS = 50; // resultados "parecidos" (possível erro de digitação) mostrados depois dos exatos
-const MAX_TAGS_LINHA = 4; // no computador: no máximo 4 tags (em até 2 linhas); o resto fica no "…"
+const MAX_LINHAS_APELIDOS_PC = 1; // "Também conhecido como": 1 linha no computador
+const MAX_LINHAS_APELIDOS_CELULAR = 2; // e até 2 no celular; o resto fica no "+N" (clique mostra todos)
 const fmtNum = new Intl.NumberFormat("pt-BR");
 const ordemAlfabetica = new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true });
 
@@ -603,7 +604,7 @@ function executarBusca(termoOriginal, pagina = 1) {
 
 // 4 colunas normais; 6 quando há Lista Diária (Saldo e Preço campanha)
 function numColunas() {
-  return window.ListaDiaria && window.ListaDiaria.ativa() ? 7 : 5; // + coluna "Site"
+  return window.ListaDiaria && window.ListaDiaria.ativa() ? 6 : 4; // SKU, descrição (+ saldo e preço), Ref., Site
 }
 
 /* ---------- Link para o site oficial (cbsmed.com.br) ---------- */
@@ -763,29 +764,26 @@ function celulasLista(sku) {
 }
 
 function linhaProduto(item, termos) {
-  let tagsHtml = "";
-
-  if (item.tags.length === 0) {
-    tagsHtml = `<span class="tag-empty"></span>`;
-  } else {
-    // Tags que casaram com a busca vêm primeiro, para nunca ficarem escondidas
+  // "Também conhecido como": as tags ficam visíveis sob a descrição, para ensinar os outros nomes do
+  // produto (apelidos comerciais, marcas, termos técnicos). As que casaram com a busca vêm primeiro.
+  let apelidosHtml = "";
+  if (item.tags.length) {
     const casou = (tag) => termos.some((alt) => casaAlternativa(normalizarEspacos(tag), alt));
     const ordenadas = [...item.tags.filter(casou), ...item.tags.filter((tag) => !casou(tag))];
-    const pills = ordenadas.map((tag) => `<span class="tag-pill">${destacar(tag, termos)}</span>`).join("");
-    // Uma linha só: ajustarTags() esconde o que não cabe e mostra o "…"; passar o mouse nele mostra todas
-    tagsHtml =
-      `<div class="tags-linha">${pills}` +
-      `<button type="button" class="tag-pill tag-mais" aria-label="Ver todas as ${ordenadas.length} tags" hidden>…</button>` +
-      `<span class="tags-todas" role="tooltip">${pills}</span></div>`;
+    const pills = ordenadas
+      .map((tag) => `<span class="tag-pill${casou(tag) ? " tag-pill--casou" : ""}">${destacar(tag, termos)}</span>`)
+      .join("");
+    apelidosHtml =
+      `<div class="apelidos"><span class="apelidos__rotulo">Também conhecido como</span>${pills}` +
+      `<button type="button" class="apelidos__mais" aria-expanded="false" hidden></button></div>`;
   }
 
   const lista = celulasLista(item.sku);
   return `
         <tr>
           <td class="col-sku"><button type="button" class="sku-copiar" data-sku="${escaparHtml(item.sku)}" title="Clique para copiar o código" aria-label="Copiar código ${escaparHtml(item.sku)}">${destacar(item.sku, termos)}</button></td>
-          <td class="col-desc">${destacar(item.descricao, termos)}${lista.resumoMobile}</td>
+          <td class="col-desc"><span class="desc-texto">${destacar(item.descricao, termos)}</span>${apelidosHtml}${lista.resumoMobile}</td>
           ${lista.colunas}
-          <td class="col-tags">${tagsHtml}</td>
           <td class="col-ref">${destacar(item.referenciaOriginal, termos, item.referenciaOriginal.length - item.referencia.length)}</td>
           ${celulaSite(item)}
         </tr>
@@ -865,36 +863,60 @@ function renderizarPagina() {
 
 /* ---------- Tags em uma linha (computador) ---------- */
 
-// Mostra até 4 tags inteiras, em no máximo 2 linhas (as que combinam com a busca vêm primeiro).
-// Se sobrar alguma, aparece a tag "…", que mostra todas ao passar o mouse. Nenhuma palavra é cortada.
+// Mostra quantos nomes couberem (1 linha no computador, 2 no celular), sem cortar palavra.
+// Se sobrar algum, aparece "+N"; o clique abre todos ali mesmo (e "mostrar menos" fecha).
 const mqCelular = window.matchMedia("(max-width: 768px)");
-const MAX_LINHAS_TAGS = 2;
+// Linhas ocupadas: itens com o topo a menos de 8px um do outro estão na mesma linha
+// (o rótulo e as tags têm alturas diferentes e ficam centralizados)
 function contarLinhas(el) {
-  const topos = new Set();
-  for (const filho of el.children) {
-    if (filho.hidden || filho.classList.contains("tags-todas")) continue;
-    topos.add(Math.round(filho.offsetTop));
+  // no celular o rótulo "Também conhecido como" fica numa linha própria, que não conta
+  const topos = [...el.children]
+    .filter((f) => !f.hidden && !(mqCelular.matches && f.classList.contains("apelidos__rotulo")))
+    .map((f) => f.offsetTop)
+    .sort((a, b) => a - b);
+  let linhas = 0, ultimo = -Infinity;
+  for (const t of topos) {
+    if (t - ultimo > 8) { linhas++; ultimo = t; }
   }
-  return topos.size;
+  return linhas;
+}
+function ajustarApelidos(linha) {
+  const pills = [...linha.querySelectorAll(":scope > .tag-pill")];
+  const mais = linha.querySelector(":scope > .apelidos__mais");
+  if (linha.classList.contains("is-aberto")) {
+    pills.forEach((p) => (p.hidden = false));
+    mais.hidden = false;
+    mais.textContent = "mostrar menos";
+    mais.setAttribute("aria-label", "Mostrar menos nomes");
+    return;
+  }
+  const maxLinhas = mqCelular.matches ? MAX_LINHAS_APELIDOS_CELULAR : MAX_LINHAS_APELIDOS_PC;
+  let n = pills.length;
+  const aplicar = () => {
+    pills.forEach((p, i) => (p.hidden = i >= n));
+    const ocultos = pills.length - n;
+    mais.hidden = ocultos === 0;
+    mais.textContent = `+${ocultos} ${ocultos === 1 ? "nome" : "nomes"}`;
+    mais.setAttribute("aria-label", `Ver mais ${ocultos} nome(s) deste produto`);
+  };
+  aplicar();
+  while (n > 1 && contarLinhas(linha) > maxLinhas) {
+    n--;
+    aplicar();
+  }
 }
 function ajustarTags() {
-  if (mqCelular.matches) return; // no celular a coluna de tags fica oculta
-  for (const linha of tbody.querySelectorAll(".tags-linha")) {
-    const pills = [...linha.querySelectorAll(":scope > .tag-pill:not(.tag-mais)")];
-    const mais = linha.querySelector(":scope > .tag-mais");
-    let n = Math.min(pills.length, MAX_TAGS_LINHA);
-    const aplicar = () => {
-      pills.forEach((p, i) => (p.hidden = i >= n));
-      mais.hidden = n >= pills.length;
-    };
-    aplicar();
-    while (n > 1 && contarLinhas(linha) > MAX_LINHAS_TAGS) {
-      n--;
-      aplicar();
-    }
-    if (pills[0].scrollWidth > pills[0].clientWidth + 1) mais.hidden = false; // tag gigante, cortada com "…"
-  }
+  tbody.querySelectorAll(".apelidos").forEach(ajustarApelidos);
 }
+tbody.addEventListener("click", (e) => {
+  const mais = e.target.closest(".apelidos__mais");
+  if (!mais) return;
+  const linha = mais.closest(".apelidos");
+  const abrir = !linha.classList.contains("is-aberto");
+  linha.classList.toggle("is-aberto", abrir);
+  mais.setAttribute("aria-expanded", String(abrir));
+  ajustarApelidos(linha);
+});
 let timeoutAjusteTags = null;
 window.addEventListener("resize", () => {
   clearTimeout(timeoutAjusteTags);
