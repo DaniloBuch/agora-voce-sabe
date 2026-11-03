@@ -36,6 +36,8 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 - **Praticidade:** clique no código para copiar o SKU e use "Copiar link desta busca" para compartilhar (`?q=sonda`); a busca do link abre já executada.
 - **Leve e seguro:** debounce na digitação, 50 linhas por página e escape de HTML nos dados.
 - **Lista Diária (saldo e preço campanha):** qualquer usuário, sem login, pode carregar a planilha Excel da Lista Diária (botão **Carregar Lista Diária**; aceita `.xlsx`, `.xls`, `.xlsm` e `.csv`; o CSV é lido pelo próprio site, como texto, com separador `;`, `,` ou tab, UTF-8 ou Windows-1252 e números no padrão brasileiro, `4,7983` e `1.234,5`). O site lê as colunas **Saldo disponível** e **Preco campanha** e mostra os valores na tabela (colunas *Saldo* e *Preço camp.*; no celular, uma linha sob a descrição) conforme as buscas são feitas. **Esses dados nunca vão para o banco nem para nenhum servidor:** a leitura é feita no navegador e o resultado fica só no `localStorage` do próprio usuário, que é apagado automaticamente após **24 horas**. Um aviso ao lado do botão mostra quando a lista foi atualizada e em quanto tempo ela se apaga, e o **(?)** explica que os valores são meramente consultivos e que, para maior exatidão, deve-se consultar o Protheus (TOTVS). O botão **×** apaga a lista na hora (útil em computador compartilhado). Linhas repetidas do mesmo SKU somam o saldo e usam o primeiro preço diferente de zero (o preço campanha sempre é mostrado com 4 casas decimais, ex.: R$ 12,5000); SKUs que não estão no catálogo são ignorados.
+- **Link para o site oficial:** a coluna **Site** tem um ícone que abre, em nova aba, a página do produto em cbsmed.com.br (imagem e ficha técnica). O endereço é montado pela descrição técnica do jeito do WordPress (sem acento, minúsculas, `/` e `.` viram traço, vírgula, `%`, `+` e parênteses saem: `FILME TRANSP TEGADERM CHG 8,5X11,5 C/CLOREX 2% 3M 1657R(25)` → `/produto/filme-transp-tegaderm-chg-85x115-c-clorex-2-3m-1657r25/`). Como o site às vezes muda o endereço (ex.: acrescenta `-2`), o painel tem **Sincronizar com o site**, que guarda o endereço exato de cada código; depois disso, produto que não está no site abre a busca do site.
+- **Copiar o valor unitário:** com a Lista Diária carregada, clicar no preço campanha copia o número (ex.: `4,7983`), igual ao clique no SKU.
 - **Modo contingência:** se o banco estiver fora do ar, o site lê o `db.json` e avisa na tela.
 
 ### Painel de administração (`/admin/`)
@@ -70,7 +72,7 @@ Supabase (PostgreSQL + PostgREST)
 | `api.js` | Camada de acesso ao Supabase (login, listar, CRUD, importar, histórico, tags) |
 | `config.js` | Endereço do projeto e chave pública (`anon`) do Supabase |
 | `supabase/schema.sql` | Tabelas, políticas, triggers e funções do banco |
-| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags, `005` categorias, `006` categorias iniciais, `007` correção de referências estragadas pelo Excel, `008` sinônimos da busca) |
+| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags, `005` categorias, `006` categorias iniciais, `007` correção de referências estragadas pelo Excel, `008` sinônimos da busca, `009` links do site oficial) |
 | `supabase/produtos_seed.csv` | Carga inicial dos produtos |
 | `db.json` | Cópia estática usada como contingência |
 | `design-system/` | CBS Design System vendorizado ([detalhes](design-system/README.md)) |

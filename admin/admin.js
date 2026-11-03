@@ -167,6 +167,7 @@
     if (nome === "tags") renderizarTags();
     if (nome === "categorias") renderizarCategorias();
     if (nome === "sinonimos") carregarSinonimos();
+    if (nome === "importar") mostrarResumoLinks();
   }
 
   document.querySelectorAll(".aba").forEach((b) =>
@@ -1241,6 +1242,131 @@
     aplicarCategoria("", $("#dlgCategoriaExcluir"), $("#btnSimExcluirCategoria"), $("#categoriaExcluirErro"), "Excluir categoria", (n) =>
       `Categoria excluída; ${fmt.format(n)} produto(s) ficaram sem categoria. Dá para desfazer no Histórico.`,
     );
+  });
+
+  /* ---------------- Links do site oficial (aba Importar CSV) ---------------- */
+
+  const URL_SITE_PRODUTO = "https://cbsmed.com.br/produto/";
+  const API_PRODUTOS_SITE = "https://cbsmed.com.br/wp-json/wc/store/v1/products";
+  const MSG_FALTA_009 =
+    "A tabela de links ainda não existe no Supabase. Rode o arquivo supabase/migracoes/009_links_site.sql no SQL Editor (veja o SETUP-SUPABASE.md).";
+
+  // Igual ao slugProduto do site (script.js): como o WordPress monta o endereço pela descrição
+  function slugProduto(descricao) {
+    return String(descricao ?? "")
+      .normalize("NFKD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replace(/[\/.\u2013\u2014]/g, "-")
+      .replace(/\u00d7/g, "x")
+      .replace(/[^a-z0-9 _-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/-{2,}/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  // Lê a lista pública de produtos do site (WooCommerce Store API), 100 por página, 4 páginas por vez
+  async function lerProdutosDoSite(aoAvancar) {
+    const POR_PAGINA = 100;
+    const pedir = async (pagina) => {
+      let r;
+      try {
+        r = await fetch(`${API_PRODUTOS_SITE}?per_page=${POR_PAGINA}&page=${pagina}&_fields=sku,permalink`, { credentials: "omit" });
+      } catch (_) {
+        throw new Error("Não conseguimos ler a lista de produtos do site (sem conexão, ou o site bloqueou a leitura). O botão Site da busca continua funcionando pela descrição.");
+      }
+      if (!r.ok) throw new Error(`O site respondeu com erro ${r.status} ao listar os produtos. Tente de novo mais tarde.`);
+      return { itens: await r.json(), paginas: Number(r.headers.get("X-WP-TotalPages")) || 0 };
+    };
+    const primeira = await pedir(1);
+    let itens = primeira.itens;
+    if (primeira.paginas > 1) {
+      const restantes = [];
+      for (let p = 2; p <= primeira.paginas; p++) restantes.push(p);
+      let feitas = 1;
+      aoAvancar(feitas, primeira.paginas);
+      while (restantes.length) {
+        const lote = restantes.splice(0, 4);
+        const resp = await Promise.all(lote.map(pedir));
+        resp.forEach((x) => (itens = itens.concat(x.itens)));
+        feitas += lote.length;
+        aoAvancar(feitas, primeira.paginas);
+      }
+    } else if (itens.length === POR_PAGINA) {
+      // sem o total de páginas: vai pedindo até vir uma página incompleta
+      for (let p = 2; ; p++) {
+        const x = await pedir(p);
+        itens = itens.concat(x.itens);
+        aoAvancar(p, 0);
+        if (x.itens.length < POR_PAGINA) break;
+      }
+    }
+    return itens;
+  }
+
+  const skuDoSite = (sku) => {
+    const s = String(sku ?? "").trim();
+    return /^\d+$/.test(s) && s.length < 6 ? s.padStart(6, "0") : s;
+  };
+  const caminhoDoLink = (url) => {
+    const u = String(url ?? "").trim();
+    return u.startsWith(URL_SITE_PRODUTO) ? u.slice(URL_SITE_PRODUTO.length).replace(/\/+$/, "") : u;
+  };
+
+  async function mostrarResumoLinks() {
+    try {
+      const r = await api.resumoLinksSite();
+      $("#infoLinksSite").textContent = r.total
+        ? `${fmt.format(r.total)} produtos com endereço exato · última sincronização em ${fmtData.format(new Date(r.ultima))}`
+        : "Ainda não sincronizado: o endereço é montado pela descrição.";
+    } catch (err) {
+      $("#infoLinksSite").textContent = err.status === 404 ? "Falta rodar a migração 009 no Supabase." : "";
+    }
+  }
+
+  $("#btnSincronizarSite").addEventListener("click", async () => {
+    const btn = $("#btnSincronizarSite");
+    const saida = $("#resultadoLinksSite");
+    btn.disabled = true;
+    saida.innerHTML = alerta("info", "Lendo a lista de produtos do site...");
+    try {
+      const doSite = await lerProdutosDoSite((feitas, total) => {
+        saida.innerHTML = alerta("info", `Lendo a lista de produtos do site... página ${fmt.format(feitas)}${total ? ` de ${fmt.format(total)}` : ""}`);
+      });
+      const catalogo = new Map(estado.produtos.map((p) => [p.sku, p]));
+      const itens = [];
+      const diferentes = [];
+      const vistos = new Set();
+      for (const prod of doSite) {
+        const sku = skuDoSite(prod.sku);
+        const caminho = caminhoDoLink(prod.permalink);
+        if (!sku || !caminho || vistos.has(sku) || !catalogo.has(sku)) continue;
+        vistos.add(sku);
+        itens.push({ sku, caminho });
+        if (caminho !== slugProduto(catalogo.get(sku).descricao_tecnica)) diferentes.push({ sku, desc: catalogo.get(sku).descricao_tecnica, caminho });
+      }
+      if (!itens.length) throw new Error(`O site listou ${fmt.format(doSite.length)} produtos, mas nenhum código bate com o catálogo. Nada foi gravado.`);
+      saida.innerHTML = alerta("info", "Gravando os endereços...");
+      await api.substituirLinksSite(itens);
+      const fora = estado.produtos.length - itens.length;
+      const exemplos = diferentes.slice(0, 5).map((d) => `<li><code>${esc(d.sku)}</code> ${esc(d.desc)} → <code>${esc(d.caminho)}</code></li>`).join("");
+      saida.innerHTML = alerta(
+        "ok",
+        `<strong>${fmt.format(itens.length)}</strong> produtos do catálogo agora abrem o endereço exato no site ` +
+          `(o site listou ${fmt.format(doSite.length)}). ` +
+          `${fmt.format(fora)} produto(s) do catálogo não estão no site: o botão Site deles abre a busca do site. ` +
+          (diferentes.length
+            ? `<br>${fmt.format(diferentes.length)} têm endereço diferente do montado pela descrição (corrigidos pela sincronização), por exemplo:<ul>${exemplos}</ul>`
+            : ""),
+      );
+      aviso("Links do site sincronizados. Valem para quem abrir ou recarregar a busca.");
+      mostrarResumoLinks();
+    } catch (err) {
+      saida.innerHTML = alerta("erro", esc(err.status === 404 ? MSG_FALTA_009 : err.message));
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   /* ---------------- aba Sinônimos (dicionário da busca do site) ---------------- */

@@ -102,6 +102,18 @@ Para bancos já criados. Em banco novo, o `schema.sql` já traz tudo.
    grupos iniciais só entram se a tabela estiver vazia.
 3. Abra o painel, aba **Sinônimos**, e ajuste a lista.
 
+## 9. Links do site oficial (migração 009)
+
+O botão **Site** de cada produto na busca abre a página dele em cbsmed.com.br. Funciona antes
+de qualquer SQL, montando o endereço pela descrição técnica (como o WordPress faz). Para usar o
+endereço exato de cada código:
+
+1. No **SQL Editor**, rode `supabase/migracoes/009_links_site.sql` (cria a tabela `links_site`;
+   o site lê, só quem tem login grava).
+2. No painel, aba **Importar CSV**, clique em **Sincronizar com o site**. O painel lê a lista
+   pública de produtos de cbsmed.com.br, casa pelo código (SKU) e grava o endereço de cada um.
+3. Repita quando produtos forem incluídos ou renomeados no site.
+
 ## Como usar o painel de administração
 
 | Aba | Para quê |

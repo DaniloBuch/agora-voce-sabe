@@ -290,7 +290,7 @@ async function carregarDados() {
   }
 }
 
-carregarDados();
+carregarDados().then(() => carregado && carregarLinksSite());
 
 // A Lista Diária (lista-diaria.js) precisa saber quais códigos existem no catálogo
 window.CBS_skusCatalogo = () => database.map((item) => item.sku);
@@ -603,7 +603,64 @@ function executarBusca(termoOriginal, pagina = 1) {
 
 // 4 colunas normais; 6 quando há Lista Diária (Saldo e Preço campanha)
 function numColunas() {
-  return window.ListaDiaria && window.ListaDiaria.ativa() ? 6 : 4;
+  return window.ListaDiaria && window.ListaDiaria.ativa() ? 7 : 5; // + coluna "Site"
+}
+
+/* ---------- Link para o site oficial (cbsmed.com.br) ---------- */
+
+const URL_SITE_PRODUTO = "https://cbsmed.com.br/produto/";
+let linksSite = null; // Map sku -> caminho exato no site (sincronizado no painel); null = sem sincronização
+
+// Descrição técnica -> endereço do produto, do mesmo jeito que o WordPress monta:
+// sem acento (ç -> c), minúsculas, "/" e "." viram traço, o resto que não é letra,
+// número, espaço, "_" ou "-" sai (vírgula, %, +, parênteses...), espaços viram traço.
+//   "FILME TRANSP TEGADERM CHG 8,5X11,5 C/CLOREX 2% 3M 1657R(25)"
+//   -> "filme-transp-tegaderm-chg-85x115-c-clorex-2-3m-1657r25"
+function slugProduto(descricao) {
+  return String(descricao ?? "")
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[\/.\u2013\u2014]/g, "-")
+    .replace(/\u00d7/g, "x")
+    .replace(/[^a-z0-9 _-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+// Endereço do produto no site. Com a sincronização feita no painel, usa o endereço exato
+// (resolve casos como o "-2" do WordPress); produto que não estava no site na última
+// sincronização vai para a busca do site, que abre direto o produto quando o nome bate.
+function linkDoProduto(item) {
+  if (linksSite && linksSite.size) {
+    const caminho = linksSite.get(item.sku);
+    if (caminho) return { url: caminho.startsWith("http") ? caminho : `${URL_SITE_PRODUTO}${caminho}/`, exato: true };
+    return { url: `https://cbsmed.com.br/?s=${encodeURIComponent(item.descricao.replace(/\s+/g, " ").trim())}&post_type=product`, exato: false };
+  }
+  return { url: `${URL_SITE_PRODUTO}${slugProduto(item.descricao)}/`, exato: true };
+}
+
+const ICONE_SITE =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>';
+
+function celulaSite(item) {
+  const { url, exato } = linkDoProduto(item);
+  const dica = exato ? "Ver no site: imagem e ficha técnica" : "Procurar no site oficial";
+  return `<td class="col-site"><a class="link-site" href="${escaparHtml(url)}" target="_blank" rel="noopener" data-dica="${dica}" aria-label="${dica}: ${escaparHtml(item.descricao)} (abre em nova aba)">${ICONE_SITE}</a></td>`;
+}
+
+// Carrega os endereços exatos sincronizados no painel (em segundo plano; sem eles vale o slugProduto)
+async function carregarLinksSite() {
+  if (!window.CBS_API || !CBS_API.configurado || !CBS_API.listarLinksSite) return;
+  try {
+    const linhas = await CBS_API.listarLinksSite();
+    linksSite = new Map(linhas.map((l) => [l.sku, l.caminho]));
+    if (linksSite.size && estadoLista && resultsContainer.style.display === "block") renderizarPagina();
+  } catch (_) {
+    linksSite = null; // migração 009 ainda não rodou: segue com o link pela descrição
+  }
 }
 
 // Células de saldo e preço vindas da Lista Diária (consulta local, nunca vão ao banco)
@@ -614,7 +671,11 @@ function celulasLista(sku) {
   const preco = v ? window.ListaDiaria.formatarPreco(v.preco) : null;
   const zero = v && v.saldo === 0;
   const saldoHtml = saldo === null ? `<span class="lista-nd" title="Não consta na Lista Diária">—</span>` : `<span class="${zero ? "saldo-zero" : "saldo-ok"}">${saldo}</span>`;
-  const precoHtml = preco === null ? `<span class="lista-nd" title="Sem preço campanha na Lista Diária">—</span>` : `<span class="preco-camp">${preco}</span>`;
+  // valor unitário clicável: copia só o número (ex.: 4,7983), igual ao SKU
+  const valorCopia = v && v.preco ? v.preco.toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : "";
+  const precoHtml = preco === null
+    ? `<span class="lista-nd" title="Sem preço campanha na Lista Diária">—</span>`
+    : `<button type="button" class="preco-camp preco-copiar" data-valor="${valorCopia}" title="Clique para copiar o valor unitário" aria-label="Copiar valor unitário ${valorCopia}">${preco}</button>`;
   return {
     colunas: `<td class="col-lista col-saldo">${saldoHtml}</td><td class="col-lista col-preco">${precoHtml}</td>`,
     // no celular as colunas somem e o resumo aparece sob a descrição
@@ -647,6 +708,7 @@ function linhaProduto(item, termos) {
           ${lista.colunas}
           <td class="col-tags">${tagsHtml}</td>
           <td class="col-ref">${destacar(item.referenciaOriginal, termos, item.referenciaOriginal.length - item.referencia.length)}</td>
+          ${celulaSite(item)}
         </tr>
       `;
 }
@@ -883,6 +945,12 @@ tbody.addEventListener("click", async (e) => {
   if (btn && (await copiarTexto(btn.dataset.sku))) {
     sinalizarCopiado(btn);
     registrarBuscaAtual(); // copiou um código: a busca foi útil, entra no histórico
+    return;
+  }
+  const preco = e.target.closest("button.preco-copiar");
+  if (preco && (await copiarTexto(preco.dataset.valor))) {
+    sinalizarCopiado(preco);
+    registrarBuscaAtual();
   }
 });
 

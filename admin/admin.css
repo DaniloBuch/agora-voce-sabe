@@ -390,3 +390,11 @@ details summary:hover { background: var(--cbs-roxo-050); border-radius: var(--ra
 .tag-pill__n { margin-left: 2px; font-size: var(--fs-3xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
 #avisoSinonimos { margin-bottom: var(--sp-4); }
 #aba-sinonimos .ajuda code { padding: 1px 6px; background: var(--cbs-neutro-100); border-radius: var(--radius-xs); }
+
+/* --- Links do site oficial (aba Importar CSV) ------------------------------- */
+.bloco-secao { margin-top: var(--sp-10); padding-top: var(--sp-6); border-top: 1px solid var(--border-subtle); }
+.titulo-secao { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-3); font-size: var(--fs-md); color: var(--cbs-roxo); }
+.titulo-secao svg { color: var(--cbs-azul); }
+#resultadoLinksSite .alerta { margin-top: var(--sp-3); }
+#resultadoLinksSite ul { margin: var(--sp-2) 0 0; padding-left: var(--sp-5); }
+#resultadoLinksSite li { margin-bottom: 2px; }

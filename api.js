@@ -231,6 +231,37 @@
     return resp.json();
   }
 
+  /* ---------- Links do site oficial (cbsmed.com.br) ---------- */
+
+  // [{ sku, caminho, atualizado_em }] de todos os produtos que estão no site.
+  // Se a migração 009 ainda não rodou (tabela não existe), lança erro com status 404.
+  async function listarLinksSite() {
+    const base = "links_site?select=sku,caminho,atualizado_em&order=sku.asc";
+    let todas = [];
+    for (let off = 0; ; off += PAGINA) {
+      const pag = await (await requisitar(`${base}&limit=${PAGINA}&offset=${off}`, { anonimo: true })).json();
+      todas = todas.concat(pag);
+      if (pag.length < PAGINA) return todas;
+    }
+  }
+
+  // Quantos links estão guardados e quando foi a última sincronização (consulta leve)
+  async function resumoLinksSite() {
+    const resp = await requisitar("links_site?select=atualizado_em&order=atualizado_em.desc&limit=1", {
+      headers: { Prefer: "count=exact" },
+      anonimo: true,
+    });
+    const linhas = await resp.json();
+    const total = Number((resp.headers.get("content-range") || "").split("/")[1]) || 0;
+    return { total, ultima: linhas[0] ? linhas[0].atualizado_em : null };
+  }
+
+  // Troca a lista inteira de links (uma transação só no banco)
+  async function substituirLinksSite(itens) {
+    const resp = await requisitar("rpc/substituir_links_site", { method: "POST", corpo: { p_itens: itens } });
+    return resp.json();
+  }
+
   /* ---------- Sinônimos (dicionário da busca) ---------- */
 
   // Grupos de sinônimos: [{ id, palavras: ["cx", "caixa"] }].
@@ -364,6 +395,9 @@
     criarCategoria,
     renomearCategoria,
     categoriasDisponiveis: () => !semColunaCategoria,
+    listarLinksSite,
+    resumoLinksSite,
+    substituirLinksSite,
     listarSinonimos,
     criarSinonimo,
     atualizarSinonimo,

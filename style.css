@@ -755,6 +755,80 @@ tbody tr.linha-divisoria:hover { background: none; }
 .pag-reticencias { min-width: 20px; text-align: center; color: var(--text-faint); }
 .pag-resumo { display: none; font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--text-muted); }
 
+/* Valor unitário clicável (Lista Diária): copia o número, como o SKU */
+.preco-copiar {
+  position: relative;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-xs);
+  font: inherit;
+  font-weight: var(--fw-semibold);
+  color: var(--cbs-roxo);
+  cursor: copy;
+}
+.preco-copiar:hover { background: var(--cbs-roxo-050); }
+.preco-copiar:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.preco-copiar.copiado::after {
+  content: "Copiado";
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 6px;
+  padding: 2px 8px;
+  background: var(--cbs-sucesso);
+  color: var(--cbs-neutro-000);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-core);
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  z-index: 2;
+}
+.desc-extra .preco-copiar.copiado::after { right: auto; left: 100%; margin: 0 0 0 6px; }
+
+/* Coluna "Site": ícone que abre a página do produto em cbsmed.com.br */
+.col-site { width: 48px; text-align: center; }
+th.col-site { padding-left: 4px; padding-right: 4px; }
+.link-site {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--cbs-roxo);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  transition: var(--transition-control);
+}
+.link-site:hover { background: var(--cbs-roxo-050); border-color: var(--cbs-roxo-200); }
+.link-site:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+/* dica ao passar o mouse (acima do ícone, alinhada à direita para não sair da tabela) */
+.link-site::after {
+  content: attr(data-dica);
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  padding: 4px 8px;
+  font-family: var(--font-core);
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  color: var(--cbs-neutro-000);
+  background: var(--cbs-neutro-900, #1d1b29);
+  border-radius: var(--radius-xs);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-standard);
+  z-index: 6;
+}
+.link-site:hover::after,
+.link-site:focus-visible::after { opacity: 1; }
+@media (hover: none) { .link-site::after { display: none; } }
+
 /* SKU clicável: copia o código */
 .sku-copiar {
   position: relative;
@@ -1228,4 +1302,10 @@ body.com-lista .col-lista { display: table-cell; }
   .col-sku {
     width: 84px;
   }
+}
+
+/* Notebook pequeno (até 1099px) com a Lista Diária: não sobra espaço útil para as tags
+   sem quebrar a descrição em duas linhas, então a coluna de tags sai nesse caso */
+@media (min-width: 769px) and (max-width: 1099px) {
+  body.com-lista .col-tags { display: none; }
 }
