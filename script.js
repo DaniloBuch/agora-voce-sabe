@@ -290,7 +290,7 @@ async function carregarDados() {
   }
 }
 
-carregarDados().then(() => carregado && carregarLinksSite());
+carregarDados().then(() => carregado && verificarLinksSite());
 
 // A Lista Diária (lista-diaria.js) precisa saber quais códigos existem no catálogo
 window.CBS_skusCatalogo = () => database.map((item) => item.sku);
@@ -609,7 +609,11 @@ function numColunas() {
 /* ---------- Link para o site oficial (cbsmed.com.br) ---------- */
 
 const URL_SITE_PRODUTO = "https://cbsmed.com.br/produto/";
-let linksSite = null; // Map sku -> caminho exato no site (sincronizado no painel); null = sem sincronização
+// Endereços exatos sincronizados com o site (tabela links_site). Para gastar pouco tráfego, a busca
+// só pede os códigos da página que está na tela, e guarda o que já pediu.
+let linksSincronizados = false; // true quando a tabela existe e tem dados
+const cacheLinks = new Map(); // sku -> { caminho, ficha, imagem } | null (não está no site)
+const linksPedidos = new Set();
 
 // Descrição técnica -> endereço do produto, do mesmo jeito que o WordPress monta:
 // sem acento (ç -> c), minúsculas, "/" e "." viram traço, o resto que não é letra,
@@ -630,38 +634,113 @@ function slugProduto(descricao) {
     .replace(/^-+|-+$/g, "");
 }
 
-// Endereço do produto no site. Com a sincronização feita no painel, usa o endereço exato
-// (resolve casos como o "-2" do WordPress); produto que não estava no site na última
-// sincronização vai para a busca do site, que abre direto o produto quando o nome bate.
+// Endereço do produto no site. Com a sincronização, usa o endereço exato (resolve o "-2" do WordPress);
+// produto que não estava no site na última sincronização vai para a busca do site, que abre direto
+// o produto quando o nome bate. Sem sincronização (ou enquanto carrega), monta pela descrição.
 function linkDoProduto(item) {
-  if (linksSite && linksSite.size) {
-    const caminho = linksSite.get(item.sku);
-    if (caminho) return { url: caminho.startsWith("http") ? caminho : `${URL_SITE_PRODUTO}${caminho}/`, exato: true };
-    return { url: `https://cbsmed.com.br/?s=${encodeURIComponent(item.descricao.replace(/\s+/g, " ").trim())}&post_type=product`, exato: false };
+  const info = linksSincronizados ? cacheLinks.get(item.sku) : undefined;
+  if (info) {
+    const url = info.caminho.startsWith("http") ? info.caminho : `${URL_SITE_PRODUTO}${info.caminho}/`;
+    return { url, exato: true, ficha: info.ficha || "", imagem: info.imagem || "" };
   }
-  return { url: `${URL_SITE_PRODUTO}${slugProduto(item.descricao)}/`, exato: true };
+  if (info === null) {
+    return { url: `https://cbsmed.com.br/?s=${encodeURIComponent(item.descricao.replace(/\s+/g, " ").trim())}&post_type=product`, exato: false, ficha: "", imagem: "" };
+  }
+  return { url: `${URL_SITE_PRODUTO}${slugProduto(item.descricao)}/`, exato: true, ficha: "", imagem: "" };
 }
 
 const ICONE_SITE =
   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>';
 
-function celulaSite(item) {
-  const { url, exato } = linkDoProduto(item);
+const ICONE_FICHA =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M12 18v-6"></path><path d="m9 15 3 3 3-3"></path></svg>';
+
+function htmlSite(item) {
+  const { url, exato, ficha, imagem } = linkDoProduto(item);
   const dica = exato ? "Ver no site: imagem e ficha técnica" : "Procurar no site oficial";
-  return `<td class="col-site"><a class="link-site" href="${escaparHtml(url)}" target="_blank" rel="noopener" data-dica="${dica}" aria-label="${dica}: ${escaparHtml(item.descricao)} (abre em nova aba)">${ICONE_SITE}</a></td>`;
+  const nome = escaparHtml(item.descricao);
+  const site =
+    `<a class="link-site${imagem ? " tem-imagem" : ""}" href="${escaparHtml(url)}" target="_blank" rel="noopener" data-dica="${dica}"` +
+    `${imagem ? ` data-imagem="${escaparHtml(imagem)}"` : ""} aria-label="${dica}: ${nome} (abre em nova aba)">${ICONE_SITE}</a>`;
+  const pdf = ficha
+    ? `<a class="link-site link-ficha" href="${escaparHtml(ficha)}" target="_blank" rel="noopener" download data-dica="Baixar ficha técnica (PDF)" aria-label="Baixar ficha técnica (PDF): ${nome}">${ICONE_FICHA}</a>`
+    : `<span class="link-vazio" aria-hidden="true"></span>`;
+  return site + pdf;
 }
 
-// Carrega os endereços exatos sincronizados no painel (em segundo plano; sem eles vale o slugProduto)
-async function carregarLinksSite() {
-  if (!window.CBS_API || !CBS_API.configurado || !CBS_API.listarLinksSite) return;
+function celulaSite(item) {
+  return `<td class="col-site" data-sku-site="${escaparHtml(item.sku)}">${htmlSite(item)}</td>`;
+}
+
+// Pede ao banco os links dos códigos da página atual que ainda não foram pedidos e atualiza só essas células
+async function carregarLinksDaPagina(itens) {
+  if (!linksSincronizados || !CBS_API.linksSitePorSkus) return;
+  const faltam = itens.map((i) => i.sku).filter((sku) => !linksPedidos.has(sku));
+  if (!faltam.length) return;
+  faltam.forEach((sku) => linksPedidos.add(sku));
   try {
-    const linhas = await CBS_API.listarLinksSite();
-    linksSite = new Map(linhas.map((l) => [l.sku, l.caminho]));
-    if (linksSite.size && estadoLista && resultsContainer.style.display === "block") renderizarPagina();
+    const linhas = await CBS_API.linksSitePorSkus(faltam);
+    const achados = new Map(linhas.map((l) => [l.sku, l]));
+    faltam.forEach((sku) => cacheLinks.set(sku, achados.get(sku) || null));
   } catch (_) {
-    linksSite = null; // migração 009 ainda não rodou: segue com o link pela descrição
+    faltam.forEach((sku) => linksPedidos.delete(sku)); // tenta de novo na próxima página
+    return;
+  }
+  const porSku = new Map(itens.map((i) => [i.sku, i]));
+  tbody.querySelectorAll("td.col-site[data-sku-site]").forEach((td) => {
+    const item = porSku.get(td.dataset.skuSite);
+    if (item && faltam.includes(item.sku)) td.innerHTML = htmlSite(item);
+  });
+}
+
+// Uma consulta leve na abertura: a sincronização com o site já foi feita? (sem ela vale o slugProduto)
+async function verificarLinksSite() {
+  if (!window.CBS_API || !CBS_API.configurado || !CBS_API.resumoLinksSite) return;
+  try {
+    linksSincronizados = (await CBS_API.resumoLinksSite()).total > 0;
+    if (linksSincronizados && estadoLista && resultsContainer.style.display === "block") renderizarPagina();
+  } catch (_) {
+    linksSincronizados = false; // migração 009/010 ainda não rodou: link pela descrição
   }
 }
+
+/* Miniatura da foto ao passar o mouse no ícone do site (carrega só a imagem que a pessoa pediu) */
+const previaSite = document.createElement("div");
+previaSite.className = "previa-site";
+previaSite.hidden = true;
+previaSite.setAttribute("aria-hidden", "true");
+document.body.appendChild(previaSite);
+function mostrarPrevia(link) {
+  const src = link.dataset.imagem;
+  if (!src) return;
+  previaSite.innerHTML = `<img src="${escaparHtml(src)}" alt="" width="180" height="180" /><span>Ver no site: imagem e ficha técnica</span>`;
+  previaSite.querySelector("img").addEventListener("error", esconderPrevia, { once: true });
+  previaSite.hidden = false;
+  const r = link.getBoundingClientRect();
+  const largura = previaSite.offsetWidth, altura = previaSite.offsetHeight;
+  let top = r.top + r.height / 2 - altura / 2;
+  top = Math.max(8, Math.min(top, window.innerHeight - altura - 8));
+  previaSite.style.top = `${top + window.scrollY}px`;
+  previaSite.style.left = `${Math.max(8, r.left - largura - 10) + window.scrollX}px`;
+}
+function esconderPrevia() {
+  previaSite.hidden = true;
+  previaSite.innerHTML = "";
+}
+tbody.addEventListener("mouseover", (e) => {
+  const link = e.target.closest("a.link-site.tem-imagem");
+  if (link && !link.contains(e.relatedTarget)) mostrarPrevia(link);
+});
+tbody.addEventListener("mouseout", (e) => {
+  const link = e.target.closest("a.link-site.tem-imagem");
+  if (link && !link.contains(e.relatedTarget)) esconderPrevia();
+});
+tbody.addEventListener("focusin", (e) => {
+  const link = e.target.closest("a.link-site.tem-imagem");
+  if (link && link.matches(":focus-visible")) mostrarPrevia(link);
+});
+tbody.addEventListener("focusout", esconderPrevia);
+window.addEventListener("scroll", esconderPrevia, { passive: true });
 
 // Células de saldo e preço vindas da Lista Diária (consulta local, nunca vão ao banco)
 function celulasLista(sku) {
@@ -780,6 +859,7 @@ function renderizarPagina() {
   }
   tbody.innerHTML = html;
   ajustarTags();
+  carregarLinksDaPagina(estado.itens.slice(inicio, fim));
   renderizarPaginacao(totalPaginas);
 }
 

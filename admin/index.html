@@ -270,12 +270,13 @@
         <section class="bloco-secao" aria-labelledby="tituloLinksSite">
           <h2 class="titulo-secao" id="tituloLinksSite"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>Links do site oficial</h2>
           <p class="ajuda">
-            O botão <strong>Site</strong> de cada produto na busca abre a página dele em
-            <strong>cbsmed.com.br</strong> (imagem e ficha técnica). Sem sincronizar, o endereço é montado
-            pela descrição técnica, mas o site às vezes muda o endereço (por exemplo, acrescenta
-            <code>-2</code> no final) e aí o link pode abrir outro produto. <strong>Sincronizar</strong>
-            lê a lista pública de produtos do site e guarda o endereço exato de cada código. Leva menos
-            de um minuto; faça de novo quando produtos forem incluídos ou renomeados no site.
+            Cada produto da busca tem dois ícones na coluna <strong>Site</strong>: a página do produto em
+            <strong>cbsmed.com.br</strong> (com a foto em miniatura ao passar o mouse) e o <strong>PDF da ficha
+            técnica</strong>. A sincronização lê a lista pública de produtos do site e guarda, para cada código,
+            o endereço exato da página (o site às vezes acrescenta <code>-2</code>), o link da ficha e o da foto.
+            Ela roda <strong>sozinha toda segunda-feira às 06:15</strong>; use o botão quando entrar produto
+            novo no site e não quiser esperar. Sem sincronização, o endereço é montado pela descrição e não
+            há ficha nem foto.
           </p>
           <div class="barra-ferramentas">
             <button type="button" class="btn btn--secundario" id="btnSincronizarSite"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>Sincronizar com o site</button>

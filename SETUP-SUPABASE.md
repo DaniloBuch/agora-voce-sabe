@@ -102,17 +102,26 @@ Para bancos já criados. Em banco novo, o `schema.sql` já traz tudo.
    grupos iniciais só entram se a tabela estiver vazia.
 3. Abra o painel, aba **Sinônimos**, e ajuste a lista.
 
-## 9. Links do site oficial (migração 009)
+## 9. Links do site oficial, ficha técnica e foto (migrações 009 e 010)
 
-O botão **Site** de cada produto na busca abre a página dele em cbsmed.com.br. Funciona antes
-de qualquer SQL, montando o endereço pela descrição técnica (como o WordPress faz). Para usar o
-endereço exato de cada código:
+A coluna **Site** da busca tem dois ícones: a página do produto em cbsmed.com.br (com a foto em
+miniatura ao passar o mouse) e o PDF da **ficha técnica**. Antes de qualquer SQL, o endereço é
+montado pela descrição técnica (como o WordPress faz), sem ficha nem foto.
 
-1. No **SQL Editor**, rode `supabase/migracoes/009_links_site.sql` (cria a tabela `links_site`;
-   o site lê, só quem tem login grava).
-2. No painel, aba **Importar CSV**, clique em **Sincronizar com o site**. O painel lê a lista
-   pública de produtos de cbsmed.com.br, casa pelo código (SKU) e grava o endereço de cada um.
-3. Repita quando produtos forem incluídos ou renomeados no site.
+O navegador não pode ler a lista de produtos do site (o site não libera CORS), então quem lê é o
+**próprio Supabase**, de servidor para servidor:
+
+1. No **SQL Editor**, rode `supabase/migracoes/010_sincronizar_site.sql` (ela já inclui a 009). Ela
+   ativa as extensões `http` (chamar o site) e `pg_cron` (agendar), cria a tabela `links_site` e
+   agenda a sincronização para **toda segunda-feira às 06:15** (horário de Brasília).
+2. No painel, aba **Importar CSV**, clique em **Sincronizar com o site** para a primeira carga
+   (e sempre que entrar produto novo no site e não quiser esperar a segunda-feira).
+3. Para conferir o agendamento: `select status, return_message, start_time from cron.job_run_details order by start_time desc limit 5;`
+   Para desligar: `select cron.unschedule('sincronizar-links-site');`
+
+**Consumo do plano gratuito:** a sincronização faz umas 60 chamadas ao site por semana e grava uns
+5 mil registros pequenos (menos de 2 MB no banco). A busca só pede os links dos 50 produtos da
+página que está na tela, então o tráfego por pesquisa é de poucos KB.
 
 ## Como usar o painel de administração
 

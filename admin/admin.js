@@ -1246,82 +1246,20 @@
 
   /* ---------------- Links do site oficial (aba Importar CSV) ---------------- */
 
-  const URL_SITE_PRODUTO = "https://cbsmed.com.br/produto/";
-  const API_PRODUTOS_SITE = "https://cbsmed.com.br/wp-json/wc/store/v1/products";
-  const MSG_FALTA_009 =
-    "A tabela de links ainda não existe no Supabase. Rode o arquivo supabase/migracoes/009_links_site.sql no SQL Editor (veja o SETUP-SUPABASE.md).";
-
-  // Igual ao slugProduto do site (script.js): como o WordPress monta o endereço pela descrição
-  function slugProduto(descricao) {
-    return String(descricao ?? "")
-      .normalize("NFKD")
-      .replace(/\p{M}/gu, "")
-      .toLowerCase()
-      .replace(/[\/.\u2013\u2014]/g, "-")
-      .replace(/\u00d7/g, "x")
-      .replace(/[^a-z0-9 _-]/g, "")
-      .trim()
-      .replace(/\s+/g, "-")
-      .replace(/-{2,}/g, "-")
-      .replace(/^-+|-+$/g, "");
-  }
-
-  // Lê a lista pública de produtos do site (WooCommerce Store API), 100 por página, 4 páginas por vez
-  async function lerProdutosDoSite(aoAvancar) {
-    const POR_PAGINA = 100;
-    const pedir = async (pagina) => {
-      let r;
-      try {
-        r = await fetch(`${API_PRODUTOS_SITE}?per_page=${POR_PAGINA}&page=${pagina}&_fields=sku,permalink`, { credentials: "omit" });
-      } catch (_) {
-        throw new Error("Não conseguimos ler a lista de produtos do site (sem conexão, ou o site bloqueou a leitura). O botão Site da busca continua funcionando pela descrição.");
-      }
-      if (!r.ok) throw new Error(`O site respondeu com erro ${r.status} ao listar os produtos. Tente de novo mais tarde.`);
-      return { itens: await r.json(), paginas: Number(r.headers.get("X-WP-TotalPages")) || 0 };
-    };
-    const primeira = await pedir(1);
-    let itens = primeira.itens;
-    if (primeira.paginas > 1) {
-      const restantes = [];
-      for (let p = 2; p <= primeira.paginas; p++) restantes.push(p);
-      let feitas = 1;
-      aoAvancar(feitas, primeira.paginas);
-      while (restantes.length) {
-        const lote = restantes.splice(0, 4);
-        const resp = await Promise.all(lote.map(pedir));
-        resp.forEach((x) => (itens = itens.concat(x.itens)));
-        feitas += lote.length;
-        aoAvancar(feitas, primeira.paginas);
-      }
-    } else if (itens.length === POR_PAGINA) {
-      // sem o total de páginas: vai pedindo até vir uma página incompleta
-      for (let p = 2; ; p++) {
-        const x = await pedir(p);
-        itens = itens.concat(x.itens);
-        aoAvancar(p, 0);
-        if (x.itens.length < POR_PAGINA) break;
-      }
-    }
-    return itens;
-  }
-
-  const skuDoSite = (sku) => {
-    const s = String(sku ?? "").trim();
-    return /^\d+$/.test(s) && s.length < 6 ? s.padStart(6, "0") : s;
-  };
-  const caminhoDoLink = (url) => {
-    const u = String(url ?? "").trim();
-    return u.startsWith(URL_SITE_PRODUTO) ? u.slice(URL_SITE_PRODUTO.length).replace(/\/+$/, "") : u;
-  };
+  // O navegador não pode ler a lista de produtos do site (o site não libera CORS), então quem lê
+  // é o Supabase, de servidor para servidor (migração 010). O painel só pede uma página por vez
+  // e mostra o progresso.
+  const MSG_FALTA_010 =
+    "A sincronização ainda não está instalada no Supabase. Rode o arquivo supabase/migracoes/010_sincronizar_site.sql no SQL Editor (veja o SETUP-SUPABASE.md).";
 
   async function mostrarResumoLinks() {
     try {
       const r = await api.resumoLinksSite();
       $("#infoLinksSite").textContent = r.total
-        ? `${fmt.format(r.total)} produtos com endereço exato · última sincronização em ${fmtData.format(new Date(r.ultima))}`
+        ? `${fmt.format(r.total)} produtos com endereço exato · última mudança em ${fmtData.format(new Date(r.ultima))} · sincroniza sozinho toda segunda-feira`
         : "Ainda não sincronizado: o endereço é montado pela descrição.";
     } catch (err) {
-      $("#infoLinksSite").textContent = err.status === 404 ? "Falta rodar a migração 009 no Supabase." : "";
+      $("#infoLinksSite").textContent = err.status === 404 ? "Falta rodar a migração 010 no Supabase." : "";
     }
   }
 
@@ -1329,41 +1267,29 @@
     const btn = $("#btnSincronizarSite");
     const saida = $("#resultadoLinksSite");
     btn.disabled = true;
-    saida.innerHTML = alerta("info", "Lendo a lista de produtos do site...");
+    saida.innerHTML = alerta("info", "O Supabase está lendo a lista de produtos do site... página 1");
     try {
-      const doSite = await lerProdutosDoSite((feitas, total) => {
-        saida.innerHTML = alerta("info", `Lendo a lista de produtos do site... página ${fmt.format(feitas)}${total ? ` de ${fmt.format(total)}` : ""}`);
-      });
-      const catalogo = new Map(estado.produtos.map((p) => [p.sku, p]));
-      const itens = [];
-      const diferentes = [];
-      const vistos = new Set();
-      for (const prod of doSite) {
-        const sku = skuDoSite(prod.sku);
-        const caminho = caminhoDoLink(prod.permalink);
-        if (!sku || !caminho || vistos.has(sku) || !catalogo.has(sku)) continue;
-        vistos.add(sku);
-        itens.push({ sku, caminho });
-        if (caminho !== slugProduto(catalogo.get(sku).descricao_tecnica)) diferentes.push({ sku, desc: catalogo.get(sku).descricao_tecnica, caminho });
+      const primeira = await api.sincronizarPaginaSite(1);
+      const total = Math.max(1, Number(primeira.total_paginas) || 1);
+      let lidos = primeira.lidos;
+      for (let p = 2; p <= total; p++) {
+        saida.innerHTML = alerta("info", `O Supabase está lendo a lista de produtos do site... página ${fmt.format(p)} de ${fmt.format(total)}`);
+        lidos += (await api.sincronizarPaginaSite(p)).lidos;
       }
-      if (!itens.length) throw new Error(`O site listou ${fmt.format(doSite.length)} produtos, mas nenhum código bate com o catálogo. Nada foi gravado.`);
-      saida.innerHTML = alerta("info", "Gravando os endereços...");
-      await api.substituirLinksSite(itens);
-      const fora = estado.produtos.length - itens.length;
-      const exemplos = diferentes.slice(0, 5).map((d) => `<li><code>${esc(d.sku)}</code> ${esc(d.desc)} → <code>${esc(d.caminho)}</code></li>`).join("");
+      const r = await api.finalizarSincronizacaoSite(primeira.inicio);
+      const fora = estado.produtos.length - r.total;
       saida.innerHTML = alerta(
         "ok",
-        `<strong>${fmt.format(itens.length)}</strong> produtos do catálogo agora abrem o endereço exato no site ` +
-          `(o site listou ${fmt.format(doSite.length)}). ` +
-          `${fmt.format(fora)} produto(s) do catálogo não estão no site: o botão Site deles abre a busca do site. ` +
-          (diferentes.length
-            ? `<br>${fmt.format(diferentes.length)} têm endereço diferente do montado pela descrição (corrigidos pela sincronização), por exemplo:<ul>${exemplos}</ul>`
-            : ""),
+        `<strong>${fmt.format(r.total)}</strong> produtos do catálogo têm página no site (o site listou ${fmt.format(lidos)}): ` +
+          `<strong>${fmt.format(r.com_ficha)}</strong> com ficha técnica e <strong>${fmt.format(r.com_imagem)}</strong> com foto. ` +
+          `${fmt.format(Math.max(fora, 0))} produto(s) do catálogo não estão no site: o botão Site deles abre a busca do site.` +
+          (r.removidos ? ` ${fmt.format(r.removidos)} saíram do site desde a última sincronização.` : ""),
       );
       aviso("Links do site sincronizados. Valem para quem abrir ou recarregar a busca.");
       mostrarResumoLinks();
     } catch (err) {
-      saida.innerHTML = alerta("erro", esc(err.status === 404 ? MSG_FALTA_009 : err.message));
+      const semFuncao = err.status === 404 || /sincronizar_links_site_pagina|finalizar_links_site/.test(err.message || "");
+      saida.innerHTML = alerta("erro", esc(semFuncao ? MSG_FALTA_010 : err.message) + " Nada foi apagado: os links da última sincronização continuam valendo.");
     } finally {
       btn.disabled = false;
     }

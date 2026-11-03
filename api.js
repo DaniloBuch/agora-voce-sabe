@@ -256,6 +256,32 @@
     return { total, ultima: linhas[0] ? linhas[0].atualizado_em : null };
   }
 
+  // Links só dos códigos pedidos (a busca pede os da página que está na tela: economiza tráfego)
+  let linksSemColunasNovas = false; // banco só com a 009: sem ficha/imagem
+  async function linksSitePorSkus(skus) {
+    if (!skus.length) return [];
+    const filtro = `sku=in.(${skus.map((s) => `"${String(s).replace(/"/g, "")}"`).join(",")})`;
+    if (!linksSemColunasNovas) {
+      try {
+        return await (await requisitar(`links_site?select=sku,caminho,ficha,imagem&${encodeURI(filtro)}`, { anonimo: true })).json();
+      } catch (erro) {
+        if (erro.status !== 400) throw erro;
+        linksSemColunasNovas = true;
+      }
+    }
+    return (await requisitar(`links_site?select=sku,caminho&${encodeURI(filtro)}`, { anonimo: true })).json();
+  }
+
+  // Sincronização feita pelo banco (migração 010): uma página da lista do site por chamada
+  async function sincronizarPaginaSite(pagina) {
+    const resp = await requisitar("rpc/sincronizar_links_site_pagina", { method: "POST", corpo: { p_pagina: pagina } });
+    return resp.json();
+  }
+  async function finalizarSincronizacaoSite(inicio) {
+    const resp = await requisitar("rpc/finalizar_links_site", { method: "POST", corpo: { p_inicio: inicio } });
+    return resp.json();
+  }
+
   // Troca a lista inteira de links (uma transação só no banco)
   async function substituirLinksSite(itens) {
     const resp = await requisitar("rpc/substituir_links_site", { method: "POST", corpo: { p_itens: itens } });
@@ -397,6 +423,9 @@
     categoriasDisponiveis: () => !semColunaCategoria,
     listarLinksSite,
     resumoLinksSite,
+    linksSitePorSkus,
+    sincronizarPaginaSite,
+    finalizarSincronizacaoSite,
     substituirLinksSite,
     listarSinonimos,
     criarSinonimo,
