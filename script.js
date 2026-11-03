@@ -40,7 +40,7 @@ const PLACEHOLDER_PADRAO = input.placeholder;
 const DATA_URL = "./db.json";
 const ITENS_POR_PAGINA = 50;
 const MAX_PARECIDOS = 50; // resultados "parecidos" (possível erro de digitação) mostrados depois dos exatos
-const MAX_LINHAS_APELIDOS_PC = 1; // "Também conhecido como": 1 linha no computador
+const MAX_LINHAS_APELIDOS_PC = 1; // "Também conhecido por": 1 linha no computador
 const MAX_LINHAS_APELIDOS_CELULAR = 2; // e até 2 no celular; o resto fica no "+N" (clique mostra todos)
 const fmtNum = new Intl.NumberFormat("pt-BR");
 const ordemAlfabetica = new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true });
@@ -345,6 +345,20 @@ input.addEventListener("input", function (e) {
     atualizarEndereco();
     agendarRegistroHistorico();
   }, 300);
+});
+
+/* ---------- X vermelho: limpar a busca ---------- */
+
+const botaoLimparBusca = document.getElementById("limparBusca");
+function atualizarBotaoLimpar() {
+  botaoLimparBusca.hidden = input.value === "";
+}
+input.addEventListener("input", atualizarBotaoLimpar);
+botaoLimparBusca.addEventListener("mousedown", (e) => e.preventDefault()); // o campo não perde o foco
+botaoLimparBusca.addEventListener("click", () => {
+  input.value = "";
+  input.focus();
+  input.dispatchEvent(new Event("input", { bubbles: true })); // volta ao início (ou à categoria) e mostra as buscas recentes
 });
 
 /* ---------- Interpretação da busca ---------- */
@@ -764,7 +778,7 @@ function celulasLista(sku) {
 }
 
 function linhaProduto(item, termos) {
-  // "Também conhecido como": as tags ficam visíveis sob a descrição, para ensinar os outros nomes do
+  // "Também conhecido por": as tags ficam visíveis sob a descrição, para ensinar os outros nomes do
   // produto (apelidos comerciais, marcas, termos técnicos). As que casaram com a busca vêm primeiro.
   let apelidosHtml = "";
   if (item.tags.length) {
@@ -774,7 +788,7 @@ function linhaProduto(item, termos) {
       .map((tag) => `<span class="tag-pill${casou(tag) ? " tag-pill--casou" : ""}">${destacar(tag, termos)}</span>`)
       .join("");
     apelidosHtml =
-      `<div class="apelidos"><span class="apelidos__rotulo">Também conhecido como</span>${pills}` +
+      `<div class="apelidos"><span class="apelidos__rotulo">Também conhecido por</span>${pills}` +
       `<button type="button" class="apelidos__mais" aria-expanded="false" hidden></button></div>`;
   }
 
@@ -869,7 +883,7 @@ const mqCelular = window.matchMedia("(max-width: 768px)");
 // Linhas ocupadas: itens com o topo a menos de 8px um do outro estão na mesma linha
 // (o rótulo e as tags têm alturas diferentes e ficam centralizados)
 function contarLinhas(el) {
-  // no celular o rótulo "Também conhecido como" fica numa linha própria, que não conta
+  // no celular o rótulo "Também conhecido por" fica numa linha própria, que não conta
   const topos = [...el.children]
     .filter((f) => !f.hidden && !(mqCelular.matches && f.classList.contains("apelidos__rotulo")))
     .map((f) => f.offsetTop)
@@ -985,6 +999,7 @@ function abrirCatalogo() {
   clearTimeout(timeoutBusca);
   fecharHistorico();
   input.value = "";
+  atualizarBotaoLimpar();
   categoriaAtual = "";
   modoExplorar = true;
   renderizarCategorias();
@@ -1197,6 +1212,7 @@ function usarHistorico(indice) {
   if (!h) return;
   fecharHistorico();
   input.value = h.q;
+  atualizarBotaoLimpar();
   modoExplorar = false;
   // a categoria só volta se ainda existir
   categoriaAtual = h.cat && categoriasLista.some(([nome]) => nome === h.cat) ? h.cat : "";
@@ -1427,6 +1443,7 @@ document.getElementById("filtroAtivoLimpar").addEventListener("click", () => {
   const q = parametrosIniciais.get("q");
   if (q && q.trim()) {
     input.value = q.trim();
+    atualizarBotaoLimpar();
     modoExplorar = false;
     mostrarBusca();
     btnLink.hidden = false;

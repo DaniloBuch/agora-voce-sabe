@@ -432,6 +432,27 @@ body { font-weight: var(--fw-medium); }
   width: 100%;
   max-width: 760px;
 }
+/* X vermelho para limpar a busca (só aparece com algo digitado) */
+.limpar-busca {
+  position: absolute;
+  right: 10px;
+  top: 26px; /* meio do campo (52px), mesmo com o histórico aberto embaixo */
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--cbs-erro);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.limpar-busca[hidden] { display: none; }
+.limpar-busca:hover { background: var(--cbs-erro-bg, #fdecec); border-color: var(--cbs-erro); }
+.limpar-busca:focus-visible { outline: none; box-shadow: var(--ring-focus); }
 .search-icon {
   position: absolute;
   left: var(--sp-4);
@@ -443,7 +464,7 @@ body { font-weight: var(--fw-medium); }
 #searchInput {
   width: 100%;
   height: 52px;
-  padding: 0 var(--sp-4) 0 var(--sp-12);
+  padding: 0 52px 0 var(--sp-12); /* à direita: espaço do X de limpar */
   font-family: var(--font-core);
   font-weight: var(--fw-medium);
   font-size: var(--fs-md);
@@ -1028,7 +1049,7 @@ mark {
   line-height: 1.3;
   text-transform: uppercase;
 }
-/* "Também conhecido como": os outros nomes do produto, sempre à vista sob a descrição */
+/* "Também conhecido por": os outros nomes do produto, sempre à vista sob a descrição */
 .apelidos {
   display: flex;
   flex-wrap: wrap;
