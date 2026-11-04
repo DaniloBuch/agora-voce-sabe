@@ -828,6 +828,9 @@ th.col-site { padding-left: 4px; padding-right: 4px; }
   transition: var(--transition-control);
 }
 .link-site:hover { background: var(--cbs-roxo-050); border-color: var(--cbs-roxo-200); }
+/* sem foto no site (ou fora do site / sem sincronizar): ícone apagado; roxo só quando tem foto */
+.link-site.sem-imagem { color: var(--text-faint); }
+.link-site.sem-imagem:hover { color: var(--cbs-roxo); }
 .link-site:focus-visible { outline: none; box-shadow: var(--ring-focus); }
 /* dica ao passar o mouse (acima do ícone, alinhada à direita para não sair da tabela) */
 .link-site::after {

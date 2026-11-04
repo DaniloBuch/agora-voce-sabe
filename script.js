@@ -656,7 +656,7 @@ function linkDoProduto(item) {
   const info = linksSincronizados ? cacheLinks.get(item.sku) : undefined;
   if (info) {
     const url = info.caminho.startsWith("http") ? info.caminho : `${URL_SITE_PRODUTO}${info.caminho}/`;
-    return { url, exato: true, ficha: info.ficha || "", imagem: info.imagem || "" };
+    return { url, exato: true, ficha: info.ficha || "", imagem: info.imagem || "", sincronizado: true };
   }
   if (info === null) {
     return { url: `https://cbsmed.com.br/?s=${encodeURIComponent(item.descricao.replace(/\s+/g, " ").trim())}&post_type=product`, exato: false, ficha: "", imagem: "" };
@@ -670,13 +670,29 @@ const ICONE_SITE =
 const ICONE_FICHA =
   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M12 18v-6"></path><path d="m9 15 3 3 3-3"></path></svg>';
 
+// Ícone de foto: o produto tem imagem cadastrada no site (passar o mouse mostra a miniatura)
+const ICONE_FOTO =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>';
+
+// Botão do site:
+//   com foto -> ícone de foto, em roxo; passar o mouse mostra a miniatura
+//   qualquer outro caso (sem foto, fora do site, ainda sem sincronizar) -> ícone de link, em cinza,
+//   para o roxo significar sempre "tem foto no site"
 function htmlSite(item) {
-  const { url, exato, ficha, imagem } = linkDoProduto(item);
-  const dica = exato ? "Ver no site: imagem e ficha técnica" : "Procurar no site oficial";
+  const { url, exato, ficha, imagem, sincronizado } = linkDoProduto(item);
+  const semFoto = sincronizado && !imagem;
+  const dica = !exato
+    ? "Procurar no site oficial"
+    : imagem
+      ? "Ver no site: foto e ficha técnica"
+      : semFoto
+        ? "Ver no site (ainda sem foto cadastrada)"
+        : "Ver no site: imagem e ficha técnica";
   const nome = escaparHtml(item.descricao);
+  const classe = imagem ? " tem-imagem" : " sem-imagem";
   const site =
-    `<a class="link-site${imagem ? " tem-imagem" : ""}" href="${escaparHtml(url)}" target="_blank" rel="noopener" data-dica="${dica}"` +
-    `${imagem ? ` data-imagem="${escaparHtml(imagem)}"` : ""} aria-label="${dica}: ${nome} (abre em nova aba)">${ICONE_SITE}</a>`;
+    `<a class="link-site${classe}" href="${escaparHtml(url)}" target="_blank" rel="noopener" data-dica="${dica}"` +
+    `${imagem ? ` data-imagem="${escaparHtml(imagem)}"` : ""} aria-label="${dica}: ${nome} (abre em nova aba)">${imagem ? ICONE_FOTO : ICONE_SITE}</a>`;
   const pdf = ficha
     ? `<a class="link-site link-ficha" href="${escaparHtml(ficha)}" target="_blank" rel="noopener" download data-dica="Baixar ficha técnica (PDF)" aria-label="Baixar ficha técnica (PDF): ${nome}">${ICONE_FICHA}</a>`
     : `<span class="link-vazio" aria-hidden="true"></span>`;
