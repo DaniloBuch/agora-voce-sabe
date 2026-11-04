@@ -28,7 +28,16 @@
           />
         </a>
         <span class="site-header__label">Busca de produtos</span>
-        <button type="button" class="site-header__instalar" id="btnInstalar" hidden title="Instalar o Agora Você Sabe como app neste computador"><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg><span>Instalar app</span></button>
+        <!-- App (PWA): "Instalar app" quando dá para instalar; "Abrir o app" quando já está instalado -->
+        <div class="instalar-wrap">
+          <button type="button" class="site-header__instalar" id="btnInstalar" hidden aria-expanded="false"><svg class="icone-instalar" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg><svg class="icone-abrir" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg><span class="site-header__instalar-rotulo">Instalar app</span></button>
+          <div class="instalar-ajuda" id="instalarAjuda" role="dialog" aria-labelledby="instalarAjudaTitulo" hidden>
+            <p class="instalar-ajuda__titulo" id="instalarAjudaTitulo">O Firefox não instala sites como app</p>
+            <p>Abra no <strong>Microsoft Edge</strong> e clique em <strong>Instalar app</strong>: o "Agora Você Sabe" vira um programa com ícone na área de trabalho.</p>
+            <a class="btn-explorar" id="abrirNoEdge" href="microsoft-edge:https://danilobuch.github.io/agora-voce-sabe/"><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>Abrir no Edge</a>
+            <p class="instalar-ajuda__dica">Já instalou pelo Edge? <a href="web+agoravocesabe:" id="abrirAppFirefox">Abrir o app</a>. Prefere ficar no Firefox? Arraste o cadeado da barra de endereço para a área de trabalho e crie um atalho.</p>
+          </div>
+        </div>
         <a class="site-header__login" href="admin/"><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 17 5-5-5-5"></path><path d="M15 12H3"></path><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path></svg>Login</a>
       </div>
     </header>
@@ -139,14 +148,17 @@
             <li class="dica-busca"><code>luva -latex</code><span>Hífen antes da palavra: <strong>tira</strong> quem tem essa palavra.</span></li>
             <li class="dica-busca"><code>cx · Transofix</code><span>Abreviações (cx = caixa) e <strong>apelidos comerciais</strong> também valem.</span></li>
           </ul>
-          <p class="painel-info__rodape"><svg class="painel-info__icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg><span>Clique no campo de busca vazio para ver suas <strong>buscas recentes</strong> (ficam só neste navegador).</span></p>
+          <p class="painel-info__rodape"><svg class="painel-info__icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg><span>Clique no campo de busca vazio para ver suas <strong>buscas recentes</strong> (ficam só neste navegador). Atalhos: <kbd>/</kbd> vai para a busca e <kbd>Esc</kbd> limpa.</span></p>
         </section>
       </div>
 
       <div id="resultsContainer" class="results-container">
         <div class="results-head">
           <div id="resultsInfo" class="results-info" aria-live="polite"></div>
-          <button type="button" id="btnLink" class="btn-link" hidden>Copiar link desta busca</button>
+          <div class="results-acoes">
+            <button type="button" id="btnExportar" class="btn-link btn-link--icone" hidden title="Baixar todos os resultados desta busca em Excel"><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>Exportar para Excel</button>
+            <button type="button" id="btnLink" class="btn-link" hidden>Copiar link desta busca</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>

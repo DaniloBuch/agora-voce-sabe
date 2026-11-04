@@ -113,6 +113,33 @@ body { font-weight: var(--fw-medium); }
 .site-header__instalar:hover { background: var(--cbs-roxo-700, #281f6b); }
 .site-header__instalar:focus-visible { outline: none; box-shadow: var(--ring-focus); }
 .site-header__instalar svg { flex: 0 0 auto; }
+/* já instalado: "Abrir o app" em estilo secundário (não compete com a busca) */
+.site-header__instalar--abrir { color: var(--cbs-roxo); background: var(--cbs-roxo-050); border-color: var(--cbs-roxo-200); }
+.site-header__instalar--abrir:hover { background: var(--cbs-roxo-100, #e4e1f4); border-color: var(--cbs-roxo); }
+.instalar-wrap { position: relative; display: inline-flex; }
+.site-header__instalar .icone-abrir,
+.site-header__instalar--abrir .icone-instalar { display: none; }
+.site-header__instalar--abrir .icone-abrir { display: inline; }
+/* Firefox: ajuda para instalar pelo Edge */
+.instalar-ajuda {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 45;
+  width: 320px;
+  padding: var(--sp-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(20, 16, 50, 0.18));
+}
+.instalar-ajuda[hidden] { display: none; }
+.instalar-ajuda p { margin: 0 0 var(--sp-3); font-size: var(--fs-xs); line-height: var(--lh-normal); color: var(--text-muted); }
+.instalar-ajuda p strong { color: var(--text-body); }
+.instalar-ajuda__titulo { font-weight: var(--fw-semibold); color: var(--cbs-roxo) !important; }
+.instalar-ajuda .btn-explorar { width: 100%; justify-content: center; margin-bottom: var(--sp-3); text-decoration: none; }
+.instalar-ajuda__dica { margin-bottom: 0 !important; font-size: var(--fs-2xs) !important; }
+.instalar-ajuda__dica a { color: var(--cbs-azul-700); }
 
 /* --- Página ----------------------------------------------------------- */
 .page {
@@ -750,6 +777,20 @@ body { font-weight: var(--fw-medium); }
 }
 .btn-link:focus-visible { outline: none; box-shadow: var(--ring-focus); }
 .btn-link.copiado { color: var(--cbs-sucesso); text-decoration: none; }
+.results-acoes { display: flex; align-items: center; gap: var(--sp-3); flex: 0 0 auto; }
+.btn-link--icone { display: inline-flex; align-items: center; gap: 4px; }
+.btn-link[hidden] { display: none; }
+.btn-link:disabled { opacity: 0.6; cursor: progress; }
+kbd {
+  padding: 0 5px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--text-body);
+  background: var(--cbs-neutro-100);
+  border: 1px solid var(--border-subtle);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-xs);
+}
 .table-wrap { border-left: var(--border-width-rule) solid var(--cbs-azul); }
 .tag-pill:hover { border-color: var(--cbs-azul-400); }
 
@@ -1338,9 +1379,13 @@ body.com-lista .col-lista { display: table-cell; }
   .site-header__login {
     margin-left: auto;
   }
-  .site-header__instalar { margin-left: auto; }
+
   .site-header__instalar span { display: none; } /* celular: só o ícone */
-  .site-header__instalar:not([hidden]) ~ .site-header__login { margin-left: 0; }
+  .instalar-wrap { margin-left: auto; }
+  .results-head { flex-direction: column; gap: var(--sp-1); }
+  .results-acoes { flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); margin-bottom: var(--sp-2); }
+  .instalar-ajuda { width: min(320px, calc(100vw - 32px)); right: -60px; }
+  .instalar-wrap:has(.site-header__instalar:not([hidden])) ~ .site-header__login { margin-left: 0; }
   .painel-info__base { flex-wrap: wrap; padding: var(--sp-4); }
   .painel-info__base .btn-explorar { width: 100%; justify-content: center; }
   .painel-info__dicas { padding: var(--sp-4); }

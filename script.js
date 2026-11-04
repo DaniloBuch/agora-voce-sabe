@@ -6,6 +6,14 @@ let timeoutFade = null;
 let vocabulario = null; // palavras da base, para sugerir correções de digitação
 let categoriaAtual = ""; // categoria escolhida na gaveta ("" = todas)
 let categoriasLista = []; // [[nome, quantidade]], da mais usada para a menos usada
+// Aberto pelo botão "Abrir o app" (protocolo web+agoravocesabe:): o endereço vem em ?abrir=...
+(function abertoPeloAtalho() {
+  const abrir = new URLSearchParams(location.search).get("abrir");
+  if (abrir === null) return;
+  let resto = abrir.replace(/^web\+agoravocesabe:\/*/i, "");
+  try { resto = decodeURIComponent(resto); } catch (_) {}
+  try { history.replaceState(null, "", resto ? `?${resto.replace(/^\?/, "")}` : location.pathname); } catch (_) {}
+})();
 const parametrosIniciais = new URLSearchParams(location.search);
 let categoriaDoLink = parametrosIniciais.get("cat") || "";
 let paginaDoLink = Math.max(1, parseInt(parametrosIniciais.get("p"), 10) || 1);
@@ -580,6 +588,7 @@ function sugerirPalavras(termo, { estrito = false, limite = 3 } = {}) {
 /* ---------- Execução da busca ---------- */
 
 function mensagemNaTabela(classe, html) {
+  btnExportar.hidden = true;
   tbody.innerHTML = `<tr><td colspan="${numColunas()}" class="${classe}">${html}</td></tr>`;
   resultsInfo.innerText = "";
   paginacao.hidden = true;
@@ -941,6 +950,7 @@ function renderizarPagina() {
     html += linhaProduto(estado.itens[i], i >= estado.nExatos ? destaqueParecidos : estado.destaque);
   }
   tbody.innerHTML = html;
+  btnExportar.hidden = false;
   ajustarTags();
   carregarLinksDaPagina(estado.itens.slice(inicio, fim));
   renderizarPaginacao(totalPaginas);
@@ -1090,6 +1100,88 @@ document.getElementById("btnExplorar").addEventListener("click", () => {
   }
   abrirCatalogo();
 });
+
+/* ---------- Exportar o resultado da busca para Excel ---------- */
+
+const btnExportar = document.getElementById("btnExportar");
+
+function carregarLeitorExcel() {
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((resolver, rejeitar) => {
+    const s = document.createElement("script");
+    s.src = "vendor/xlsx.full.min.js";
+    s.onload = () => resolver();
+    s.onerror = () => rejeitar(new Error("Não conseguimos carregar o gerador de Excel. Verifique a conexão."));
+    document.head.appendChild(s);
+  });
+}
+
+function nomeArquivoExportacao() {
+  const partes = [input.value.trim(), categoriaAtual, estadoLista && estadoLista.modo === "explorar" ? "catalogo-completo" : ""]
+    .filter(Boolean)
+    .join(" ");
+  const base = slugProduto(partes).slice(0, 50) || "busca";
+  const d = new Date();
+  const data = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `agora-voce-sabe_${base}_${data}.xlsx`;
+}
+
+async function exportarParaExcel() {
+  if (!estadoLista || !estadoLista.itens.length) return;
+  const rotulo = btnExportar.lastChild;
+  const textoOriginal = rotulo.textContent;
+  btnExportar.disabled = true;
+  rotulo.textContent = "Gerando...";
+  try {
+    await carregarLeitorExcel();
+    const comLista = window.ListaDiaria && window.ListaDiaria.ativa();
+    const temParecidos = estadoLista.itens.length > estadoLista.nExatos;
+    const cab = ["SKU", "Descrição", "Referência", "Categoria", "Também conhecido por"];
+    if (comLista) cab.push("Saldo (Lista Diária)", "Preço campanha (Lista Diária)");
+    cab.push("Página no site");
+    if (temParecidos) cab.push("Observação");
+    const linhas = estadoLista.itens.map((item, i) => {
+      const l = [item.sku, item.descricao, item.referencia, item.categoria === "-" ? "" : item.categoria, item.tags.join(", ")];
+      if (comLista) {
+        const v = window.ListaDiaria.obter(item.sku);
+        l.push(v && v.saldo !== null && v.saldo !== undefined ? v.saldo : "", v && v.preco ? v.preco : "");
+      }
+      l.push(linkDoProduto(item).url);
+      if (temParecidos) l.push(i >= estadoLista.nExatos ? "Parecido com a busca" : "");
+      return l;
+    });
+    const ws = window.XLSX.utils.aoa_to_sheet([cab, ...linhas]);
+    // SKU e Referência como texto (o Excel não pode comer os zeros à esquerda); preço com 4 casas
+    const ref = window.XLSX.utils.decode_range(ws["!ref"]);
+    for (let r = 1; r <= ref.e.r; r++) {
+      for (const c of [0, 2]) {
+        const cel = ws[window.XLSX.utils.encode_cell({ r, c })];
+        if (cel) { cel.t = "s"; cel.v = String(cel.v); cel.z = "@"; }
+      }
+      if (comLista) {
+        const saldo = ws[window.XLSX.utils.encode_cell({ r, c: 5 })];
+        if (saldo && saldo.t === "n") saldo.z = "#,##0.##";
+        const preco = ws[window.XLSX.utils.encode_cell({ r, c: 6 })];
+        if (preco && preco.t === "n") preco.z = '"R$" #,##0.0000';
+      }
+    }
+    ws["!cols"] = cab.map((c) => ({ wch: { SKU: 9, "Descrição": 62, "Referência": 20, Categoria: 24, "Também conhecido por": 40, "Página no site": 60 }[c] || 18 }));
+    ws["!autofilter"] = { ref: ws["!ref"] };
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, "Resultados");
+    window.XLSX.writeFile(wb, nomeArquivoExportacao());
+    registrarBuscaAtual();
+  } catch (erro) {
+    console.error(erro);
+    rotulo.textContent = "Não deu para exportar";
+    setTimeout(() => (rotulo.textContent = textoOriginal), 2500);
+    return;
+  } finally {
+    btnExportar.disabled = false;
+  }
+  rotulo.textContent = textoOriginal;
+}
+btnExportar.addEventListener("click", exportarParaExcel);
 
 /* ---------- Copiar SKU e link da busca ---------- */
 
@@ -1327,7 +1419,22 @@ input.addEventListener("keydown", (e) => {
     e.preventDefault();
     e.stopPropagation();
     fecharHistorico();
+  } else if (e.key === "Escape" && input.value) {
+    e.preventDefault();
+    botaoLimparBusca.click(); // Esc limpa a busca (igual ao X vermelho)
   }
+});
+
+// Atalho "/": vai para a busca de qualquer lugar da página (menos quando já se está digitando)
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+  const alvo = e.target;
+  if (alvo && (alvo.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName))) return;
+  e.preventDefault();
+  if (caixaCategorias.classList.contains("is-aberta")) definirGavetaAberta(false, false);
+  window.scrollTo({ top: 0, behavior: "auto" });
+  input.focus();
+  input.select();
 });
 // clicar dentro da lista não tira o foco do campo
 historicoCaixa.addEventListener("mousedown", (e) => e.preventDefault());
@@ -1533,27 +1640,96 @@ if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 }
 
-// Botão "Instalar app": aparece quando o navegador (Chrome/Edge) permite instalar
-(function botaoInstalar() {
+// Botão do app no cabeçalho:
+//   Chrome/Edge, app ainda não instalado -> "Instalar app" (janela de instalação do navegador)
+//   Chrome/Edge, app já instalado        -> "Abrir o app" (abre o app pelo protocolo web+agoravocesabe:,
+//                                           já com a busca que está na tela)
+//   Firefox no computador                -> "Instalar app" abre uma ajuda: abrir no Edge e instalar por lá
+//   Dentro do próprio app                -> some
+(function botaoApp() {
   const botao = document.getElementById("btnInstalar");
+  const rotulo = botao && botao.querySelector(".site-header__instalar-rotulo");
+  const ajuda = document.getElementById("instalarAjuda");
   if (!botao) return;
+  const CHAVE = "cbs_app_instalado";
+  const marcar = (sim) => { try { sim ? localStorage.setItem(CHAVE, "1") : localStorage.removeItem(CHAVE); } catch (_) {} };
+  const marcado = () => { try { return localStorage.getItem(CHAVE) === "1"; } catch (_) { return false; } };
+  const dentroDoApp = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const firefoxPC = /firefox/i.test(navigator.userAgent) && !/android|mobi/i.test(navigator.userAgent);
   let pedido = null;
-  const instalado = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  let modo = ""; // "instalar" | "abrir" | "ajuda"
+
+  function mostrar(novo) {
+    modo = novo;
+    botao.hidden = !novo;
+    if (!novo) return;
+    const abrir = novo === "abrir";
+    rotulo.textContent = abrir ? "Abrir o app" : "Instalar app";
+    botao.title = abrir
+      ? "Abrir o Agora Você Sabe no app instalado neste computador"
+      : "Instalar o Agora Você Sabe como app neste computador";
+    botao.classList.toggle("site-header__instalar--abrir", abrir);
+    botao.setAttribute("aria-haspopup", novo === "ajuda" ? "dialog" : "false");
+  }
+
+  if (dentroDoApp) {
+    marcar(true); // usado como app: este navegador tem o app instalado
+    return;
+  }
+  if (firefoxPC) {
+    mostrar("ajuda");
+  } else if (marcado()) {
+    mostrar("abrir");
+  }
+
+  // O navegador só oferece instalar quando o app NÃO está instalado (inclusive se a pessoa desinstalou)
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
-    if (instalado()) return;
     pedido = e;
-    botao.hidden = false;
-  });
-  botao.addEventListener("click", async () => {
-    if (!pedido) return;
-    botao.hidden = true;
-    pedido.prompt();
-    try { await pedido.userChoice; } catch (_) {}
-    pedido = null;
+    marcar(false);
+    mostrar("instalar");
   });
   window.addEventListener("appinstalled", () => {
-    botao.hidden = true;
     pedido = null;
+    marcar(true);
+    mostrar("abrir");
+  });
+  // Chrome/Edge que sabem dizer se o app está instalado (mesmo sem o aviso acima)
+  if (navigator.getInstalledRelatedApps) {
+    navigator.getInstalledRelatedApps()
+      .then((apps) => { if (apps.length && !pedido) { marcar(true); mostrar("abrir"); } })
+      .catch(() => {});
+  }
+
+  function linkDoApp() {
+    const params = typeof parametrosDaBusca === "function" ? parametrosDaBusca() : "";
+    return `web+agoravocesabe:${encodeURIComponent(params)}`;
+  }
+  document.getElementById("abrirAppFirefox").addEventListener("click", (e) => {
+    e.currentTarget.href = linkDoApp();
+  });
+
+  function fecharAjuda() {
+    ajuda.hidden = true;
+    botao.setAttribute("aria-expanded", "false");
+  }
+  document.addEventListener("click", (e) => { if (!ajuda.hidden && !e.target.closest(".instalar-wrap")) fecharAjuda(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !ajuda.hidden) { fecharAjuda(); botao.focus(); } });
+
+  botao.addEventListener("click", async () => {
+    if (modo === "instalar" && pedido) {
+      pedido.prompt();
+      try {
+        const escolha = await pedido.userChoice;
+        if (escolha && escolha.outcome === "accepted") { pedido = null; marcar(true); mostrar("abrir"); }
+      } catch (_) {}
+    } else if (modo === "abrir") {
+      window.location.href = linkDoApp(); // o Windows abre o app instalado (Edge/Chrome)
+    } else if (modo === "ajuda") {
+      const abrir = ajuda.hidden;
+      ajuda.hidden = !abrir;
+      botao.setAttribute("aria-expanded", String(abrir));
+      if (abrir) document.getElementById("abrirNoEdge").focus();
+    }
   });
 })();
