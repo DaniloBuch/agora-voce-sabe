@@ -1,0 +1,145 @@
+/* ==========================================================================
+   Página de cotação (usa os estilos do site: ../style.css + Design System)
+   ========================================================================== */
+
+.pagina-cotacao .faixa-busca__conteudo { padding-top: var(--sp-10); padding-bottom: var(--sp-10); }
+.pagina-cotacao .lead { margin-bottom: 0; }
+
+/* Barra de ações */
+.cot-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+.cot-barra[hidden] { display: none; }
+.cot-barra__espaco { flex: 1; }
+.btn-explorar--primario { color: var(--text-on-brand); background: var(--cbs-roxo); border-color: var(--cbs-roxo); }
+.btn-explorar--primario:hover { background: var(--cbs-roxo-700, #281f6b); border-color: var(--cbs-roxo-700, #281f6b); }
+.btn-explorar--perigo { color: var(--cbs-erro); border-color: var(--cbs-erro-bg, #fbeceb); }
+.btn-explorar--perigo:hover { color: var(--cbs-erro); background: var(--cbs-erro-bg, #fbeceb); border-color: var(--cbs-erro); }
+.btn-explorar:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-explorar { text-decoration: none; }
+
+.cot-msg { margin: 0 0 var(--sp-3); font-size: var(--fs-xs); font-weight: var(--fw-medium); }
+.cot-msg[hidden] { display: none; }
+.cot-msg--ok { color: var(--cbs-sucesso); }
+.cot-msg--erro { color: var(--cbs-erro); }
+
+/* Tabela (mesmas colunas do papel timbrado) */
+.cot-tabela-wrap[hidden] { display: none; }
+.cot-tabela th { white-space: nowrap; }
+.cot-tabela thead th[class] { font-family: var(--font-core); font-weight: var(--fw-semibold); color: var(--text-label); }
+.cot-tabela td { vertical-align: middle; }
+.cot-tabela .c-item { width: 52px; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.cot-tabela .c-cod { width: 84px; font-family: var(--font-mono); font-weight: var(--fw-medium); color: var(--cbs-roxo); }
+.cot-tabela .c-desc { width: auto; }
+.cot-tabela .c-um { width: 64px; }
+.cot-tabela .c-qtd { width: 120px; text-align: right; }
+.cot-tabela .c-unit { width: 140px; text-align: right; }
+.cot-tabela .c-total { width: 130px; text-align: right; font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cot-tabela .c-acoes { width: 104px; text-align: right; white-space: nowrap; }
+.cot-ref { display: block; margin-top: 2px; font-size: var(--fs-3xs); color: var(--text-muted); }
+
+.cot-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  font-family: var(--font-core);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-body);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  outline: none;
+  transition: var(--transition-control);
+}
+.cot-input:hover:not(:focus) { border-color: var(--cbs-azul-400); }
+.cot-input:focus { border-color: var(--cbs-azul); box-shadow: var(--ring-focus); }
+.cot-input--num { text-align: right; font-variant-numeric: tabular-nums; }
+.cot-input--um { text-transform: uppercase; text-align: center; }
+.cot-saldo { display: block; margin-top: 3px; font-size: var(--fs-3xs); line-height: 1.3; color: var(--text-muted); }
+.cot-saldo--falta { color: var(--cbs-erro); font-weight: var(--fw-semibold); }
+
+.cot-acao {
+  width: 28px;
+  height: 28px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.cot-acao:hover:not(:disabled) { color: var(--cbs-roxo); background: var(--cbs-roxo-050); border-color: var(--cbs-roxo-200); }
+.cot-acao:disabled { opacity: 0.3; cursor: default; }
+.cot-acao:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.cot-acao--remover:hover:not(:disabled) { color: var(--cbs-erro); background: var(--cbs-erro-bg, #fbeceb); border-color: var(--cbs-erro); }
+
+/* Rodapé: aviso + totais (como o quadro "Total geral" do papel timbrado) */
+.cot-rodape {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--sp-6);
+  margin-top: var(--sp-5);
+}
+.cot-rodape[hidden] { display: none; }
+.cot-nota { margin: 0; max-width: 46ch; font-size: var(--fs-2xs); color: var(--text-muted); }
+.cot-totais { min-width: 300px; margin: 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); overflow: hidden; }
+.cot-totais div { display: flex; justify-content: space-between; gap: var(--sp-4); padding: 10px var(--sp-4); font-size: var(--fs-xs); }
+.cot-totais dt { margin: 0; color: var(--text-muted); }
+.cot-totais dd { margin: 0; font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.cot-totais__geral { background: var(--cbs-roxo); }
+.cot-totais__geral dt,
+.cot-totais__geral dd { color: var(--text-on-brand) !important; font-weight: var(--fw-bold); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: var(--ls-caps); }
+.cot-totais__geral dd { text-transform: none; letter-spacing: 0; font-size: var(--fs-md); }
+
+/* Cotação vazia */
+.cot-vazia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-12) var(--sp-4);
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--surface-card);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-card);
+}
+.cot-vazia[hidden] { display: none; }
+.cot-vazia svg { color: var(--cbs-azul); margin-bottom: var(--sp-2); }
+.cot-vazia p { margin: 0; }
+.cot-vazia .btn-explorar { margin-top: var(--sp-4); }
+
+/* Confirmação de limpar */
+.cot-dialogo { max-width: 380px; padding: var(--sp-5); border: 1px solid var(--border-default); border-radius: var(--radius-card); box-shadow: var(--shadow-lg, 0 12px 32px rgba(20, 16, 50, 0.18)); }
+.cot-dialogo::backdrop { background: rgba(20, 16, 50, 0.35); }
+.cot-dialogo p { margin: 0 0 var(--sp-3); font-size: var(--fs-sm); color: var(--text-muted); }
+.cot-dialogo__titulo { font-weight: var(--fw-semibold); color: var(--cbs-roxo) !important; font-size: var(--fs-md) !important; }
+.cot-dialogo__botoes { display: flex; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-4); }
+
+/* Celular: tabela rola de lado; botões em grade */
+@media (max-width: 768px) {
+  .cot-tabela { min-width: 960px; }
+  .cot-tabela-wrap { overflow-x: auto; position: relative; } /* o rótulo escondido "Ações" não alarga a página */
+  .cot-barra__espaco { display: none; }
+  .cot-rodape { flex-direction: column; }
+  .cot-totais { min-width: 0; width: 100%; }
+}
+
+/* Impressão: só a tabela e o total, sem botões nem campos */
+@media print {
+  .site-header, .faixa-busca, .site-footer, .cot-barra, .cot-msg, .c-acoes, .aviso-cotacao { display: none !important; }
+  .page { padding: 0 !important; max-width: none; }
+  .table-wrap { box-shadow: none; border: 1px solid #ccc; }
+  .cot-tabela th { position: static; background: #312783 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cot-input { border: none; padding: 0; height: auto; background: transparent; box-shadow: none; }
+  .cot-saldo, .cot-ref { display: none; }
+  .cot-totais__geral { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { background: #fff; }
+}

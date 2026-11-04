@@ -11,7 +11,7 @@
 
    Ao mudar a lista de arquivos abaixo, aumente a VERSAO.
    ========================================================================== */
-const VERSAO = "v2";
+const VERSAO = "v3";
 const CACHE = `agora-voce-sabe-${VERSAO}`;
 const ESPERA_REDE_MS = 4000; // rede lenta: depois disso usa o que está guardado (se houver)
 
@@ -23,6 +23,11 @@ const ESSENCIAIS = [
   "api.js",
   "config.js",
   "lista-diaria.js",
+  "cotacao-store.js",
+  "cotacao/",
+  "cotacao/index.html",
+  "cotacao/cotacao.js",
+  "cotacao/cotacao.css",
   "manifest.webmanifest",
   "icon.png",
   "icons/icone-192.png",

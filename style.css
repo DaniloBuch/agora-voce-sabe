@@ -92,6 +92,40 @@ body { font-weight: var(--fw-medium); }
 }
 .site-header__login:active { transform: translateY(1px); }
 .site-header__login svg { flex: 0 0 auto; }
+/* Link "Cotação" no cabeçalho, com o número de itens guardados */
+.site-header__cotacao {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--cbs-roxo);
+  text-decoration: none;
+  background: var(--cbs-neutro-000);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  transition: var(--transition-control);
+}
+.site-header__cotacao:hover { background: var(--cbs-roxo-050); border-color: var(--cbs-roxo-400); }
+.site-header__cotacao:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.contador-cotacao {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-bold);
+  line-height: 20px;
+  text-align: center;
+  color: var(--cbs-neutro-000);
+  background: var(--cbs-amarelo, #dc9c01);
+  border-radius: var(--radius-pill);
+  font-variant-numeric: tabular-nums;
+}
+.contador-cotacao[hidden] { display: none; }
+
 /* "Instalar app" (PWA): só aparece quando o navegador permite instalar */
 .site-header__instalar {
   display: inline-flex;
@@ -951,6 +985,49 @@ th.col-site { padding-left: 4px; padding-right: 4px; }
 }
 @media (hover: none) { .link-site::after { display: none; } }
 
+/* Coluna "adicionar à cotação" (primeira da tabela) */
+.col-cot { width: 44px; text-align: center; padding-left: 6px !important; padding-right: 2px !important; }
+th.col-cot svg { display: inline-block; vertical-align: middle; color: var(--text-label); }
+.cot-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--cbs-roxo);
+  background: var(--surface-card);
+  border: 1px dashed var(--cbs-roxo-200);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.cot-btn:hover { background: var(--cbs-roxo-050); border-color: var(--cbs-roxo); border-style: solid; }
+.cot-btn:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.cot-btn.is-marcado { color: var(--cbs-neutro-000); background: var(--cbs-roxo); border: 1px solid var(--cbs-roxo); }
+.cot-btn.is-marcado:hover { background: var(--cbs-roxo-700, #281f6b); }
+
+/* Aviso rápido "adicionado à cotação" */
+.aviso-cotacao {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 60;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  max-width: calc(100vw - 32px);
+  padding: 10px var(--sp-4);
+  font-size: var(--fs-xs);
+  color: var(--cbs-neutro-000);
+  background: var(--cbs-neutro-900, #1d1b29);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(20, 16, 50, 0.18));
+}
+.aviso-cotacao[hidden] { display: none; }
+.aviso-cotacao strong { font-weight: var(--fw-semibold); }
+.aviso-cotacao a { flex: 0 0 auto; font-weight: var(--fw-semibold); color: var(--cbs-amarelo, #dc9c01); }
+
 /* SKU clicável: copia o código */
 .sku-copiar {
   position: relative;
@@ -1377,15 +1454,16 @@ body.com-lista .col-lista { display: table-cell; }
     display: none;
   }
   .site-header__login {
-    margin-left: auto;
+    margin-left: 0;
   }
 
   .site-header__instalar span { display: none; } /* celular: só o ícone */
-  .instalar-wrap { margin-left: auto; }
+  .site-header__cotacao-rotulo { display: none; }
+  .site-header__cotacao { padding: 0 8px; margin-left: auto; }
+  .site-header__inner { gap: var(--sp-2); }
   .results-head { flex-direction: column; gap: var(--sp-1); }
   .results-acoes { flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); margin-bottom: var(--sp-2); }
   .instalar-ajuda { width: min(320px, calc(100vw - 32px)); right: -60px; }
-  .instalar-wrap:has(.site-header__instalar:not([hidden])) ~ .site-header__login { margin-left: 0; }
   .painel-info__base { flex-wrap: wrap; padding: var(--sp-4); }
   .painel-info__base .btn-explorar { width: 100%; justify-content: center; }
   .painel-info__dicas { padding: var(--sp-4); }
@@ -1405,8 +1483,10 @@ body.com-lista .col-lista { display: table-cell; }
     display: none;
   } /* esconde a referência no celular para caber a descrição */
   .apelidos__rotulo { flex-basis: 100%; } /* rótulo em cima, nomes embaixo (até 2 linhas) */
+  .apelidos .tag-pill { white-space: normal; text-overflow: clip; } /* nome comprido quebra entre palavras, sem cortar */
   .col-sku {
-    width: 84px;
+    width: 70px;
   }
+  .col-cot { width: 38px; padding-left: 4px !important; }
 }
 

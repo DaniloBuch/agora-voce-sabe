@@ -682,7 +682,7 @@ function executarBusca(termoOriginal, pagina = 1) {
 
 // 4 colunas normais; 6 quando há Lista Diária (Saldo e Preço campanha)
 function numColunas() {
-  return window.ListaDiaria && window.ListaDiaria.ativa() ? 6 : 4; // SKU, descrição (+ saldo e preço), Ref., Site
+  return window.ListaDiaria && window.ListaDiaria.ativa() ? 7 : 5; // cotação, SKU, descrição (+ saldo e preço), Ref., Site
 }
 
 /* ---------- Link para o site oficial (cbsmed.com.br) ---------- */
@@ -875,6 +875,7 @@ function linhaProduto(item, termos) {
   const lista = celulasLista(item.sku);
   return `
         <tr>
+          ${celulaCotacao(item)}
           <td class="col-sku"><button type="button" class="sku-copiar" data-sku="${escaparHtml(item.sku)}" title="Clique para copiar o código" aria-label="Copiar código ${escaparHtml(item.sku)}">${destacar(item.sku, termos)}</button></td>
           <td class="col-desc"><span class="desc-texto">${destacar(item.descricao, termos)}</span>${apelidosHtml}${lista.resumoMobile}</td>
           ${lista.colunas}
@@ -1100,6 +1101,71 @@ document.getElementById("btnExplorar").addEventListener("click", () => {
   }
   abrirCatalogo();
 });
+
+/* ---------- Lista de cotação (cotacao-store.js + página /cotacao/) ---------- */
+
+const ICONE_ADD_COTACAO =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>';
+const ICONE_NA_COTACAO =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>';
+const cotacao = window.CBSCotacao;
+
+function htmlBotaoCotacao(item, marcado) {
+  const acao = marcado ? "Tirar da cotação" : "Adicionar à cotação";
+  return `<button type="button" class="cot-btn${marcado ? " is-marcado" : ""}" data-cot="${escaparHtml(item.sku)}" aria-pressed="${marcado}" ` +
+    `title="${acao}" aria-label="${acao}: ${escaparHtml(item.sku)} ${escaparHtml(item.descricao)}">${marcado ? ICONE_NA_COTACAO : ICONE_ADD_COTACAO}</button>`;
+}
+function celulaCotacao(item) {
+  return `<td class="col-cot">${cotacao ? htmlBotaoCotacao(item, cotacao.tem(item.sku)) : ""}</td>`;
+}
+
+const contadorCotacao = document.getElementById("contadorCotacao");
+const avisoCotacao = document.getElementById("avisoCotacao");
+let timeoutAvisoCotacao = null;
+function atualizarContadorCotacao() {
+  const n = cotacao ? cotacao.quantidade() : 0;
+  contadorCotacao.textContent = String(n);
+  contadorCotacao.hidden = n === 0;
+  document.getElementById("linkCotacao").setAttribute("aria-label", n ? `Ver a cotação (${n} ${n === 1 ? "item" : "itens"})` : "Ver a cotação (vazia)");
+}
+function mostrarAvisoCotacao(texto) {
+  avisoCotacao.innerHTML = `<span>${texto}</span><a href="cotacao/">Ver cotação</a>`;
+  avisoCotacao.hidden = false;
+  clearTimeout(timeoutAvisoCotacao);
+  timeoutAvisoCotacao = setTimeout(() => (avisoCotacao.hidden = true), 3500);
+}
+// redesenha só os botões da cotação (ex.: a cotação mudou em outra aba ou foi limpa)
+function sincronizarBotoesCotacao() {
+  tbody.querySelectorAll("button.cot-btn").forEach((btn) => {
+    const item = database.find((i) => i.sku === btn.dataset.cot);
+    if (item) btn.outerHTML = htmlBotaoCotacao(item, cotacao.tem(item.sku));
+  });
+  atualizarContadorCotacao();
+}
+if (cotacao) {
+  cotacao.aoMudar(sincronizarBotoesCotacao);
+  atualizarContadorCotacao();
+  tbody.addEventListener("click", (e) => {
+    const btn = e.target.closest("button.cot-btn");
+    if (!btn) return;
+    const sku = btn.dataset.cot;
+    const item = database.find((i) => i.sku === sku);
+    if (!item) return;
+    if (cotacao.tem(sku)) {
+      cotacao.remover(sku);
+      mostrarAvisoCotacao(`<strong>${escaparHtml(sku)}</strong> saiu da cotação.`);
+    } else {
+      // o preço campanha da Lista Diária (se carregada) entra como sugestão de valor unitário
+      const v = window.ListaDiaria && window.ListaDiaria.ativa() ? window.ListaDiaria.obter(sku) : null;
+      cotacao.adicionar({ sku, descricao: item.descricao, referencia: item.referencia, preco: v ? v.preco : null });
+      registrarBuscaAtual();
+      const n = cotacao.quantidade();
+      mostrarAvisoCotacao(`<strong>${escaparHtml(sku)}</strong> adicionado à cotação (${n} ${n === 1 ? "item" : "itens"}).`);
+    }
+    const novo = tbody.querySelector(`button.cot-btn[data-cot="${CSS.escape(sku)}"]`);
+    if (novo) novo.focus();
+  });
+}
 
 /* ---------- Exportar o resultado da busca para Excel ---------- */
 
