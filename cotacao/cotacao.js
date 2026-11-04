@@ -43,6 +43,40 @@
     }
   }
 
+  /* ---------- Catálogo para a Lista Diária ----------
+     O leitor da Lista Diária (../lista-diaria.js) só guarda os códigos que existem no catálogo.
+     Aqui a base vem da cópia guardada pela busca neste aparelho; sem ela, do Supabase. */
+  let skusCatalogo = [];
+  window.CBS_skusCatalogo = () => skusCatalogo;
+  function lerBaseDoAparelho() {
+    return new Promise((resolver) => {
+      try {
+        const pedido = indexedDB.open("cbs_agora_voce_sabe", 1);
+        pedido.onupgradeneeded = () => pedido.result.createObjectStore("dados");
+        pedido.onerror = () => resolver(null);
+        pedido.onsuccess = () => {
+          const db = pedido.result;
+          try {
+            const get = db.transaction("dados", "readonly").objectStore("dados").get("produtos");
+            get.onsuccess = () => { db.close(); resolver(get.result || null); };
+            get.onerror = () => { db.close(); resolver(null); };
+          } catch (_) { db.close(); resolver(null); }
+        };
+      } catch (_) { resolver(null); }
+    });
+  }
+  (async function carregarCatalogo() {
+    const salvo = await lerBaseDoAparelho();
+    if (salvo && Array.isArray(salvo.dados) && salvo.dados.length) {
+      skusCatalogo = salvo.dados.map((p) => String(p.sku));
+      return;
+    }
+    try {
+      if (window.CBS_API && CBS_API.configurado) skusCatalogo = (await CBS_API.listarProdutos()).map((p) => String(p.sku));
+      else skusCatalogo = (await (await fetch("../db.json")).json()).map((p) => String(p.sku));
+    } catch (_) {}
+  })();
+
   /* ---------- Tabela ---------- */
 
   function linha(i, n, lista) {
@@ -313,8 +347,28 @@
       mensagem("Cotação limpa.");
     }
   });
-  // a Lista Diária pode ser carregada em outra aba: atualiza os saldos mostrados
-  window.addEventListener("storage", (e) => { if (e.key === CHAVE_LISTA) desenhar(); });
+  // Lista Diária carregada, trocada ou apagada (aqui ou em outra aba): atualiza saldos e
+  // preenche o valor unitário dos itens que ainda estão sem valor (não mexe no que foi digitado)
+  let listaAnterior = localStorage.getItem(CHAVE_LISTA);
+  function aoMudarLista() {
+    const atual = localStorage.getItem(CHAVE_LISTA);
+    const nova = atual && atual !== listaAnterior;
+    listaAnterior = atual;
+    if (nova) {
+      const lista = lerListaDiaria();
+      let n = 0;
+      if (lista) {
+        for (const i of cot.listar()) {
+          const info = lista.get(i.sku);
+          if (info && info.preco && i.preco == null) { cot.atualizar(i.sku, { preco: info.preco }); n++; }
+        }
+      }
+      if (n) mensagem(`${n} valor(es) unitário(s) vazio(s) preenchido(s) com o preço campanha da nova Lista Diária.`);
+    }
+    desenhar();
+  }
+  window.addEventListener("listadiaria:mudou", aoMudarLista);
+  window.addEventListener("storage", (e) => { if (e.key === CHAVE_LISTA) aoMudarLista(); });
 
   desenhar();
 })();

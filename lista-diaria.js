@@ -11,7 +11,8 @@
   const CHAVE = "cbs_lista_diaria_v1";
   const VALIDADE_MS = 24 * 60 * 60 * 1000; // 24 horas
   const TOLERANCIA_RELOGIO_MS = 5 * 60 * 1000;
-  const SHEETJS_URL = "vendor/xlsx.full.min.js";
+  // relativo a este arquivo (funciona na busca e na página /cotacao/)
+  const SHEETJS_URL = new URL("vendor/xlsx.full.min.js", (document.currentScript && document.currentScript.src) || location.href).href;
 
   const $ = (id) => document.getElementById(id);
   const el = {

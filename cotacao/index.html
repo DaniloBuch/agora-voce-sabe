@@ -37,6 +37,26 @@
             <strong>copie a tabela</strong> para o papel timbrado (ou baixe em Excel). A lista fica só neste
             navegador, até você limpar.
           </p>
+
+          <!-- Lista Diária: saldo e preço campanha, só neste navegador (24 h) -->
+          <div class="lista-diaria" id="listaDiaria">
+            <input type="file" id="listaArquivo" accept=".xlsx,.xls,.csv,.xlsm" hidden />
+            <button type="button" class="btn-lista" id="listaBotao">
+              <svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg><span class="btn-lista__rotulo">Carregar Lista Diária</span>
+            </button>
+            <span class="lista-status" id="listaStatus"><span class="lista-status__ponto" aria-hidden="true"></span><span>Sem Lista Diária carregada</span></span>
+            <span class="lista-ajuda-wrap">
+              <button type="button" class="lista-ajuda" id="listaAjuda" aria-expanded="false" aria-controls="listaAjudaTexto" aria-label="Sobre o saldo e o preço da Lista Diária">?</button>
+              <span class="lista-ajuda__texto" id="listaAjudaTexto" role="tooltip" hidden>
+                <strong>Valores meramente consultivos.</strong> O saldo e o preço campanha vêm da Lista Diária
+                que você carregou. Para maior exatidão, consulte o <strong>Protheus (TOTVS)</strong>.
+                Os dados ficam só neste navegador (não vão para nenhum servidor) e são apagados depois de 24 horas.
+              </span>
+            </span>
+            <button type="button" class="lista-limpar" id="listaLimpar" aria-label="Remover Lista Diária deste navegador" title="Remover Lista Diária" hidden><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+          </div>
+          <p class="lista-msg" id="listaMsg" role="status" hidden></p>
+          <p class="lista-nota" id="listaNota" hidden></p>
         </div>
       </div>
     </section>
@@ -99,6 +119,9 @@
       </form>
     </dialog>
 
+    <script src="../config.js"></script>
+    <script src="../api.js"></script>
+    <script src="../lista-diaria.js"></script>
     <script src="../cotacao-store.js"></script>
     <script src="cotacao.js"></script>
   </body>
