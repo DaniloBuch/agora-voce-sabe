@@ -60,7 +60,22 @@
 .cot-input:focus { border-color: var(--cbs-azul); box-shadow: var(--ring-focus); }
 .cot-input--num { text-align: right; font-variant-numeric: tabular-nums; }
 .cot-input--um { text-transform: uppercase; text-align: center; }
-.cot-saldo { display: block; margin-top: 3px; font-size: var(--fs-3xs); line-height: 1.3; color: var(--text-muted); }
+/* saldo sob a quantidade: fica "solto" embaixo do campo, para o campo continuar alinhado com os outros */
+.cot-tabela td.c-qtd { position: relative; } /* só a célula: o cabeçalho continua fixo (sticky) */
+.cot-tabela.com-saldo tbody td { padding-top: 18px; padding-bottom: 18px; }
+.cot-saldo {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: calc(50% + 19px);
+  font-size: var(--fs-3xs);
+  line-height: 1.3;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+}
 .cot-saldo--falta { color: var(--cbs-erro); font-weight: var(--fw-semibold); }
 
 .cot-acao {

@@ -50,10 +50,10 @@
     const info = lista ? lista.get(i.sku) : null;
     let saldo = "";
     if (lista) {
-      if (!info || info.saldo == null) saldo = `<span class="cot-saldo">Sem saldo na Lista Diária</span>`;
+      if (!info || info.saldo == null) saldo = `<span class="cot-saldo" title="Este produto não está na Lista Diária">Sem saldo na lista</span>`;
       else {
         const falta = i.qtd != null && i.qtd > info.saldo;
-        saldo = `<span class="cot-saldo${falta ? " cot-saldo--falta" : ""}" title="Saldo disponível na Lista Diária (consultivo)">Saldo: ${fmtSaldo.format(info.saldo)}${falta ? " · acima do saldo" : ""}</span>`;
+        saldo = `<span class="cot-saldo${falta ? " cot-saldo--falta" : ""}" title="Saldo disponível na Lista Diária (consultivo)${falta ? ": a quantidade está acima do saldo" : ""}">Saldo: ${fmtSaldo.format(info.saldo)}${falta ? " · acima" : ""}</span>`;
       }
     }
     return `<tr data-sku="${esc(i.sku)}">
@@ -85,6 +85,7 @@
       ? "Preenche o valor unitário com o preço campanha da Lista Diária (não mexe nos valores que você digitou)"
       : "Carregue a Lista Diária na busca para usar os preços campanha";
     corpo.innerHTML = itens.map((i, k) => linha(i, k + 1, lista)).join("");
+    corpo.closest("table").classList.toggle("com-saldo", Boolean(lista)); // espaço para o saldo sob a quantidade
     const ultimo = corpo.querySelector("tr:last-child [data-acao=descer]");
     if (ultimo) ultimo.disabled = true;
     atualizarTotais(itens);
