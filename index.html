@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CBS - Agora Você Sabe!</title>
     <link rel="icon" href="./icon.png" sizes="32x32" />
+    <!-- PWA: dá para "instalar" o site como app no computador e no celular -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="theme-color" content="#312783" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <link rel="icon" type="image/svg+xml" href="./design-system/assets/brand/simbolo-s-roxo-quadrado-laranja.svg" />
     <link rel="preload" href="./design-system/assets/fonts/Quicksand-VariableFont_wght.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="stylesheet" href="./design-system/styles.css" />
@@ -24,6 +28,7 @@
           />
         </a>
         <span class="site-header__label">Busca de produtos</span>
+        <button type="button" class="site-header__instalar" id="btnInstalar" hidden title="Instalar o Agora Você Sabe como app neste computador"><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg><span>Instalar app</span></button>
         <a class="site-header__login" href="admin/"><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 17 5-5-5-5"></path><path d="M15 12H3"></path><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path></svg>Login</a>
       </div>
     </header>

@@ -160,12 +160,61 @@ function destacar(texto, termos, deslocamento = 0) {
 
 /* ---------- Carga dos dados ---------- */
 
+/* Cópia da base guardada neste aparelho (IndexedDB), para o app funcionar sem internet.
+   Guarda só o que já é público (a mesma lista que o site lê do Supabase). */
+const BaseOffline = (() => {
+  const NOME = "cbs_agora_voce_sabe", LOJA = "dados";
+  function abrir() {
+    return new Promise((resolver, rejeitar) => {
+      if (!window.indexedDB) return rejeitar(new Error("sem IndexedDB"));
+      const pedido = indexedDB.open(NOME, 1);
+      pedido.onupgradeneeded = () => pedido.result.createObjectStore(LOJA);
+      pedido.onsuccess = () => resolver(pedido.result);
+      pedido.onerror = () => rejeitar(pedido.error);
+    });
+  }
+  async function salvar(chave, valor) {
+    try {
+      const db = await abrir();
+      await new Promise((resolver, rejeitar) => {
+        const tx = db.transaction(LOJA, "readwrite");
+        tx.objectStore(LOJA).put(valor, chave);
+        tx.oncomplete = resolver;
+        tx.onerror = () => rejeitar(tx.error);
+      });
+      db.close();
+    } catch (_) {} // sem espaço ou navegação privada: só não fica disponível offline
+  }
+  async function ler(chave) {
+    try {
+      const db = await abrir();
+      const valor = await new Promise((resolver, rejeitar) => {
+        const pedido = db.transaction(LOJA, "readonly").objectStore(LOJA).get(chave);
+        pedido.onsuccess = () => resolver(pedido.result || null);
+        pedido.onerror = () => rejeitar(pedido.error);
+      });
+      db.close();
+      return valor;
+    } catch (_) {
+      return null;
+    }
+  }
+  return { salvar, ler };
+})();
+
 async function lerDb() {
-  // 1) Banco (Supabase), se configurado; 2) db.json como plano B.
+  // 1) Banco (Supabase), se configurado; 2) cópia guardada neste aparelho; 3) db.json como plano B.
   if (window.CBS_API && CBS_API.configurado) {
     try {
-      return { dados: await CBS_API.listarProdutos(), contingencia: false };
+      const dados = await CBS_API.listarProdutos();
+      BaseOffline.salvar("produtos", { em: Date.now(), dados }); // sem esperar: não atrasa a busca
+      return { dados, contingencia: false };
     } catch (erro) {
+      const salvo = await BaseOffline.ler("produtos");
+      if (salvo && Array.isArray(salvo.dados) && salvo.dados.length) {
+        console.warn("Sem conexão com o banco; usando a base guardada neste aparelho:", erro);
+        return { dados: salvo.dados, contingencia: "offline", salvoEm: salvo.em };
+      }
       console.warn("Supabase indisponível, usando db.json:", erro);
       const dados = await lerDbJson();
       return { dados, contingencia: true };
@@ -190,9 +239,11 @@ async function lerDbJson() {
 async function lerSinonimos() {
   if (!window.CBS_API || !CBS_API.configurado || !CBS_API.listarSinonimos) return [];
   try {
-    return await CBS_API.listarSinonimos();
+    const grupos = await CBS_API.listarSinonimos();
+    BaseOffline.salvar("sinonimos", grupos);
+    return grupos;
   } catch (_) {
-    return [];
+    return (await BaseOffline.ler("sinonimos")) || []; // offline: os sinônimos da última vez
   }
 }
 
@@ -214,7 +265,7 @@ async function carregarDados() {
   const infoNumero = document.getElementById("infoBaseNumero");
   const infoTexto = document.getElementById("infoBaseTexto");
   try {
-    const [{ dados: dadosBrutos, contingencia }, grupos] = await Promise.all([lerDb(), lerSinonimos()]);
+    const [{ dados: dadosBrutos, contingencia, salvoEm }, grupos] = await Promise.all([lerDb(), lerSinonimos()]);
     montarSinonimos(grupos);
 
     database = dadosBrutos
@@ -262,10 +313,14 @@ async function carregarDados() {
 
     // Atualiza o painel com o número real
     infoNumero.textContent = fmtNum.format(database.length);
-    infoTexto.textContent = contingencia
-      ? "produtos do arquivo local (modo contingência: pode estar desatualizado)."
-      : "produtos carregados";
-    infoTexto.classList.toggle("is-erro", contingencia);
+    infoTexto.textContent =
+      contingencia === "offline"
+        ? `produtos (sem internet: usando a base guardada neste aparelho em ${new Date(salvoEm).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}).`
+        : contingencia
+          ? "produtos do arquivo local (modo contingência: pode estar desatualizado)."
+          : "produtos carregados";
+    infoTexto.classList.toggle("is-erro", contingencia === true);
+    infoTexto.classList.toggle("is-alerta", contingencia === "offline");
     heroCards.classList.add("is-carregado");
 
     // Se o usuário já digitou algo (ou abriu um link com categoria/catálogo) enquanto carregava, busca agora
@@ -1469,4 +1524,36 @@ document.getElementById("filtroAtivoLimpar").addEventListener("click", () => {
     btnLink.hidden = false;
     executarBusca("");
   }
+})();
+
+/* ---------- App instalável (PWA) ---------- */
+
+// Guarda o site para abrir rápido e funcionar sem internet (sw.js)
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+
+// Botão "Instalar app": aparece quando o navegador (Chrome/Edge) permite instalar
+(function botaoInstalar() {
+  const botao = document.getElementById("btnInstalar");
+  if (!botao) return;
+  let pedido = null;
+  const instalado = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    if (instalado()) return;
+    pedido = e;
+    botao.hidden = false;
+  });
+  botao.addEventListener("click", async () => {
+    if (!pedido) return;
+    botao.hidden = true;
+    pedido.prompt();
+    try { await pedido.userChoice; } catch (_) {}
+    pedido = null;
+  });
+  window.addEventListener("appinstalled", () => {
+    botao.hidden = true;
+    pedido = null;
+  });
 })();

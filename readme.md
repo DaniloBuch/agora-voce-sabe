@@ -38,6 +38,7 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 - **Lista Diária (saldo e preço campanha):** qualquer usuário, sem login, pode carregar a planilha Excel da Lista Diária (botão **Carregar Lista Diária**; aceita `.xlsx`, `.xls`, `.xlsm` e `.csv`; o CSV é lido pelo próprio site, como texto, com separador `;`, `,` ou tab, UTF-8 ou Windows-1252 e números no padrão brasileiro, `4,7983` e `1.234,5`). O site lê as colunas **Saldo disponível** e **Preco campanha** e mostra os valores na tabela (colunas *Saldo* e *Preço camp.*; no celular, uma linha sob a descrição) conforme as buscas são feitas. **Esses dados nunca vão para o banco nem para nenhum servidor:** a leitura é feita no navegador e o resultado fica só no `localStorage` do próprio usuário, que é apagado automaticamente após **24 horas**. Um aviso ao lado do botão mostra quando a lista foi atualizada e em quanto tempo ela se apaga, e o **(?)** explica que os valores são meramente consultivos e que, para maior exatidão, deve-se consultar o Protheus (TOTVS). O botão **×** apaga a lista na hora (útil em computador compartilhado). Linhas repetidas do mesmo SKU somam o saldo e usam o primeiro preço diferente de zero (o preço campanha sempre é mostrado com 4 casas decimais, ex.: R$ 12,5000); SKUs que não estão no catálogo são ignorados.
 - **Site oficial, foto e ficha técnica:** a coluna **Site** tem dois ícones: um abre, em nova aba, a página do produto em cbsmed.com.br (passando o mouse aparece a **foto em miniatura**) e o outro abre o **PDF da ficha técnica**. Sem sincronizar, o endereço é montado pela descrição técnica do jeito do WordPress (sem acento, minúsculas, `/` e `.` viram traço, vírgula, `%`, `+` e parênteses saem: `FILME TRANSP TEGADERM CHG 8,5X11,5 C/CLOREX 2% 3M 1657R(25)` → `/produto/filme-transp-tegaderm-chg-85x115-c-clorex-2-3m-1657r25/`). A **sincronização** é feita pelo próprio Supabase (o site não libera a leitura pelo navegador): toda segunda-feira às 06:15 e pelo botão do painel, ela guarda o endereço exato (resolve o `-2` do WordPress), a ficha e a foto de cada código. Produto que não está no site abre a busca do site. O ícone mostra se o produto tem foto no site: **ícone de foto, em roxo**, quando tem (com a miniatura ao passar o mouse); **ícone de link, em cinza**, em qualquer outro caso (sem foto, fora do site ou antes da sincronização). A busca só pede os links da página na tela, para gastar pouco tráfego.
 - **Copiar o valor unitário:** com a Lista Diária carregada, clicar no preço campanha copia o número (ex.: `4,7983`), igual ao clique no SKU.
+- **App instalável (PWA) e modo offline:** no Chrome ou no Edge aparece o botão **Instalar app** no cabeçalho (ou o ícone de instalar na barra de endereço). Instalado, o site abre em janela própria, com ícone na área de trabalho e no menu Iniciar; no celular, "Adicionar à tela inicial". O app guarda o próprio site (`sw.js`) e a última base carregada neste aparelho: **sem internet, a busca continua funcionando** e o painel avisa de quando é a base. Com internet, sempre vale a versão mais nova (o cache é só plano B). Para instalar em todos os computadores de uma vez, o TI pode usar a política `WebAppInstallForceList` do Edge/Chrome.
 - **Modo contingência:** se o banco estiver fora do ar, o site lê o `db.json` e avisa na tela.
 
 ### Painel de administração (`/admin/`)
@@ -67,6 +68,7 @@ Supabase (PostgreSQL + PostgREST)
 | Arquivo / pasta | Função |
 | --- | --- |
 | `index.html`, `script.js`, `style.css` | Site público de busca |
+| `manifest.webmanifest`, `sw.js`, `icons/` | App instalável (PWA): nome, ícones e cores do app; service worker que guarda o site para abrir sem internet |
 | `lista-diaria.js`, `vendor/xlsx.full.min.js` | Lista Diária: leitura local do Excel (SheetJS 0.18.5, Apache-2.0, carregado só quando alguém envia uma planilha) e armazenamento de 24 h no navegador |
 | `admin/` | Painel de administração (`index.html`, `admin.js`, `admin.css`), acessado por `/admin/` |
 | `api.js` | Camada de acesso ao Supabase (login, listar, CRUD, importar, histórico, tags) |
@@ -113,10 +115,18 @@ O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/
 - [x] CBS Design System aplicado
 - [x] Copiar SKU, link compartilhável da busca e tolerância a erro de digitação
 - [x] Categorias de produtos (filtro no site, gestão no painel, CSV)
-- [ ] Valor e saldo em estoque apenas para usuários logados (exige perfis de acesso e avaliação de dado sensível)
-- [ ] Registrar buscas sem resultado, para descobrir apelidos que faltam virar tag
-- [ ] Backup automático agendado
-- [ ] Atalhos e melhorias de uso no celular
+- [x] Busca avançada (aspas e exclusão), sinônimos editáveis e resultados parecidos
+- [x] Paginação, catálogo completo, histórico de buscas e busca na gaveta de categorias
+- [x] Lista Diária: saldo e preço campanha, só no navegador, por 24 horas
+- [x] "Também conhecido por": os outros nomes do produto sempre à vista
+- [x] Site oficial, foto e ficha técnica (sincronização semanal pelo Supabase)
+- [x] App instalável (PWA) com modo offline
+- [ ] Lista de cotação: marcar produtos e copiar tudo de uma vez (SKU, descrição, saldo e preço) para colar no e-mail, WhatsApp ou Protheus
+- [ ] Alternativas ("De/Para"): ligar produtos equivalentes no painel e, quando a Lista Diária mostrar saldo zero, sugerir os substitutos com saldo
+- [ ] Selo "Novo" nos produtos que entraram na base nos últimos 30 dias
+- [ ] Exportar o resultado da busca para Excel
+- [ ] Atalhos de teclado: "/" vai para a busca, Esc limpa
+- [ ] Backup automático agendado da base
 
 ---
 

@@ -92,6 +92,27 @@ body { font-weight: var(--fw-medium); }
 }
 .site-header__login:active { transform: translateY(1px); }
 .site-header__login svg { flex: 0 0 auto; }
+/* "Instalar app" (PWA): só aparece quando o navegador permite instalar */
+.site-header__instalar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 var(--sp-3);
+  font-family: var(--font-core);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-on-brand);
+  background: var(--cbs-roxo);
+  border: 1px solid var(--cbs-roxo);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.site-header__instalar[hidden] { display: none; }
+.site-header__instalar:hover { background: var(--cbs-roxo-700, #281f6b); }
+.site-header__instalar:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.site-header__instalar svg { flex: 0 0 auto; }
 
 /* --- Página ----------------------------------------------------------- */
 .page {
@@ -532,6 +553,7 @@ body { font-weight: var(--fw-medium); }
   font-variant-numeric: tabular-nums;
 }
 .painel-info__numero .is-erro { color: var(--cbs-erro); font-weight: var(--fw-medium); }
+.painel-info__numero .is-alerta { color: var(--cbs-amarelo-700); font-weight: var(--fw-medium); }
 .painel-info__texto {
   margin: 2px 0 0;
   font-size: var(--fs-xs);
@@ -1316,6 +1338,9 @@ body.com-lista .col-lista { display: table-cell; }
   .site-header__login {
     margin-left: auto;
   }
+  .site-header__instalar { margin-left: auto; }
+  .site-header__instalar span { display: none; } /* celular: só o ícone */
+  .site-header__instalar:not([hidden]) ~ .site-header__login { margin-left: 0; }
   .painel-info__base { flex-wrap: wrap; padding: var(--sp-4); }
   .painel-info__base .btn-explorar { width: 100%; justify-content: center; }
   .painel-info__dicas { padding: var(--sp-4); }
