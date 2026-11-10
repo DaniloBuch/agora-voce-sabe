@@ -138,11 +138,25 @@ No **SQL Editor**, rode `supabase/migracoes/011_areas_atuacao.sql`. Ela:
 
 Antes de rodar, o site e o painel funcionam normalmente, só sem as áreas (o painel mostra um aviso).
 
+## 11. Sino de novidades e produtos removidos (migração 012)
+
+No **SQL Editor**, rode `supabase/migracoes/012_novidades.sql`. Ela cria:
+
+- a tabela `novidades` (mensagens do sino). O site lê só as publicadas com data até agora; o painel
+  vê e edita todas;
+- a função `produtos_removidos`, que a página **Novidades do catálogo** usa para listar os produtos
+  excluídos nos últimos dias (só código, descrição, referência, categoria e data; o histórico
+  completo continua restrito ao painel). Produtos que voltaram ao catálogo não aparecem.
+
+Antes de rodar, o site funciona normalmente: o sino fica sem mensagens e a aba "Removidos" avisa
+que não está disponível.
+
 ## Como usar o painel de administração
 
 | Aba | Para quê |
 | --- | --- |
 | **Produtos** | Buscar, criar, editar (inclusive tags) e excluir. O botão **Exportar CSV** baixa todos os produtos, com Categoria e Tags (use como backup). O filtro **"Só sem tags"** mostra o que falta etiquetar; o filtro **Adicionados** (hoje, 7, 30 ou 90 dias) mostra os produtos que entraram no catálogo, do mais novo ao mais antigo, com o selo "novo". |
+| **Novidades** | Mensagens do sino do site. As sugestões de cada atualização aparecem prontas (publicar, editar e publicar, ou ignorar); também dá para escrever, agendar, editar e excluir mensagens. O número no rótulo da aba é de sugestões esperando. |
 | **Áreas** | Áreas de atuação (Hospitais, Laboratórios...): criar, trocar nome e ícone, mesclar e excluir. Cada produto pode ter várias, marcadas no cadastro ou na edição em massa. |
 | **Tags** | Lista todas as tags com a contagem de produtos. **Renomear** troca a tag em todos os produtos; se o novo nome já existir, as duas viram uma só (mescla). **Excluir** tira a tag de todos. Marca possíveis duplicadas (acento, plural, maiúscula). Tudo vai para o Histórico. |
 | **Categorias** | Lista as categorias com a contagem de produtos. Permite **criar**, **renomear** (se o nome já existir, mescla) e **excluir** (os produtos voltam para `-`). "Ver produtos" abre a lista já filtrada. Categoria de um produto: no cadastro dele ou na **Edição em massa**. |

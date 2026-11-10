@@ -41,7 +41,9 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 - **Leve e seguro:** debounce na digitação, 50 linhas por página e escape de HTML nos dados.
 - **Lista Diária (saldo e preço campanha):** qualquer usuário, sem login, pode carregar a planilha Excel da Lista Diária (botão **Carregar Lista Diária**; aceita `.xlsx`, `.xls`, `.xlsm` e `.csv`; o CSV é lido pelo próprio site, como texto, com separador `;`, `,` ou tab, UTF-8 ou Windows-1252 e números no padrão brasileiro, `4,7983` e `1.234,5`). O site lê as colunas **Saldo disponível** e **Preco campanha** e mostra os valores na tabela (colunas *Saldo* e *Preço camp.*; no celular, uma linha sob a descrição) conforme as buscas são feitas. **Esses dados nunca vão para o banco nem para nenhum servidor:** a leitura é feita no navegador e o resultado fica só no `localStorage` do próprio usuário, que é apagado automaticamente após **24 horas**. Um aviso ao lado do botão mostra quando a lista foi atualizada e em quanto tempo ela se apaga, e o **(?)** explica que os valores são meramente consultivos e que, para maior exatidão, deve-se consultar o Protheus (TOTVS). O botão **×** apaga a lista na hora (útil em computador compartilhado). Linhas repetidas do mesmo SKU somam o saldo e usam o primeiro preço diferente de zero (o preço campanha sempre é mostrado com 4 casas decimais, ex.: R$ 12,5000); SKUs que não estão no catálogo são ignorados.
 - **Site oficial, foto e ficha técnica:** a coluna **Site** tem dois ícones: um abre, em nova aba, a página do produto em cbsmed.com.br (passando o mouse aparece a **foto em miniatura**) e o outro abre o **PDF da ficha técnica**. Sem sincronizar, o endereço é montado pela descrição técnica do jeito do WordPress (sem acento, minúsculas, `/` e `.` viram traço, vírgula, `%`, `+` e parênteses saem: `FILME TRANSP TEGADERM CHG 8,5X11,5 C/CLOREX 2% 3M 1657R(25)` → `/produto/filme-transp-tegaderm-chg-85x115-c-clorex-2-3m-1657r25/`). A **sincronização** é feita pelo próprio Supabase (o site não libera a leitura pelo navegador): toda segunda-feira às 06:15 e pelo botão do painel, ela guarda o endereço exato (resolve o `-2` do WordPress), a ficha e a foto de cada código. Produto que não está no site abre a busca do site. O ícone mostra se o produto tem foto no site: **ícone de foto, em roxo**, quando tem (com a miniatura ao passar o mouse); **ícone de link, em cinza**, em qualquer outro caso (sem foto, fora do site ou antes da sincronização). A busca só pede os links da página na tela, para gastar pouco tráfego.
-- **Variação de preço:** ao carregar a Lista Diária, o site compara o preço campanha com o da lista de data anterior (a data vem do nome do arquivo, ex.: `LISTA DIÁRIA 10-11-2026.xlsx`; sem data no nome, vale o dia em que foi carregada) e mostra, sob o preço, a diferença em % e em R$: **▼ −10,0% · −R$ 0,10** em verde quando caiu e **▲ +11,1% · +R$ 0,50** em vermelho quando subiu (o preço antigo aparece ao passar o mouse). A mensagem de carregamento diz quantos preços mudaram. Para isso o navegador guarda **só os preços** (nunca o saldo) da lista anterior por até 5 dias, o que cobre fim de semana e feriado prolongado; recarregar a mesma lista continua comparando com a anterior, e o **×** apaga tudo.
+- **Variação de preço:** ao carregar a Lista Diária, o site compara o preço campanha com o da lista de data anterior (a data vem do nome do arquivo, ex.: `LISTA DIÁRIA 10-11-2026.xlsx`; sem data no nome, vale o dia em que foi carregada) e mostra, sob o preço, a diferença em % e em R$: **▼ −10,0% · −R$ 0,10** em verde quando caiu e **▲ +11,1% · +R$ 0,50** em vermelho quando subiu (na tela só a seta e o %; o preço antigo e a diferença em R$ aparecem ao passar o mouse). A mensagem de carregamento diz quantos preços mudaram. Para isso o navegador guarda **só os preços** (nunca o saldo) da lista anterior por até 5 dias, o que cobre fim de semana e feriado prolongado; recarregar a mesma lista continua comparando com a anterior, e o **×** apaga tudo.
+- **Sino de novidades:** o sino no cabeçalho mostra as mensagens sobre as atualizações do site, com o número de não lidas (contadas por navegador). A cada atualização chegam sugestões de mensagem prontas, que são publicadas, editadas ou ignoradas no painel; dá para agendar uma mensagem para um dia futuro.
+- **Novidades do catálogo (`/novidades/`):** página com três abas em forma de cartão: produtos **adicionados** e **removidos** no período (7, 30, 90 dias ou 1 ano) e **mudanças de preço** da Lista Diária carregada neste navegador (antes, agora, variação em % e em R$; filtro "só os que caíram/subiram"). Filtros por categoria e texto, ordenação clicando no título da coluna e **+** para pôr na cotação. Abre pelo rodapé do sino; o endereço guarda a aba (`/novidades/#precos`).
 - **Copiar o valor unitário:** com a Lista Diária carregada, clicar no preço campanha copia o número (ex.: `4,7983`), igual ao clique no SKU.
 - **App instalável (PWA) e modo offline:** no Chrome ou no Edge aparece o botão **Instalar app** no cabeçalho (ou o ícone de instalar na barra de endereço). Instalado, o site abre em janela própria, com ícone na área de trabalho e no menu Iniciar; no celular, "Adicionar à tela inicial". O app guarda o próprio site (`sw.js`) e a última base carregada neste aparelho: **sem internet, a busca continua funcionando** e o painel avisa de quando é a base. Com internet, sempre vale a versão mais nova (o cache é só plano B). Depois de instalado, o botão vira **Abrir o app** (abre o app já com a busca da tela, pelo protocolo `web+agoravocesabe:`), útil para quem apagou o atalho; se o app for desinstalado, volta a ser "Instalar app". O **Firefox** não instala sites como app no computador: lá o botão abre uma ajuda com **Abrir no Edge** (para instalar por lá) e a dica de criar um atalho arrastando o cadeado. Para instalar em todos os computadores de uma vez, o TI pode usar a política `WebAppInstallForceList` do Edge/Chrome.
 - **Modo contingência:** se o banco estiver fora do ar, o site lê o `db.json` e avisa na tela.
@@ -56,6 +58,7 @@ Painel para manter a base sem mexer em arquivos JSON. O acesso é pelo botão **
 - **Sinônimos:** grupos de palavras equivalentes para a busca do site (`cx, caixa`), com a contagem de produtos de cada palavra;
 - **Categorias:** uma por produto (`-` quando não há), com aba própria para criar, renomear, mesclar e excluir, filtro na lista e campo no cadastro e na edição em massa;
 - **Áreas de atuação:** várias por produto, com ícone; aba própria para criar, trocar nome e ícone, mesclar e excluir, filtro na lista e escolha no cadastro e na edição em massa (cada área alterna entre adicionar, remover e não alterar);
+- **Novidades (sino):** sugestões da atualização do site (arquivo `novidades-site.json`) para publicar, editar ou ignorar; mensagens escritas à mão, editáveis, com data de publicação (inclusive agendada) e exclusão;
 - **Adicionados recentemente:** filtro por data de inclusão (hoje, 7, 30 ou 90 dias), do mais novo ao mais antigo, com selo "novo" e a data;
 - **Gerenciamento de tags:** lista com contagem, renomear, mesclar e excluir em todos os produtos, com alerta de possíveis duplicadas;
 - **Edição de tags em massa**, com seleção múltipla e prévia do resultado;
@@ -76,6 +79,8 @@ Supabase (PostgreSQL + PostgREST)
 | --- | --- |
 | `index.html`, `script.js`, `style.css` | Site público de busca |
 | `tema.css`, `tema.js` | Tema escuro (redefine a paleta do Design System; a escolha fica no navegador) |
+| `sino.js`, `novidades/` | Sino de novidades no cabeçalho e página "Novidades do catálogo" (adicionados, removidos e mudanças de preço) |
+| `novidades-site.json` | Sugestões de mensagem do sino, uma por atualização do site (o painel oferece para publicar) |
 | `areas-icones.js` | Ícones das áreas de atuação (Lucide, ISC), usados pelo site e pelo painel |
 | `cotacao/`, `cotacao-store.js` | Lista de cotação: página com a tabela para o papel timbrado e a lista guardada no navegador |
 | `manifest.webmanifest`, `sw.js`, `icons/` | App instalável (PWA): nome, ícones e cores do app; service worker que guarda o site para abrir sem internet |
@@ -84,7 +89,7 @@ Supabase (PostgreSQL + PostgREST)
 | `api.js` | Camada de acesso ao Supabase (login, listar, CRUD, importar, histórico, tags) |
 | `config.js` | Endereço do projeto e chave pública (`anon`) do Supabase |
 | `supabase/schema.sql` | Tabelas, políticas, triggers e funções do banco |
-| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags, `005` categorias, `006` categorias iniciais, `007` correção de referências estragadas pelo Excel, `008` sinônimos da busca, `009` links do site oficial, `010` sincronização com o site pelo Supabase, `011` áreas de atuação e data de inclusão) |
+| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags, `005` categorias, `006` categorias iniciais, `007` correção de referências estragadas pelo Excel, `008` sinônimos da busca, `009` links do site oficial, `010` sincronização com o site pelo Supabase, `011` áreas de atuação e data de inclusão, `012` mensagens do sino e produtos removidos) |
 | `supabase/produtos_seed.csv` | Carga inicial dos produtos |
 | `db.json` | Cópia estática usada como contingência |
 | `design-system/` | CBS Design System vendorizado ([detalhes](design-system/README.md)) |
@@ -115,6 +120,10 @@ O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/
 - A chave `anon` no `config.js` é pública por natureza e não dá permissão de gravação.
 - O **Histórico** guarda a versão anterior de tudo o que for alterado ou excluído, e a exportação em CSV serve de backup extra.
 
+## 📣 Ao publicar uma atualização do site
+
+Acrescente no topo de `novidades-site.json` um item com `chave` única (ex.: `2026-11-20-nome-da-melhoria`), `data`, `titulo` e `texto` (linguagem simples, só o que o usuário vê; nada do painel). Depois do deploy, a sugestão aparece na aba **Novidades** do painel para publicar no sino.
+
 ## 🛣️ Roadmap
 
 - [x] Busca por partículas, sem acento, com relevância e destaque
@@ -135,6 +144,7 @@ O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/
 - [x] Lista de cotação: marcar produtos, ajustar quantidade e valor e copiar a tabela para o papel timbrado
 - [x] Tema escuro, áreas de atuação (filtro e painel) e filtro de adicionados recentemente
 - [x] Variação de preço da Lista Diária, mini-busca na cotação e copiar o código ao adicionar
+- [x] Sino de novidades (mensagens editáveis no painel) e página de novidades do catálogo
 - [ ] Alternativas ("De/Para"): ligar produtos equivalentes no painel e, quando a Lista Diária mostrar saldo zero, sugerir os substitutos com saldo
 - [ ] "Outros clientes também compram": sugerir itens que costumam ir juntos (ex.: agulha de coleta a vácuo + swab com álcool + garrote)
 - [ ] Backup automático agendado da base

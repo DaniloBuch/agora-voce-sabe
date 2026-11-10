@@ -271,6 +271,47 @@
     return resp.json();
   }
 
+  /* ---------- Novidades: mensagens do sino e removidos (migração 012) ---------- */
+
+  // Site: as publicadas, da mais nova para a mais antiga. [] se a tabela ainda não existe.
+  async function listarNovidades(limite = 30) {
+    try {
+      const resp = await requisitar(`novidades?select=id,titulo,texto,publicado_em&status=eq.publicada&order=publicado_em.desc&limit=${limite}`, { anonimo: true });
+      return await resp.json();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // Painel: todas (publicadas e sugestões ignoradas). Lança erro se a tabela não existe (para avisar).
+  async function listarNovidadesPainel() {
+    const resp = await requisitar("novidades?select=*&order=publicado_em.desc");
+    return resp.json();
+  }
+
+  // id vazio = nova. campos: { chave?, titulo, texto, status?, publicado_em? }
+  async function salvarNovidade(id, campos) {
+    if (id) {
+      await requisitar(`novidades?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", corpo: campos });
+    } else {
+      await requisitar("novidades", { method: "POST", corpo: campos });
+    }
+  }
+
+  async function excluirNovidade(id) {
+    await requisitar(`novidades?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
+  }
+
+  // [{ sku, descricao_tecnica, referencia, categoria, removido_em }]; [] se a função ainda não existe.
+  async function produtosRemovidos(dias = 90) {
+    try {
+      const resp = await requisitar("rpc/produtos_removidos", { method: "POST", corpo: { p_dias: dias, p_limite: 1000 }, anonimo: true });
+      return await resp.json();
+    } catch (_) {
+      return null; // null = recurso não disponível (migração 012 não rodou)
+    }
+  }
+
   /* ---------- Links do site oficial (cbsmed.com.br) ---------- */
 
   // [{ sku, caminho, atualizado_em }] de todos os produtos que estão no site.
@@ -468,6 +509,11 @@
     categoriasDisponiveis: () => !semColunaCategoria,
     areasDisponiveis: () => !semColunaAreas && !semColunaCategoria,
     listarAreas,
+    listarNovidades,
+    listarNovidadesPainel,
+    salvarNovidade,
+    excluirNovidade,
+    produtosRemovidos,
     salvarArea,
     excluirArea,
     editarAreasEmMassa,

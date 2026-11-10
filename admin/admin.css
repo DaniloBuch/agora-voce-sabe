@@ -440,3 +440,32 @@ fieldset.campo legend { padding: 0; margin-bottom: 6px; font-size: var(--fs-xs);
 .dialogo__esquerda { margin-right: auto; }
 #areaExcluirConfirma[hidden] { display: none; }
 .area-opcao--massa[data-estado=""] .area-opcao__sinal { display: none; }
+
+/* --- Novidades (sino do site) ----------------------------------------------- */
+.subtitulo-aba { margin: var(--sp-5) 0 var(--sp-3); font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--text-heading); text-transform: none; letter-spacing: 0; }
+.barra-ferramentas--titulo { align-items: center; justify-content: space-between; }
+.barra-ferramentas--titulo .subtitulo-aba { margin: 0; }
+#avisoNovidades { margin-bottom: var(--sp-4); }
+#avisoNovidades[hidden] { display: none; }
+.nov-sugestoes { display: grid; gap: var(--sp-3); }
+.nov-sugestao {
+  padding: var(--sp-4); background: var(--surface-card);
+  border: 1px solid var(--border-default); border-left: 3px solid var(--cbs-amarelo); border-radius: var(--radius-card);
+}
+.nov-sugestao h4 { margin: 0 0 4px; font-size: var(--fs-sm); color: var(--text-body); }
+.nov-sugestao p { margin: 0 0 var(--sp-3); font-size: var(--fs-xs); color: var(--text-muted); max-width: 90ch; }
+.nov-sugestao__acoes { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.nov-texto { display: block; font-size: var(--fs-2xs); color: var(--text-muted); max-width: 80ch; white-space: pre-line; }
+.c-data { width: 150px; white-space: nowrap; }
+.c-status { width: 130px; }
+.status-pill { display: inline-block; padding: 2px 8px; font-size: var(--fs-3xs); font-weight: var(--fw-semibold); border-radius: 999px; }
+.status-pill--publicada { color: var(--cbs-sucesso); background: var(--cbs-sucesso-bg); }
+.status-pill--agendada { color: var(--cbs-azul-700); background: var(--cbs-azul-050); }
+.status-pill--ignorada { color: var(--text-muted); background: var(--cbs-neutro-050); }
+.aba-selo { display: inline-block; min-width: 18px; margin-left: 6px; padding: 0 5px; font-size: 10px; line-height: 18px; text-align: center; color: #fff; background: var(--cbs-amarelo-600); border-radius: 999px; }
+.aba-selo[hidden] { display: none; }
+#nTexto {
+  width: 100%; padding: 10px 12px; font: inherit; font-size: var(--fs-sm); resize: vertical;
+  color: var(--text-body); background: var(--cbs-neutro-000); border: 1px solid var(--border-default); border-radius: var(--radius-control); outline: none;
+}
+#nTexto:focus { border-color: var(--cbs-azul); box-shadow: var(--ring-focus); }

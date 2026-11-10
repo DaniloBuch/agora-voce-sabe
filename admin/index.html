@@ -47,6 +47,7 @@
           <button class="aba so-areas" data-aba="areas" role="tab" aria-selected="false">Áreas</button>
           <button class="aba" data-aba="tags" role="tab" aria-selected="false">Tags</button>
           <button class="aba" data-aba="sinonimos" role="tab" aria-selected="false">Sinônimos</button>
+          <button class="aba" data-aba="novidades" role="tab" aria-selected="false">Novidades<span class="aba-selo" id="seloSugestoes" hidden></span></button>
           <button class="aba" data-aba="importar" role="tab" aria-selected="false">Importar CSV</button>
           <button class="aba" data-aba="historico" role="tab" aria-selected="false">Histórico</button>
         </nav>
@@ -216,6 +217,36 @@
               </tr>
             </thead>
             <tbody id="corpoAreas"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ========== ABA NOVIDADES (sino do site) ========== -->
+      <section id="aba-novidades" class="painel" hidden>
+        <p class="ajuda">
+          Mensagens do <strong>sino</strong> do site. A cada atualização do site chegam aqui
+          <strong>sugestões</strong> prontas: publique como estão, edite antes ou ignore. Também dá para
+          escrever uma mensagem do zero. Quem abre o site vê o número de mensagens não lidas no sino.
+          Uma data futura agenda a mensagem: ela só aparece a partir desse dia.
+        </p>
+        <div id="avisoNovidades" class="alerta alerta--alerta" role="status" hidden><svg class="icone" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg><div>O sino ainda não está ativado no banco. Rode o arquivo <code>supabase/migracoes/012_novidades.sql</code> no SQL Editor do Supabase (veja o SETUP-SUPABASE.md).</div></div>
+        <h3 class="subtitulo-aba">Sugestões da atualização do site</h3>
+        <div id="novSugestoes" class="nov-sugestoes"></div>
+        <div class="barra-ferramentas barra-ferramentas--titulo">
+          <h3 class="subtitulo-aba">Mensagens</h3>
+          <button type="button" class="btn btn--primario" id="btnNovaNovidade"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Nova mensagem</button>
+        </div>
+        <div class="tabela-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="c-data">Publicação</th>
+                <th>Mensagem</th>
+                <th class="c-status">Situação</th>
+                <th class="c-acoes"><span class="sr-only">Ações</span></th>
+              </tr>
+            </thead>
+            <tbody id="corpoNovidades"></tbody>
           </table>
         </div>
       </section>
@@ -528,6 +559,36 @@
           <button type="button" class="btn btn--secundario btn--excluir dialogo__esquerda" id="btnExcluirArea" hidden><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Excluir área</button>
           <button type="button" class="btn btn--secundario" id="btnCancelarArea">Cancelar</button>
           <button type="submit" class="btn btn--primario" id="btnSalvarArea">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ========== DIÁLOGO: MENSAGEM DO SINO ========== -->
+    <dialog id="dlgNovidade" class="dialogo">
+      <form id="formNovidade" novalidate>
+        <div class="dialogo__topo">
+          <h2 id="novidadeTitulo">Nova mensagem</h2>
+          <button type="button" class="btn-icone" id="btnFecharNovidade" aria-label="Fechar"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+        </div>
+        <div class="dialogo__corpo">
+          <div class="campo">
+            <label for="nTitulo">Título</label>
+            <input id="nTitulo" maxlength="90" autocomplete="off" placeholder="Ex.: Tema escuro chegou" />
+          </div>
+          <div class="campo">
+            <label for="nTexto">Texto</label>
+            <textarea id="nTexto" rows="6" maxlength="1200" placeholder="Explique a novidade em poucas linhas. Enter quebra a linha."></textarea>
+          </div>
+          <div class="campo">
+            <label for="nData">Publicar em</label>
+            <input id="nData" type="datetime-local" />
+            <span class="dica">Agora ou uma data futura (agendada).</span>
+          </div>
+          <p class="erro" id="nErro" role="alert"></p>
+        </div>
+        <div class="dialogo__rodape">
+          <button type="button" class="btn btn--secundario" id="btnCancelarNovidade">Cancelar</button>
+          <button type="submit" class="btn btn--primario" id="btnSalvarNovidade">Publicar</button>
         </div>
       </form>
     </dialog>

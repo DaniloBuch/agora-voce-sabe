@@ -1,0 +1,20 @@
+[
+  {
+    "chave": "2026-11-10-painel-novidades",
+    "data": "2026-11-10",
+    "titulo": "Chegou o sino de novidades 🔔",
+    "texto": "A partir de agora as novidades do Agora Você Sabe aparecem aqui no sino, sem precisar de mensagem no Teams.\nE tem página nova: Novidades do catálogo, com os produtos que entraram, os que saíram e as mudanças de preço da Lista Diária, tudo com filtro e ordenação."
+  },
+  {
+    "chave": "2026-11-10-variacao-preco",
+    "data": "2026-11-10",
+    "titulo": "Preço subiu ou caiu? Agora você vê",
+    "texto": "Ao carregar a Lista Diária, o preço campanha mostra a variação em relação à lista anterior: ▼ em verde quando caiu e ▲ em vermelho quando subiu. Passe o mouse para ver o preço antigo e a diferença em R$.\nNa Cotação, o campo Adicionar produto acha e inclui itens sem voltar para a busca, e o + agora também copia o código."
+  },
+  {
+    "chave": "2026-11-10-tema-areas",
+    "data": "2026-11-10",
+    "titulo": "Tema escuro e áreas de atuação",
+    "texto": "O botão de lua no canto do cabeçalho liga o tema escuro (e fica salvo no seu navegador).\nOs produtos começam a mostrar para quem servem: Hospitais, Clínicas, Laboratórios, Veterinária... É só filtrar pela área na gaveta de Categorias para montar o kit do cliente."
+  }
+]

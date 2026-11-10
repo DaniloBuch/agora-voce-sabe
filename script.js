@@ -873,11 +873,12 @@ function htmlVariacao(sku) {
   if (!v) return "";
   const caiu = v.dif < 0;
   const quando = window.ListaDiaria.comparadaCom() ? new Date(window.ListaDiaria.comparadaCom()).toLocaleDateString("pt-BR") : "";
-  const titulo = `Antes: ${window.ListaDiaria.formatarPreco(v.anterior)}${quando ? ` (lista de ${quando})` : ""}`;
+  const pct = `${caiu ? "−" : "+"}${fmtPct.format(Math.abs(v.pct))}%`;
+  // na tela só a seta e o %; o resto aparece ao passar o mouse (e é lido pelo leitor de tela)
+  const detalhe = `${caiu ? "Caiu" : "Subiu"} ${pct} (${textoDifReais(v.dif)}). Antes: ${window.ListaDiaria.formatarPreco(v.anterior)}${quando ? `, na lista de ${quando}` : ""}`;
   return (
-    `<span class="preco-var preco-var--${caiu ? "baixa" : "alta"}" title="${escaparHtml(titulo)}">` +
-    `<span aria-hidden="true">${caiu ? "▼" : "▲"}</span> ${caiu ? "−" : "+"}${fmtPct.format(Math.abs(v.pct))}% · ${textoDifReais(v.dif)}` +
-    `<span class="sr-only">. ${caiu ? "Caiu" : "Subiu"} em relação à lista anterior. ${escaparHtml(titulo)}</span></span>`
+    `<span class="preco-var preco-var--${caiu ? "baixa" : "alta"}" title="${escaparHtml(detalhe)}">` +
+    `<span aria-hidden="true">${caiu ? "▼" : "▲"} ${pct}</span><span class="sr-only">${escaparHtml(detalhe)}</span></span>`
   );
 }
 

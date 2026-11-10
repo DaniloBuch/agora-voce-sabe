@@ -11,7 +11,7 @@
 
    Ao mudar a lista de arquivos abaixo, aumente a VERSAO.
    ========================================================================== */
-const VERSAO = "v8";
+const VERSAO = "v9";
 const CACHE = `agora-voce-sabe-${VERSAO}`;
 const ESPERA_REDE_MS = 4000; // rede lenta: depois disso usa o que está guardado (se houver)
 
@@ -27,6 +27,11 @@ const ESSENCIAIS = [
   "areas-icones.js",
   "tema.js",
   "tema.css",
+  "sino.js",
+  "novidades/",
+  "novidades/index.html",
+  "novidades/novidades.js",
+  "novidades/novidades.css",
   "cotacao/",
   "cotacao/index.html",
   "cotacao/cotacao.js",
