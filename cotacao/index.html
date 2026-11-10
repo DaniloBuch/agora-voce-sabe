@@ -22,8 +22,8 @@
           <img data-logo src="../design-system/assets/brand/logo-completo-gentequemove-roxo-quadrado-laranja.svg" alt="CBS · Gente que move o cuidado" width="160" />
         </a>
         <span class="site-header__label">Cotação</span>
-        <button type="button" class="btn-tema" aria-label="Usar tema escuro" title="Tema escuro"><svg class="tema-lua" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><svg class="tema-sol" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></button>
         <a class="site-header__login" href="../"><svg class="icone" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>Voltar à busca</a>
+        <button type="button" class="btn-tema" aria-label="Usar tema escuro" title="Tema escuro"><svg class="tema-lua" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><svg class="tema-sol" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></button>
       </div>
     </header>
 
@@ -65,6 +65,17 @@
     </section>
 
     <main class="page">
+      <!-- Mini-busca: acha o produto e já põe na cotação, sem voltar para a busca -->
+      <section class="cot-busca" aria-labelledby="cotBuscaTitulo">
+        <label class="cot-busca__rotulo" id="cotBuscaTitulo" for="cotBuscaInput">Adicionar produto</label>
+        <div class="cot-busca__campo">
+          <svg class="cot-busca__icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+          <input type="search" id="cotBuscaInput" placeholder="Código, descrição, referência ou apelido... (Enter adiciona o 1º)" autocomplete="off" aria-controls="cotBuscaResultados" aria-describedby="cotBuscaInfo" disabled />
+        </div>
+        <p class="cot-busca__info" id="cotBuscaInfo" role="status" aria-live="polite">Carregando o catálogo...</p>
+        <ul class="cot-busca__lista" id="cotBuscaResultados" hidden></ul>
+      </section>
+
       <div class="cot-barra" id="cotBarra">
         <button type="button" class="btn-explorar btn-explorar--primario" id="btnCopiar"><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg><span>Copiar tabela</span></button>
         <button type="button" class="btn-explorar" id="btnExcel"><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>Baixar Excel</button>
@@ -106,7 +117,7 @@
       <div class="cot-vazia" id="cotVazia" hidden>
         <svg class="icone" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg>
         <p><strong>Sua cotação está vazia.</strong></p>
-        <p>Na busca, clique no <strong>+</strong> ao lado dos produtos para trazê-los para cá.</p>
+        <p>Use o campo <strong>Adicionar produto</strong> acima, ou clique no <strong>+</strong> ao lado dos produtos na busca.</p>
         <a class="btn-explorar" href="../"><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg>Ir para a busca</a>
       </div>
     </main>

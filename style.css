@@ -1556,3 +1556,17 @@ body.com-lista .col-lista { display: table-cell; }
   white-space: nowrap;
 }
 .area-selo--ativa { color: var(--cbs-roxo); background: var(--cbs-roxo-050); border-color: var(--cbs-roxo-200); }
+
+/* Variação do preço campanha desde a lista anterior (verde: caiu; vermelho: subiu) */
+.preco-var {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  line-height: 1.3;
+  white-space: normal; /* diferença grande quebra no "·" em vez de invadir a coluna ao lado */
+  font-variant-numeric: tabular-nums;
+}
+.preco-var--baixa { color: var(--cbs-sucesso); }
+.preco-var--alta { color: var(--cbs-erro); }
+.desc-extra .preco-var { display: inline; margin: 0 0 0 6px; }

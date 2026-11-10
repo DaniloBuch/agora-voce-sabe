@@ -158,3 +158,84 @@
   .cot-totais__geral { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { background: #fff; }
 }
+
+/* Mini-busca: adicionar produto sem voltar para a busca */
+.cot-busca { margin-bottom: var(--sp-5); max-width: 880px; }
+.cot-busca__rotulo {
+  display: block;
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-label);
+}
+.cot-busca__campo { position: relative; }
+.cot-busca__icone { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-faint); pointer-events: none; }
+.cot-busca__campo input {
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--sp-3) 0 38px;
+  font-family: var(--font-core);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-body);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  outline: none;
+  transition: var(--transition-control);
+}
+.cot-busca__campo input:hover:not(:focus):not(:disabled) { border-color: var(--cbs-azul-400); }
+.cot-busca__campo input:focus { border-color: var(--cbs-azul); box-shadow: var(--ring-focus); }
+.cot-busca__campo input:disabled { background: var(--cbs-neutro-050); cursor: progress; }
+.cot-busca__info { margin: 6px 0 0; font-size: var(--fs-2xs); color: var(--text-muted); }
+.cot-busca__info:empty { display: none; }
+.cot-busca__lista {
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.cot-busca__lista[hidden] { display: none; }
+.cot-sug {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 8px var(--sp-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.cot-sug:first-child { border-top: none; }
+.cot-sug__cod { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--cbs-roxo); }
+.cot-sug__desc { min-width: 0; font-size: var(--fs-xs); line-height: 1.35; }
+.cot-sug__desc .cot-ref, .cot-sug__lista { display: block; font-size: var(--fs-3xs); color: var(--text-muted); }
+.cot-sug__lista { color: var(--cbs-azul-700); font-weight: var(--fw-semibold); }
+.cot-sug__btn {
+  height: 30px;
+  padding: 0 var(--sp-3);
+  font-family: var(--font-core);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  color: var(--cbs-roxo);
+  background: var(--surface-card);
+  border: 1px solid var(--cbs-roxo-200);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cot-sug__btn:hover:not(:disabled) { color: var(--text-on-brand); background: var(--cbs-roxo); border-color: var(--cbs-roxo); }
+.cot-sug__btn:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.cot-sug__btn:disabled { color: var(--cbs-sucesso); border-color: transparent; background: transparent; cursor: default; }
+.cot-sug--na .cot-sug__desc { color: var(--text-muted); }
+.cot-linha--nova td { animation: cot-nova 1.6s ease-out; }
+@keyframes cot-nova { from { background: var(--cbs-amarelo-100); } to { background: transparent; } }
+@media (max-width: 640px) {
+  .cot-sug { grid-template-columns: 1fr auto; }
+  .cot-sug__cod { grid-column: 1 / -1; }
+}
+@media print { .cot-busca { display: none !important; } }

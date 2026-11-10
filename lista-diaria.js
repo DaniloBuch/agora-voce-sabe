@@ -4,6 +4,8 @@
    - Nada é enviado ao banco nem a qualquer servidor.
    - Os valores ficam no localStorage deste navegador por no máximo 24 horas e depois são apagados.
    - Qualquer pessoa pode carregar a lista (não precisa de login).
+   - Variação de preço: só os PREÇOS da lista de um dia anterior ficam guardados (até 4 dias, sem
+     saldo) para comparar com a lista nova; o × apaga tudo na hora.
    ========================================================================== */
 (function () {
   "use strict";
@@ -11,6 +13,10 @@
   const CHAVE = "cbs_lista_diaria_v1";
   const VALIDADE_MS = 24 * 60 * 60 * 1000; // 24 horas
   const TOLERANCIA_RELOGIO_MS = 5 * 60 * 1000;
+  // Preços da lista anterior (para mostrar a variação). Só preço, nunca saldo, e por no máximo 4 dias
+  // (cobre o fim de semana: a lista de sexta compara com a de segunda).
+  const CHAVE_ANTERIOR = "cbs_lista_diaria_anterior_v1";
+  const ANTERIOR_MS = 4 * 24 * 60 * 60 * 1000;
   // relativo a este arquivo (funciona na busca e na página /cotacao/)
   const SHEETJS_URL = new URL("vendor/xlsx.full.min.js", (document.currentScript && document.currentScript.src) || location.href).href;
 
@@ -27,7 +33,7 @@
   };
   if (!el.botao) return; // página sem o recurso
 
-  let dados = null; // { nome, atualizadoEm, expiraEm, mapa: Map(sku -> {saldo, preco}) }
+  let dados = null; // { nome, atualizadoEm, expiraEm, mapa: Map(sku -> {saldo, preco}), variacoes: Map(sku -> preço anterior), comparadaCom }
   let memoriaApenas = null; // se o localStorage não estiver disponível, vale só nesta aba
   let timer = null;
 
@@ -73,6 +79,59 @@
     }
   }
 
+  /* ---------- preços da lista anterior (variação) ---------- */
+
+  const diaDe = (ms) => {
+    const d = new Date(ms);
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  };
+
+  function lerAnterior() {
+    try {
+      const o = JSON.parse(localStorage.getItem(CHAVE_ANTERIOR) || "null");
+      if (!o || !Array.isArray(o.precos) || !Number.isFinite(o.atualizadoEm)) return null;
+      if (Date.now() > o.atualizadoEm + ANTERIOR_MS || Date.now() < o.atualizadoEm - TOLERANCIA_RELOGIO_MS) {
+        localStorage.removeItem(CHAVE_ANTERIOR); // passou de 4 dias: apaga
+        return null;
+      }
+      return o;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Guarda os preços de uma lista de dia anterior (a mais recente vence)
+  function guardarAnterior(lista) {
+    if (!lista || diaDe(lista.atualizadoEm) === diaDe(Date.now())) return;
+    const atual = lerAnterior();
+    if (atual && atual.atualizadoEm >= lista.atualizadoEm) return;
+    if (Date.now() > lista.atualizadoEm + ANTERIOR_MS) return;
+    try {
+      localStorage.setItem(CHAVE_ANTERIOR, JSON.stringify({
+        atualizadoEm: lista.atualizadoEm,
+        precos: lista.itens.filter((i) => i[2] > 0).map((i) => [i[0], i[2]]),
+      }));
+    } catch (_) {
+      /* sem armazenamento: fica sem comparação */
+    }
+  }
+
+  function apagarAnterior() {
+    try { localStorage.removeItem(CHAVE_ANTERIOR); } catch (_) { /* nada a apagar */ }
+  }
+
+  // [sku, preço anterior] dos produtos cujo preço mudou em relação à lista anterior
+  function calcularVariacoes(itens, anterior) {
+    if (!anterior) return [];
+    const antes = new Map(anterior.precos.map(([sku, p]) => [String(sku), p]));
+    const out = [];
+    for (const [sku, , preco] of itens) {
+      const a = antes.get(String(sku));
+      if (a > 0 && preco > 0 && Math.abs(preco - a) >= 0.00005) out.push([sku, a]);
+    }
+    return out;
+  }
+
   function expirada(o, agora = Date.now()) {
     // também descarta se o relógio do computador voltou para antes do envio
     return agora >= o.expiraEm || agora < o.atualizadoEm - TOLERANCIA_RELOGIO_MS;
@@ -83,13 +142,15 @@
     const o = lerArmazenado();
     let expirou = false;
     if (o && expirada(o)) {
+      guardarAnterior(o); // os preços servem de base para a variação da próxima lista
       apagarArmazenado();
       expirou = true;
       dados = null;
     } else if (o) {
       const mapa = new Map();
       for (const [sku, saldo, preco] of o.itens) mapa.set(String(sku), { saldo, preco });
-      dados = { nome: o.nome, atualizadoEm: o.atualizadoEm, expiraEm: o.expiraEm, mapa };
+      const variacoes = new Map((o.variacoes || []).map(([sku, a]) => [String(sku), a]));
+      dados = { nome: o.nome, atualizadoEm: o.atualizadoEm, expiraEm: o.expiraEm, mapa, variacoes, comparadaCom: o.comparadaCom || null };
     } else {
       dados = null;
     }
@@ -340,17 +401,27 @@
     try {
       const r = await lerLista(arquivo);
       const agora = Date.now();
+      // a lista que está saindo vira base de comparação (se for de outro dia)
+      guardarAnterior(lerArmazenado());
+      const anterior = lerAnterior();
+      const itens = [...r.mapa].map(([sku, v]) => [sku, v.saldo, v.preco]);
+      const variacoes = calcularVariacoes(itens, anterior);
       const obj = {
         v: 1,
         nome: arquivo.name,
         atualizadoEm: agora,
         expiraEm: agora + VALIDADE_MS,
-        itens: [...r.mapa].map(([sku, v]) => [sku, v.saldo, v.preco]),
+        itens,
+        variacoes,
+        comparadaCom: anterior ? anterior.atualizadoEm : null,
       };
       salvarArmazenado(obj);
       sincronizar();
       const fora = r.foraDoCatalogo ? ` ${r.foraDoCatalogo.toLocaleString("pt-BR")} código(s) da lista não estão no catálogo e foram ignorados.` : "";
-      mostrarMsg("ok", `Lista Diária carregada: saldo e preço de <strong>${r.mapa.size.toLocaleString("pt-BR")}</strong> produtos.${fora}`);
+      const mudou = anterior
+        ? ` <strong>${variacoes.length.toLocaleString("pt-BR")}</strong> preço(s) mudaram desde a lista de ${textoData(anterior.atualizadoEm)}.`
+        : "";
+      mostrarMsg("ok", `Lista Diária carregada: saldo e preço de <strong>${r.mapa.size.toLocaleString("pt-BR")}</strong> produtos.${mudou}${fora}`);
     } catch (err) {
       console.error(err);
       mostrarMsg("erro", String(err.message || err).replace(/</g, "&lt;"));
@@ -366,6 +437,7 @@
   el.arquivo.addEventListener("change", () => aoEscolherArquivo(el.arquivo.files[0]));
   el.limpar.addEventListener("click", () => {
     apagarArmazenado();
+    apagarAnterior(); // o × apaga tudo, inclusive os preços guardados para comparar
     sincronizar();
     mostrarMsg("info", "Lista Diária removida deste navegador.");
   });
@@ -403,6 +475,17 @@
     obter: (sku) => (dados ? dados.mapa.get(String(sku)) || null : null),
     formatarSaldo: (n) => (n === null || n === undefined ? null : fmtSaldo.format(n)),
     formatarPreco: (n) => (!n ? null : fmtPreco.format(n)),
+    // { anterior, atual, dif, pct } se o preço mudou desde a lista anterior; senão null
+    variacao(sku) {
+      if (!dados) return null;
+      const anterior = dados.variacoes.get(String(sku));
+      const v = dados.mapa.get(String(sku));
+      if (anterior === undefined || !v || !v.preco) return null;
+      return { anterior, atual: v.preco, dif: v.preco - anterior, pct: ((v.preco - anterior) / anterior) * 100 };
+    },
+    // todas as mudanças (para o painel de novidades) e a data da lista usada na comparação
+    variacoes: () => (dados ? [...dados.variacoes.keys()].map((sku) => ({ sku, ...window.ListaDiaria.variacao(sku) })) : []),
+    comparadaCom: () => (dados ? dados.comparadaCom : null),
     // só para testes
     _validadeMs: VALIDADE_MS,
   };

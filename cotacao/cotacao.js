@@ -65,17 +65,153 @@
       } catch (_) { resolver(null); }
     });
   }
+  let catalogo = []; // [{sku, descricao, referencia, tags, _busca}] para a mini-busca
+  const normalizar = (t) => String(t ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
+  const formatarRef = (r) => { const t = String(r ?? "").trim(); return /^\d+$/.test(t) ? t.replace(/^0+(?=\d)/, "") : t; };
+  function prepararCatalogo(dados) {
+    catalogo = dados
+      .filter((p) => String(p.sku ?? "").trim())
+      .map((p) => {
+        const descricao = p.descricao_tecnica || p.descricao || "";
+        const tags = Array.isArray(p.tags) ? p.tags.join(", ") : String(p.tags ?? "");
+        const refOriginal = String(p.referencia ?? "").trim();
+        return {
+          sku: String(p.sku),
+          descricao,
+          referencia: formatarRef(refOriginal),
+          _sku: normalizar(p.sku),
+          _busca: normalizar(`${p.sku} ${descricao} ${refOriginal} ${formatarRef(refOriginal)} ${tags}`),
+        };
+      });
+    skusCatalogo = catalogo.map((p) => p.sku);
+  }
   (async function carregarCatalogo() {
     const salvo = await lerBaseDoAparelho();
-    if (salvo && Array.isArray(salvo.dados) && salvo.dados.length) {
-      skusCatalogo = salvo.dados.map((p) => String(p.sku));
+    try {
+      if (salvo && Array.isArray(salvo.dados) && salvo.dados.length) prepararCatalogo(salvo.dados);
+      else if (window.CBS_API && CBS_API.configurado) prepararCatalogo(await CBS_API.listarProdutos());
+      else prepararCatalogo(await (await fetch("../db.json")).json());
+    } catch (_) {}
+    miniBuscaPronta();
+  })();
+
+  /* ---------- Mini-busca: adicionar produto sem sair da cotação ---------- */
+
+  const buscaInput = $("#cotBuscaInput");
+  const buscaLista = $("#cotBuscaResultados");
+  const buscaInfo = $("#cotBuscaInfo");
+  const MAX_SUGESTOES = 8;
+  let sugestoes = [];
+
+  function miniBuscaPronta() {
+    if (!catalogo.length) {
+      buscaInfo.textContent = "Não foi possível carregar o catálogo. Use a busca para adicionar produtos.";
       return;
     }
-    try {
-      if (window.CBS_API && CBS_API.configurado) skusCatalogo = (await CBS_API.listarProdutos()).map((p) => String(p.sku));
-      else skusCatalogo = (await (await fetch("../db.json")).json()).map((p) => String(p.sku));
-    } catch (_) {}
-  })();
+    buscaInput.disabled = false;
+    buscaInfo.textContent = "";
+  }
+
+  // todos os termos precisam aparecer (código, descrição, referência ou apelido); código exato primeiro
+  function pesquisar(texto) {
+    const termos = normalizar(texto).split(" ").filter(Boolean);
+    if (!termos.length) return { itens: [], total: 0 };
+    const achados = catalogo.filter((p) => termos.every((t) => p._busca.includes(t)));
+    const q = normalizar(texto);
+    const peso = (p) => (p._sku === q ? 0 : p._sku.startsWith(q) ? 1 : p._busca.startsWith(termos[0]) ? 2 : 3);
+    achados.sort((a, b) => peso(a) - peso(b) || a.descricao.localeCompare(b.descricao, "pt-BR"));
+    return { itens: achados.slice(0, MAX_SUGESTOES), total: achados.length };
+  }
+
+  function desenharSugestoes() {
+    const texto = buscaInput.value.trim();
+    if (!texto) {
+      sugestoes = [];
+      buscaLista.hidden = true;
+      buscaLista.innerHTML = "";
+      buscaInfo.textContent = "";
+      return;
+    }
+    const r = pesquisar(texto);
+    sugestoes = r.itens;
+    const lista = lerListaDiaria();
+    buscaLista.hidden = sugestoes.length === 0;
+    buscaLista.innerHTML = sugestoes
+      .map((p) => {
+        const na = cot.tem(p.sku);
+        const info = lista ? lista.get(p.sku) : null;
+        const extra = info
+          ? `<span class="cot-sug__lista">Saldo: ${info.saldo != null ? fmtSaldo.format(info.saldo) : "—"}${info.preco ? ` · R$ ${fmt4.format(info.preco)}` : ""}</span>`
+          : "";
+        return `<li class="cot-sug${na ? " cot-sug--na" : ""}">
+          <span class="cot-sug__cod">${esc(p.sku)}</span>
+          <span class="cot-sug__desc">${esc(p.descricao)}${p.referencia ? `<span class="cot-ref">Ref. ${esc(p.referencia)}</span>` : ""}${extra}</span>
+          <button type="button" class="cot-sug__btn" data-add="${esc(p.sku)}" ${na ? 'disabled aria-label="Já está na cotação"' : `aria-label="Adicionar ${esc(p.sku)} à cotação"`}>${na ? "✓ Na cotação" : "+ Adicionar"}</button>
+        </li>`;
+      })
+      .join("");
+    buscaInfo.textContent = r.total === 0
+      ? "Nenhum produto encontrado com esse termo."
+      : r.total > MAX_SUGESTOES ? `Mostrando ${MAX_SUGESTOES} de ${r.total.toLocaleString("pt-BR")}: digite mais para refinar.` : "";
+  }
+
+  async function copiarCodigo(sku) {
+    try { await navigator.clipboard.writeText(sku); return true; } catch (_) { return false; }
+  }
+
+  function adicionarDaBusca(sku) {
+    const p = catalogo.find((x) => x.sku === sku);
+    if (!p || cot.tem(sku)) return;
+    const copia = copiarCodigo(sku); // igual ao + da busca: também copia o código
+    const lista = lerListaDiaria();
+    const info = lista ? lista.get(sku) : null;
+    cot.adicionar({ sku, descricao: p.descricao, referencia: p.referencia, preco: info && info.preco ? info.preco : null });
+    desenhar();
+    desenharSugestoes();
+    copia.then((ok) => mensagem(`${sku} adicionado à cotação${ok ? " e código copiado" : ""}.`));
+    const linhaNova = corpo.querySelector(`tr[data-sku="${CSS.escape(sku)}"]`);
+    if (linhaNova) {
+      linhaNova.classList.add("cot-linha--nova");
+      setTimeout(() => linhaNova.classList.remove("cot-linha--nova"), 1600);
+    }
+  }
+
+  let timerBusca = null;
+  buscaInput.addEventListener("input", () => {
+    clearTimeout(timerBusca);
+    timerBusca = setTimeout(desenharSugestoes, 120);
+  });
+  buscaInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      clearTimeout(timerBusca);
+      desenharSugestoes();
+      const primeiro = sugestoes.find((p) => !cot.tem(p.sku));
+      if (primeiro) adicionarDaBusca(primeiro.sku);
+    } else if (e.key === "Escape") {
+      buscaInput.value = "";
+      desenharSugestoes();
+    } else if (e.key === "ArrowDown") {
+      const b = buscaLista.querySelector("button:not(:disabled)");
+      if (b) { e.preventDefault(); b.focus(); }
+    }
+  });
+  buscaLista.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-add]");
+    if (b) {
+      adicionarDaBusca(b.dataset.add);
+      buscaInput.focus();
+    }
+  });
+  buscaLista.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    const bs = [...buscaLista.querySelectorAll("button:not(:disabled)")];
+    const i = bs.indexOf(document.activeElement);
+    if (i === -1) return;
+    e.preventDefault();
+    if (e.key === "ArrowDown") (bs[i + 1] || bs[i]).focus();
+    else (bs[i - 1] || buscaInput).focus();
+  });
 
   /* ---------- Tabela ---------- */
 
@@ -186,6 +322,7 @@
     const ativo = document.activeElement;
     const pos = ativo && ativo.closest && ativo.closest("tr[data-sku]") ? [ativo.closest("tr").dataset.sku, ativo.dataset.campo] : null;
     desenhar();
+    if (buscaInput.value.trim()) desenharSugestoes(); // "✓ Na cotação" acompanha as mudanças
     if (pos && pos[1]) {
       const el = corpo.querySelector(`tr[data-sku="${CSS.escape(pos[0])}"] [data-campo="${pos[1]}"]`);
       if (el && document.activeElement === document.body) el.focus();

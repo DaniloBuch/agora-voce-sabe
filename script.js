@@ -861,6 +861,26 @@ tbody.addEventListener("focusout", esconderPrevia);
 window.addEventListener("scroll", esconderPrevia, { passive: true });
 
 // Células de saldo e preço vindas da Lista Diária (consulta local, nunca vão ao banco)
+// Variação do preço campanha desde a lista anterior: "▼ 10,0% · −R$ 0,10" (verde caiu, vermelho subiu)
+const fmtPct = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+function textoDifReais(dif) {
+  const abs = Math.abs(dif);
+  const casas = abs >= 0.01 ? 2 : 4;
+  return `${dif < 0 ? "−" : "+"}R$ ${abs.toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas })}`;
+}
+function htmlVariacao(sku) {
+  const v = window.ListaDiaria && window.ListaDiaria.variacao ? window.ListaDiaria.variacao(sku) : null;
+  if (!v) return "";
+  const caiu = v.dif < 0;
+  const quando = window.ListaDiaria.comparadaCom() ? new Date(window.ListaDiaria.comparadaCom()).toLocaleDateString("pt-BR") : "";
+  const titulo = `Antes: ${window.ListaDiaria.formatarPreco(v.anterior)}${quando ? ` (lista de ${quando})` : ""}`;
+  return (
+    `<span class="preco-var preco-var--${caiu ? "baixa" : "alta"}" title="${escaparHtml(titulo)}">` +
+    `<span aria-hidden="true">${caiu ? "▼" : "▲"}</span> ${caiu ? "−" : "+"}${fmtPct.format(Math.abs(v.pct))}% · ${textoDifReais(v.dif)}` +
+    `<span class="sr-only">. ${caiu ? "Caiu" : "Subiu"} em relação à lista anterior. ${escaparHtml(titulo)}</span></span>`
+  );
+}
+
 function celulasLista(sku) {
   if (!window.ListaDiaria || !window.ListaDiaria.ativa()) return { colunas: "", resumoMobile: "" };
   const v = window.ListaDiaria.obter(sku);
@@ -873,10 +893,11 @@ function celulasLista(sku) {
   const precoHtml = preco === null
     ? `<span class="lista-nd" title="Sem preço campanha na Lista Diária">—</span>`
     : `<button type="button" class="preco-camp preco-copiar" data-valor="${valorCopia}" title="Clique para copiar o valor unitário" aria-label="Copiar valor unitário ${valorCopia}">${preco}</button>`;
+  const varHtml = htmlVariacao(sku);
   return {
-    colunas: `<td class="col-lista col-saldo">${saldoHtml}</td><td class="col-lista col-preco">${precoHtml}</td>`,
+    colunas: `<td class="col-lista col-saldo">${saldoHtml}</td><td class="col-lista col-preco">${precoHtml}${varHtml}</td>`,
     // no celular as colunas somem e o resumo aparece sob a descrição
-    resumoMobile: `<span class="desc-extra">Saldo: ${saldoHtml} · Preço camp.: ${precoHtml}</span>`,
+    resumoMobile: `<span class="desc-extra">Saldo: ${saldoHtml} · Preço camp.: ${precoHtml}${varHtml}</span>`,
   };
 }
 
@@ -1136,7 +1157,7 @@ const ICONE_NA_COTACAO =
 const cotacao = window.CBSCotacao;
 
 function htmlBotaoCotacao(item, marcado) {
-  const acao = marcado ? "Tirar da cotação" : "Adicionar à cotação";
+  const acao = marcado ? "Tirar da cotação" : "Adicionar à cotação (e copiar o código)";
   return `<button type="button" class="cot-btn${marcado ? " is-marcado" : ""}" data-cot="${escaparHtml(item.sku)}" aria-pressed="${marcado}" ` +
     `title="${acao}" aria-label="${acao}: ${escaparHtml(item.sku)} ${escaparHtml(item.descricao)}">${marcado ? ICONE_NA_COTACAO : ICONE_ADD_COTACAO}</button>`;
 }
@@ -1170,7 +1191,7 @@ function sincronizarBotoesCotacao() {
 if (cotacao) {
   cotacao.aoMudar(sincronizarBotoesCotacao);
   atualizarContadorCotacao();
-  tbody.addEventListener("click", (e) => {
+  tbody.addEventListener("click", async (e) => {
     const btn = e.target.closest("button.cot-btn");
     if (!btn) return;
     const sku = btn.dataset.cot;
@@ -1182,10 +1203,12 @@ if (cotacao) {
     } else {
       // o preço campanha da Lista Diária (se carregada) entra como sugestão de valor unitário
       const v = window.ListaDiaria && window.ListaDiaria.ativa() ? window.ListaDiaria.obter(sku) : null;
+      const copia = copiarTexto(sku); // adicionar também copia o código (para colar no Protheus, e-mail...)
       cotacao.adicionar({ sku, descricao: item.descricao, referencia: item.referencia, preco: v ? v.preco : null });
       registrarBuscaAtual();
       const n = cotacao.quantidade();
-      mostrarAvisoCotacao(`<strong>${escaparHtml(sku)}</strong> adicionado à cotação (${n} ${n === 1 ? "item" : "itens"}).`);
+      const copiou = await copia;
+      mostrarAvisoCotacao(`<strong>${escaparHtml(sku)}</strong> adicionado à cotação${copiou ? " e código copiado" : ""} (${n} ${n === 1 ? "item" : "itens"}).`);
     }
     const novo = tbody.querySelector(`button.cot-btn[data-cot="${CSS.escape(sku)}"]`);
     if (novo) novo.focus();
