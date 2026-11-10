@@ -4,7 +4,7 @@
    - Nada é enviado ao banco nem a qualquer servidor.
    - Os valores ficam no localStorage deste navegador por no máximo 24 horas e depois são apagados.
    - Qualquer pessoa pode carregar a lista (não precisa de login).
-   - Variação de preço: só os PREÇOS da lista de um dia anterior ficam guardados (até 4 dias, sem
+   - Variação de preço: só os PREÇOS da lista de um dia anterior ficam guardados (até 5 dias, sem
      saldo) para comparar com a lista nova; o × apaga tudo na hora.
    ========================================================================== */
 (function () {
@@ -13,10 +13,10 @@
   const CHAVE = "cbs_lista_diaria_v1";
   const VALIDADE_MS = 24 * 60 * 60 * 1000; // 24 horas
   const TOLERANCIA_RELOGIO_MS = 5 * 60 * 1000;
-  // Preços da lista anterior (para mostrar a variação). Só preço, nunca saldo, e por no máximo 4 dias
-  // (cobre o fim de semana: a lista de sexta compara com a de segunda).
+  // Preços da lista anterior (para mostrar a variação). Só preço, nunca saldo, e por no máximo 5 dias
+  // (cobre fim de semana e feriado prolongado: a lista de quinta ainda compara com a de terça).
   const CHAVE_ANTERIOR = "cbs_lista_diaria_anterior_v1";
-  const ANTERIOR_MS = 4 * 24 * 60 * 60 * 1000;
+  const ANTERIOR_MS = 5 * 24 * 60 * 60 * 1000;
   // relativo a este arquivo (funciona na busca e na página /cotacao/)
   const SHEETJS_URL = new URL("vendor/xlsx.full.min.js", (document.currentScript && document.currentScript.src) || location.href).href;
 
@@ -91,7 +91,7 @@
       const o = JSON.parse(localStorage.getItem(CHAVE_ANTERIOR) || "null");
       if (!o || !Array.isArray(o.precos) || !Number.isFinite(o.atualizadoEm)) return null;
       if (Date.now() > o.atualizadoEm + ANTERIOR_MS || Date.now() < o.atualizadoEm - TOLERANCIA_RELOGIO_MS) {
-        localStorage.removeItem(CHAVE_ANTERIOR); // passou de 4 dias: apaga
+        localStorage.removeItem(CHAVE_ANTERIOR); // passou de 5 dias: apaga
         return null;
       }
       return o;
@@ -182,7 +182,11 @@
       el.status.innerHTML =
         `<span class="lista-status__ponto" aria-hidden="true"></span>` +
         `<span>Lista Diária atualizada em <strong>${textoData(dados.atualizadoEm)}</strong>` +
-        `<span class="lista-status__resta"> · apaga sozinha em ${tempoRestante(resta)}</span></span>`;
+        `<span class="lista-status__resta"> · apaga sozinha em ${tempoRestante(resta)}</span>` +
+        (dados.comparadaCom
+          ? `<span class="lista-status__comp"> · preços comparados com a lista de ${fmtData.format(new Date(dados.comparadaCom))}</span>`
+          : `<span class="lista-status__comp"> · sem lista anterior para comparar preços</span>`) +
+        `</span>`;
       el.nota.hidden = false;
       el.nota.textContent =
         `Saldo e preço campanha da Lista Diária de ${textoData(dados.atualizadoEm)}. Valores meramente consultivos: ` +
@@ -420,7 +424,7 @@
       const fora = r.foraDoCatalogo ? ` ${r.foraDoCatalogo.toLocaleString("pt-BR")} código(s) da lista não estão no catálogo e foram ignorados.` : "";
       const mudou = anterior
         ? ` <strong>${variacoes.length.toLocaleString("pt-BR")}</strong> preço(s) mudaram desde a lista de ${textoData(anterior.atualizadoEm)}.`
-        : "";
+        : " Ainda não há lista de um dia anterior neste navegador para comparar os preços: a variação aparece a partir da próxima lista.";
       mostrarMsg("ok", `Lista Diária carregada: saldo e preço de <strong>${r.mapa.size.toLocaleString("pt-BR")}</strong> produtos.${mudou}${fora}`);
     } catch (err) {
       console.error(err);
