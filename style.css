@@ -1716,3 +1716,16 @@ th.col-preco .ordenar, th.col-saldo .ordenar { flex-direction: row-reverse; }
   .site-header__login[href$="admin/"] { font-size: 0; gap: 0; padding: 0 8px; }
   .instalar-wrap { display: none; } /* no celular o navegador já oferece "Instalar" no menu; aqui não cabe */
 }
+
+/* Variação sob o preço SEM empurrar o preço: o preço fica no meio da linha (alinhado com o
+   saldo e a referência) e a seta/% fica logo abaixo dele. Só na célula (td): no th o
+   position: relative quebraria o cabeçalho fixo. */
+td.col-preco { position: relative; }
+td.col-preco .preco-var {
+  position: absolute;
+  right: 8px;
+  top: calc(50% + 11px);
+  margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+}
