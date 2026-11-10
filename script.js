@@ -21,6 +21,11 @@ const parametrosIniciais = new URLSearchParams(location.search);
 let categoriaDoLink = parametrosIniciais.get("cat") || "";
 let areaDoLink = parametrosIniciais.get("area") || "";
 let paginaDoLink = Math.max(1, parseInt(parametrosIniciais.get("p"), 10) || 1);
+// Ordenação escolhida clicando no título da coluna (null = relevância, a ordem da busca). Link: ?ord=preco.asc
+let ordemColuna = (() => {
+  const m = String(parametrosIniciais.get("ord") || "").match(/^(sku|descricao|saldo|preco|ref)\.(asc|desc)$/);
+  return m ? { col: m[1], dir: m[2] === "asc" ? 1 : -1 } : null;
+})();
 let modoExplorar = parametrosIniciais.get("ver") === "todos"; // catálogo completo, em ordem alfabética
 let paginaAtual = 1;
 let estadoLista = null; // resultado completo da última busca (trocar de página não refaz a busca)
@@ -940,10 +945,97 @@ function textoExcluidos(consulta) {
   return ` Sem: ${consulta.excluidos.map((e) => `<strong>${escaparHtml(e)}</strong>`).join(", ")}.`;
 }
 
+/* ---------- Ordenar pela coluna (clique no título) ---------- */
+
+const ROTULO_ORDEM = { sku: "SKU", descricao: "Descrição", saldo: "Saldo", preco: "Preço camp.", ref: "Ref." };
+const ordemTexto = new Intl.Collator("pt-BR", { numeric: true, sensitivity: "base" });
+const colunaDaLista = (col) => col === "saldo" || col === "preco";
+
+function valorParaOrdem(item, col) {
+  if (col === "sku") return item.sku;
+  if (col === "descricao") return item.descricao;
+  if (col === "ref") return item.referenciaOriginal;
+  const v = window.ListaDiaria && window.ListaDiaria.ativa() ? window.ListaDiaria.obter(item.sku) : null;
+  if (!v) return null;
+  const n = col === "saldo" ? v.saldo : v.preco;
+  return n === null || n === undefined || (col === "preco" && !n) ? null : n;
+}
+
+// Ordena os exatos e os "parecidos" separadamente (os parecidos continuam no fim, com o aviso).
+// Quem não tem valor (sem saldo/preço, sem referência) vai sempre para o fim.
+function itensNaOrdem(estado) {
+  if (!ordemColuna) return estado.itens;
+  const { col, dir } = ordemColuna;
+  const chave = `${col}.${dir}.${window.ListaDiaria && window.ListaDiaria.ativa() ? "L" : ""}`;
+  if (estado._ordem === chave) return estado._ordenados;
+  const cmp = (a, b) => {
+    const va = valorParaOrdem(a, col), vb = valorParaOrdem(b, col);
+    const vazioA = va === null || va === "", vazioB = vb === null || vb === "";
+    if (vazioA || vazioB) return vazioA === vazioB ? a._alfa - b._alfa : vazioA ? 1 : -1;
+    const r = typeof va === "number" ? va - vb : ordemTexto.compare(va, vb);
+    return r * dir || a._alfa - b._alfa;
+  };
+  const exatos = estado.itens.slice(0, estado.nExatos).sort(cmp);
+  const parecidos = estado.itens.slice(estado.nExatos).sort(cmp);
+  estado._ordem = chave;
+  estado._ordenados = exatos.concat(parecidos);
+  return estado._ordenados;
+}
+
+function desenharCabecalhoOrdem() {
+  document.querySelectorAll("th[data-ordem-col]").forEach((th) => {
+    const ativo = ordemColuna && ordemColuna.col === th.dataset.ordemCol;
+    th.setAttribute("aria-sort", ativo ? (ordemColuna.dir === 1 ? "ascending" : "descending") : "none");
+    const b = th.querySelector("button");
+    b.classList.toggle("is-ativo", Boolean(ativo));
+    b.querySelector(".ordenar__seta").textContent = ativo ? (ordemColuna.dir === 1 ? "↑" : "↓") : "↕";
+    const rot = ROTULO_ORDEM[th.dataset.ordemCol];
+    b.setAttribute("aria-label", ativo
+      ? `Ordenado por ${rot} (${ordemColuna.dir === 1 ? "crescente" : "decrescente"}). Clique para ${ordemColuna.dir === 1 ? "inverter" : "voltar à relevância"}`
+      : `Ordenar por ${rot}`);
+  });
+}
+
+function textoOrdem() {
+  if (!ordemColuna) return "";
+  const { col, dir } = ordemColuna;
+  const sentido = col === "saldo" || col === "preco" ? (dir === 1 ? "menor primeiro" : "maior primeiro") : dir === 1 ? "A→Z" : "Z→A";
+  return ` <span class="ordem-info">Ordenado por <strong>${ROTULO_ORDEM[col]}</strong> (${sentido}). <button type="button" class="btn-link" data-ordem-limpar>Voltar à relevância</button></span>`;
+}
+
+// 1º clique: crescente; 2º: decrescente; 3º: volta à relevância (a ordem da busca)
+function clicarOrdem(col) {
+  if (!ordemColuna || ordemColuna.col !== col) ordemColuna = { col, dir: 1 };
+  else if (ordemColuna.dir === 1) ordemColuna = { col, dir: -1 };
+  else ordemColuna = null;
+  paginaAtual = 1;
+  renderizarPagina();
+  atualizarEndereco();
+  const b = document.querySelector(`th[data-ordem-col="${col}"] button`);
+  if (b) b.focus();
+}
+
+resultsInfo.addEventListener("click", (e) => {
+  if (!e.target.closest("[data-ordem-limpar]")) return;
+  ordemColuna = null;
+  paginaAtual = 1;
+  renderizarPagina();
+  atualizarEndereco();
+});
+
+document.querySelector("thead").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-ordem]");
+  if (b && estadoLista) clicarOrdem(b.dataset.ordem);
+});
+
 function renderizarPagina() {
   const estado = estadoLista;
   if (!estado) return;
-  const total = estado.itens.length;
+  // sem Lista Diária não há como ordenar por saldo/preço: volta à relevância
+  if (ordemColuna && colunaDaLista(ordemColuna.col) && !(window.ListaDiaria && window.ListaDiaria.ativa())) ordemColuna = null;
+  desenharCabecalhoOrdem();
+  const itens = itensNaOrdem(estado);
+  const total = itens.length;
   const emCategoria = temFiltro() ? ` em <strong>${escaparHtml(rotuloFiltro())}</strong>` : "";
 
   if (total === 0) {
@@ -983,6 +1075,7 @@ function renderizarPagina() {
     const parecidos = nParecidos ? ` + <strong>${fmtNum.format(nParecidos)}</strong> parecido(s)` : "";
     resultsInfo.innerHTML = `<strong>${fmtNum.format(estado.nExatos)}</strong> resultado(s) encontrado(s)${emCategoria}${parecidos}.${excl}${faixa}`;
   }
+  resultsInfo.insertAdjacentHTML("beforeend", textoOrdem());
   resultsInfo.className = classeInfo;
 
   const destaqueParecidos = estado.destaque.concat(estado.destaqueParecidos);
@@ -993,7 +1086,7 @@ function renderizarPagina() {
         `<strong>Parecidos com a sua busca${i > estado.nExatos ? " (continuação)" : ""}</strong>` +
         `<span> · palavras com grafia próxima, caso algo tenha sido digitado diferente</span></td></tr>`;
     }
-    html += linhaProduto(estado.itens[i], i >= estado.nExatos ? destaqueParecidos : estado.destaque);
+    html += linhaProduto(itens[i], i >= estado.nExatos ? destaqueParecidos : estado.destaque);
   }
   tbody.innerHTML = html;
   btnExportar.hidden = false;
@@ -1255,7 +1348,7 @@ async function exportarParaExcel() {
     if (comLista) cab.push("Saldo (Lista Diária)", "Preço campanha (Lista Diária)");
     cab.push("Página no site");
     if (temParecidos) cab.push("Observação");
-    const linhas = estadoLista.itens.map((item, i) => {
+    const linhas = itensNaOrdem(estadoLista).map((item, i) => {
       const l = [item.sku, item.descricao, item.referencia, item.categoria === "-" ? "" : item.categoria, item.areas.join(", "), item.tags.join(", ")];
       if (comLista) {
         const v = window.ListaDiaria.obter(item.sku);
@@ -1359,6 +1452,7 @@ function parametrosDaBusca() {
   const termo = input.value.trim();
   if (termo) params.set("q", termo);
   if (modoExplorar && !termo && !temFiltro()) params.set("ver", "todos");
+  if (ordemColuna && params.toString()) params.set("ord", `${ordemColuna.col}.${ordemColuna.dir === 1 ? "asc" : "desc"}`);
   if (estadoLista && paginaAtual > 1 && params.toString()) params.set("p", String(paginaAtual));
   return params.toString();
 }

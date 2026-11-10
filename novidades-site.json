@@ -1,5 +1,11 @@
 [
   {
+    "chave": "2026-11-10-ordenar-busca",
+    "data": "2026-11-10",
+    "titulo": "Ordene a busca do seu jeito",
+    "texto": "Clique no título de uma coluna (SKU, Descrição, Saldo, Preço camp. ou Ref.) para ordenar os resultados: o 1º clique ordena do menor para o maior, o 2º inverte e o 3º volta à ordem de relevância. Dá para ordenar pelo preço ou pelo saldo da Lista Diária, e o Excel sai na mesma ordem.\nE a página Novidades agora tem botão próprio no topo, ao lado da Cotação."
+  },
+  {
     "chave": "2026-11-10-painel-novidades",
     "data": "2026-11-10",
     "titulo": "Chegou o sino de novidades 🔔",

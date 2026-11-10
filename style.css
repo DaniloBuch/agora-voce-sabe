@@ -1670,3 +1670,49 @@ body.com-lista .col-lista { display: table-cell; }
 @media (max-width: 768px) {
   .sino-painel { position: fixed; top: 76px; left: 8px; right: 8px; width: auto; }
 }
+
+/* --- Ordenar pelos títulos da tabela de resultados ------------------------ */
+.ordenar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  margin: -6px -6px;
+  padding: 6px 6px;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+.ordenar:hover { color: var(--cbs-roxo); background: var(--cbs-roxo-050); }
+.ordenar:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.ordenar.is-ativo { color: var(--cbs-roxo); }
+.ordenar__seta { font-size: 11px; opacity: 0; transition: opacity .15s; }
+.ordenar:hover .ordenar__seta, .ordenar:focus-visible .ordenar__seta { opacity: .55; }
+.ordenar.is-ativo .ordenar__seta { opacity: 1; }
+th.col-preco .ordenar, th.col-saldo .ordenar { flex-direction: row-reverse; }
+.ordem-info { white-space: nowrap; }
+.ordem-info .btn-link { margin-left: 2px; }
+
+/* botão Novidades ao lado de Cotação */
+.site-header__novidades[aria-current="page"] { background: var(--cbs-roxo-050); border-color: var(--cbs-roxo-200); }
+@media (max-width: 768px) {
+  /* Novidades + Cotação lado a lado: só o primeiro empurra para a direita */
+  .site-header__novidades { margin-left: auto; }
+  .site-header__novidades + .site-header__cotacao, .site-header__novidades ~ .site-header__cotacao { margin-left: 0; }
+}
+@media (max-width: 480px) {
+  /* celular estreito: logo menor e botões mais juntos para tudo caber na linha */
+  .site-header__inner { gap: 6px; }
+  .brand img { width: 100px; margin-left: -10px; }
+  .btn-tema, .btn-sino { width: 30px; height: 30px; }
+}
+@media (max-width: 480px) {
+  /* "Login" vira só o ícone (o texto continua para leitores de tela) */
+  .site-header__login[href$="admin/"] { font-size: 0; gap: 0; padding: 0 8px; }
+  .instalar-wrap { display: none; } /* no celular o navegador já oferece "Instalar" no menu; aqui não cabe */
+}

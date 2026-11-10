@@ -31,6 +31,7 @@
           />
         </a>
         <span class="site-header__label">Busca de produtos</span>
+        <a class="site-header__cotacao site-header__novidades" href="novidades/" title="Novidades do catálogo: entraram, saíram e mudanças de preço"><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg><span class="site-header__cotacao-rotulo">Novidades</span></a>
         <a class="site-header__cotacao" id="linkCotacao" href="cotacao/" title="Ver a lista de cotação"><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg><span class="site-header__cotacao-rotulo">Cotação</span><span class="contador-cotacao" id="contadorCotacao" hidden>0</span></a>
         <!-- App (PWA): "Instalar app" quando dá para instalar; "Abrir o app" quando já está instalado -->
         <div class="instalar-wrap">
@@ -183,11 +184,11 @@
             <thead>
               <tr>
                 <th class="col-cot" title="Adicionar à cotação"><span class="sr-only">Adicionar à cotação</span><svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg></th>
-                <th class="col-sku">SKU</th>
-                <th class="col-desc">Descrição do produto</th>
-                <th class="col-lista col-saldo" title="Saldo disponível (Lista Diária, consultivo)">Saldo</th>
-                <th class="col-lista col-preco" title="Preço campanha (Lista Diária, consultivo)">Preço camp.</th>
-                <th class="col-ref">Ref.</th>
+                <th class="col-sku" data-ordem-col="sku" aria-sort="none"><button type="button" class="ordenar" data-ordem="sku">SKU<span class="ordenar__seta" aria-hidden="true"></span></button></th>
+                <th class="col-desc" data-ordem-col="descricao" aria-sort="none"><button type="button" class="ordenar" data-ordem="descricao">Descrição do produto<span class="ordenar__seta" aria-hidden="true"></span></button></th>
+                <th class="col-lista col-saldo" data-ordem-col="saldo" aria-sort="none" title="Saldo disponível (Lista Diária, consultivo)"><button type="button" class="ordenar ordenar--num" data-ordem="saldo">Saldo<span class="ordenar__seta" aria-hidden="true"></span></button></th>
+                <th class="col-lista col-preco" data-ordem-col="preco" aria-sort="none" title="Preço campanha (Lista Diária, consultivo)"><button type="button" class="ordenar ordenar--num" data-ordem="preco">Preço camp.<span class="ordenar__seta" aria-hidden="true"></span></button></th>
+                <th class="col-ref" data-ordem-col="ref" aria-sort="none"><button type="button" class="ordenar" data-ordem="ref">Ref.<span class="ordenar__seta" aria-hidden="true"></span></button></th>
                 <th class="col-site" title="Página do produto no site oficial (imagem e ficha técnica)">Site</th>
               </tr>
             </thead>
