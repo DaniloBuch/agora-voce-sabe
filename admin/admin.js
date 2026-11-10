@@ -11,6 +11,9 @@
     semTags: false,
     categoria: "", // filtro: "" = todas, "-" = sem categoria, ou o nome da categoria
     categorias: [], // nomes cadastrados (inclui as que ainda não têm produtos)
+    areas: [], // [{nome, icone}] cadastradas, na ordem do painel
+    area: "", // filtro: "" = todas, "-" = sem área, ou o nome da área
+    recentes: 0, // filtro: produtos incluídos nos últimos N dias (0 = qualquer data)
     pagina: 1,
     selecionados: new Set(), // SKUs marcados para edição em massa
     skuEmEdicao: null, // null = criando
@@ -37,6 +40,7 @@
   }
 
   const fmt = new Intl.NumberFormat("pt-BR");
+  const fmtDia = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
   const fmtData = new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
@@ -76,6 +80,8 @@
       tags,
       fixo: Boolean(p.fixo),
       categoria,
+      areas: Array.isArray(p.areas) ? p.areas.map(String) : [],
+      criado_em: p.criado_em || null,
       _busca: normalizar(`${p.sku} ${p.descricao_tecnica} ${p.referencia} ${tags} ${categoria === "-" ? "" : categoria}`),
     };
   }
@@ -86,12 +92,14 @@
     const dados = await api.listarProdutos();
     estado.produtos = dados.map(prepararProduto);
     await carregarCategorias();
+    await carregarAreas();
     podarSelecao();
     atualizarSugestoesTags();
     atualizarKpis();
     renderizarLista();
     if (!$("#aba-tags").hidden) renderizarTags();
     if (!$("#aba-categorias").hidden) renderizarCategorias();
+    if (!$("#aba-areas").hidden) renderizarAreas();
   }
 
   function atualizarKpis() {
@@ -160,12 +168,13 @@
       b.classList.toggle("ativa", ativa);
       b.setAttribute("aria-selected", String(ativa));
     });
-    ["produtos", "categorias", "tags", "sinonimos", "importar", "historico"].forEach((n) => {
+    ["produtos", "categorias", "areas", "tags", "sinonimos", "importar", "historico"].forEach((n) => {
       $(`#aba-${n}`).hidden = n !== nome;
     });
     if (nome === "historico") carregarHistorico();
     if (nome === "tags") renderizarTags();
     if (nome === "categorias") renderizarCategorias();
+    if (nome === "areas") renderizarAreas();
     if (nome === "sinonimos") carregarSinonimos();
     if (nome === "importar") mostrarResumoLinks();
   }
@@ -176,14 +185,29 @@
 
   /* ---------------- lista de produtos ---------------- */
 
+  // "Adicionados recentemente": produtos com data de inclusão dentro do período (os antigos não têm data)
+  const DIA_MS = 24 * 60 * 60 * 1000;
+  function inicioDoPeriodo(dias) {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    return hoje.getTime() - (dias - 1) * DIA_MS;
+  }
+  const ehRecente = (p, dias = 30) => Boolean(p.criado_em) && Date.parse(p.criado_em) >= inicioDoPeriodo(dias);
+
   function filtrados() {
     const termos = normalizar(estado.filtro).split(/\s+/).filter(Boolean);
-    return estado.produtos.filter(
+    const desde = estado.recentes ? inicioDoPeriodo(estado.recentes) : 0;
+    const lista = estado.produtos.filter(
       (p) =>
         termos.every((t) => p._busca.includes(t)) &&
         (!estado.semTags || p.tags.trim() === "") &&
-        (!estado.categoria || chaveCat(p.categoria) === chaveCat(estado.categoria)),
+        (!estado.categoria || chaveCat(p.categoria) === chaveCat(estado.categoria)) &&
+        (!estado.area || (estado.area === "-" ? p.areas.length === 0 : p.areas.some((a) => chaveCat(a) === chaveCat(estado.area)))) &&
+        (!desde || (p.criado_em && Date.parse(p.criado_em) >= desde)),
     );
+    // filtrando por data: do mais novo para o mais antigo
+    if (desde) lista.sort((a, b) => Date.parse(b.criado_em) - Date.parse(a.criado_em));
+    return lista;
   }
 
   function renderizarLista() {
@@ -200,7 +224,7 @@
 
     $("#corpoTabela").innerHTML =
       pagina.length === 0
-        ? `<tr><td colspan="7" class="vazio">Nenhum produto encontrado com esse filtro.</td></tr>`
+        ? `<tr><td colspan="8" class="vazio">Nenhum produto encontrado com esse filtro.</td></tr>`
         : pagina
             .map((p) => {
               const tags = separarTags(p.tags);
@@ -211,10 +235,11 @@
               const marcado = estado.selecionados.has(p.sku);
               return `<tr${marcado ? ' class="selecionada"' : ""}>
                 <td class="c-sel"><input type="checkbox" data-sel="${esc(p.sku)}" aria-label="Selecionar ${esc(p.sku)}"${marcado ? " checked" : ""} /></td>
-                <td class="c-sku">${esc(p.sku)}${p.fixo ? '<span class="selo" title="Fixo: nunca excluído pela importação">fixo</span>' : ""}</td>
+                <td class="c-sku">${esc(p.sku)}${p.fixo ? '<span class="selo" title="Fixo: nunca excluído pela importação">fixo</span>' : ""}${ehRecente(p) ? `<span class="selo selo--novo" title="Incluído em ${esc(fmtData.format(new Date(p.criado_em)))}">novo · ${esc(fmtDia.format(new Date(p.criado_em)))}</span>` : ""}</td>
                 <td class="c-ref">${esc(p.referencia)}</td>
                 <td>${esc(p.descricao_tecnica)}</td>
                 <td class="c-cat so-categorias">${p.categoria === "-" ? '<span class="sem-categoria">–</span>' : esc(p.categoria)}</td>
+                <td class="c-areas so-areas">${p.areas.length ? p.areas.map((a) => `<span class="area-ico-admin" title="${esc(a)}">${iconeArea(a, 16)}<span class="sr-only">${esc(a)}</span></span>`).join("") : '<span class="sem-categoria">–</span>'}</td>
                 <td class="c-tags">${tagsHtml}</td>
                 <td class="c-acoes">
                   <button class="btn btn--secundario btn--sm" data-acao="editar" data-sku="${esc(p.sku)}">${window.CBSIcon("pencil", 14)}Editar</button>
@@ -301,6 +326,16 @@
   });
   $("#filtroCategoria").addEventListener("change", (e) => {
     estado.categoria = e.target.value;
+    estado.pagina = 1;
+    renderizarLista();
+  });
+  $("#filtroArea").addEventListener("change", (e) => {
+    estado.area = e.target.value;
+    estado.pagina = 1;
+    renderizarLista();
+  });
+  $("#filtroRecentes").addEventListener("change", (e) => {
+    estado.recentes = Number(e.target.value) || 0;
     estado.pagina = 1;
     renderizarLista();
   });
@@ -405,6 +440,7 @@
     $("#fCategoria").value = produto ? produto.categoria : "-";
     if ($("#fCategoria").value !== (produto ? produto.categoria : "-")) $("#fCategoria").value = "-";
     editorProduto.definir(produto ? separarTags(produto.tags) : []);
+    desenharEscolhaAreas(produto ? produto.areas : []);
     $("#fErro").textContent = "";
     $("#dlgProduto").showModal();
     (produto ? campoTag : $("#fSku")).focus();
@@ -437,6 +473,7 @@
       fixo: $("#fFixo").checked,
     };
     if (api.categoriasDisponiveis()) campos.categoria = $("#fCategoria").value || "-";
+    if (api.areasDisponiveis()) campos.areas = [...$("#fAreas").querySelectorAll("input:checked")].map((c) => c.value);
 
     const btn = $("#btnSalvar");
     btn.disabled = true;
@@ -444,7 +481,8 @@
       if (criando) await api.criar({ sku, ...campos });
       else await api.atualizar(sku, campos);
 
-      const novo = prepararProduto({ sku, ...campos });
+      const anterior = estado.produtos.find((p) => p.sku === sku);
+      const novo = prepararProduto({ sku, ...campos, criado_em: anterior ? anterior.criado_em : new Date().toISOString() });
       const i = estado.produtos.findIndex((p) => p.sku === sku);
       if (i >= 0) estado.produtos[i] = novo;
       else estado.produtos.unshift(novo);
@@ -509,12 +547,13 @@
           .join("")
       : "";
 
-    if (add.length === 0 && rem.length === 0 && cat === "") {
-      $("#massaPreview").innerHTML = `<span class="dica">Escolha tags para adicionar ou remover, ou uma categoria.</span>`;
+    const ar = areasMassa();
+    if (add.length === 0 && rem.length === 0 && cat === "" && !ar.add.length && !ar.rem.length) {
+      $("#massaPreview").innerHTML = `<span class="dica">Escolha tags para adicionar ou remover, uma categoria ou áreas de atuação.</span>`;
       btn.disabled = true;
       return;
     }
-    const mudou = (p) => simularTags(p.tags, add, rem) !== separarTags(p.tags).join(", ") || mudaCategoria(p, cat);
+    const mudou = (p) => simularTags(p.tags, add, rem) !== separarTags(p.tags).join(", ") || mudaCategoria(p, cat) || mudaAreas(p, ar);
     let alterados = 0;
     for (const p of sel) if (mudou(p)) alterados++;
     const partes = [];
@@ -522,6 +561,8 @@
     if (rem.length) partes.push(`remover <strong>${esc(rem.join(", "))}</strong>`);
     if (cat === "-") partes.push(`<strong>tirar a categoria</strong>`);
     else if (cat) partes.push(`definir a categoria <strong>${esc(cat)}</strong>`);
+    if (ar.add.length) partes.push(`incluir a área <strong>${esc(ar.add.join(", "))}</strong>`);
+    if (ar.rem.length) partes.push(`tirar a área <strong>${esc(ar.rem.join(", "))}</strong>`);
     const ex = sel.find(mudou);
     $("#massaPreview").innerHTML =
       `Vai ${partes.join(" e ")}: <strong>${fmt.format(alterados)}</strong> de ${fmt.format(sel.length)} produto(s) serão alterados.` +
@@ -548,6 +589,7 @@
     editorAdd.definir([]);
     editorRem.definir([]);
     $("#fMassaCategoria").value = "";
+    desenharMassaAreas();
     atualizarMassa();
     $("#dlgMassa").showModal();
     $("#fAddInput").focus();
@@ -569,7 +611,9 @@
     const add = editorAdd.obter();
     const rem = editorRem.obter();
     const cat = categoriaMassa();
-    if (add.length === 0 && rem.length === 0 && cat === "") return;
+    const ar = areasMassa();
+    const mexeTags = add.length > 0 || rem.length > 0 || cat !== "";
+    if (!mexeTags && !ar.add.length && !ar.rem.length) return;
     const skus = [...estado.selecionados];
     const erro = $("#massaErro");
     erro.textContent = "";
@@ -577,8 +621,11 @@
     btn.disabled = true;
     btn.textContent = "Aplicando...";
     try {
-      const r = await api.editarTagsEmMassa(skus, add, rem, cat === "" ? undefined : cat);
+      const antes = new Map(produtosSelecionados().map((p) => [p.sku, JSON.stringify([p.tags, p.categoria, p.areas])]));
+      if (mexeTags) await api.editarTagsEmMassa(skus, add, rem, cat === "" ? undefined : cat);
+      if (ar.add.length || ar.rem.length) await api.editarAreasEmMassa(skus, ar.add, ar.rem);
       await carregarProdutos();
+      const r = { alterados: estado.produtos.filter((p) => antes.has(p.sku) && antes.get(p.sku) !== JSON.stringify([p.tags, p.categoria, p.areas])).length };
       estado.selecionados.clear();
       renderizarLista();
       $("#dlgMassa").close();
@@ -1054,8 +1101,8 @@
   $("#btnExportar").addEventListener("click", () =>
     exportarCsv(
       $("#btnExportar"),
-      "Codigo;Descricao;Cod prd forn;Categoria;Tags;Fixo",
-      (p) => [p.sku, p.descricao_tecnica, p.referencia, p.categoria, p.tags, p.fixo ? "sim" : ""],
+      "Codigo;Descricao;Cod prd forn;Categoria;Tags;Fixo;Areas",
+      (p) => [p.sku, p.descricao_tecnica, p.referencia, p.categoria, p.tags, p.fixo ? "sim" : "", p.areas.join(" | ")],
       "cbs-produtos",
     ),
   );
@@ -1068,6 +1115,220 @@
       "cbs-categorizar",
     ),
   );
+
+  /* ---------------- áreas de atuação ---------------- */
+
+  const ICONES = window.CBS_AREAS_ICONES;
+  function iconeArea(nome, tam = 16) {
+    const a = estado.areas.find((x) => chaveCat(x.nome) === chaveCat(nome));
+    return ICONES ? ICONES.svg(a ? a.icone : "", tam) : "";
+  }
+
+  // Lista = cadastradas (na ordem do painel) + as que algum produto usa e ainda não estão nela
+  async function carregarAreas() {
+    const tem = api.areasDisponiveis();
+    document.body.classList.toggle("sem-areas", !tem);
+    $("#avisoAreas").hidden = tem || !api.categoriasDisponiveis(); // o aviso das categorias vem antes
+    if (!tem) {
+      estado.areas = [];
+      return;
+    }
+    const lista = (await api.listarAreas()).map((a) => ({ nome: a.nome, icone: a.icone }));
+    for (const p of estado.produtos)
+      for (const a of p.areas) if (!lista.some((x) => chaveCat(x.nome) === chaveCat(a))) lista.push({ nome: a, icone: "" });
+    estado.areas = lista;
+    const filtro = $("#filtroArea");
+    filtro.innerHTML =
+      `<option value="">Todas as áreas</option><option value="-">Sem área</option>` +
+      lista.map((a) => `<option value="${esc(a.nome)}">${esc(a.nome)}</option>`).join("");
+    if (![...filtro.options].some((o) => o.value === estado.area)) estado.area = "";
+    filtro.value = estado.area;
+  }
+
+  // Caixinhas de área no diálogo do produto
+  function desenharEscolhaAreas(marcadas) {
+    const chaves = new Set((marcadas || []).map(chaveCat));
+    $("#fAreas").innerHTML = estado.areas.length
+      ? estado.areas
+          .map(
+            (a) =>
+              `<label class="area-opcao"><input type="checkbox" value="${esc(a.nome)}"${chaves.has(chaveCat(a.nome)) ? " checked" : ""} />` +
+              `${ICONES ? ICONES.svg(a.icone, 16) : ""}<span>${esc(a.nome)}</span></label>`,
+          )
+          .join("")
+      : `<span class="dica">Nenhuma área cadastrada. Crie na aba Áreas.</span>`;
+  }
+
+  // Edição em massa: cada área alterna entre não alterar → + adicionar → − remover
+  const CICLO_MASSA = { "": "add", add: "rem", rem: "" };
+  function desenharMassaAreas() {
+    $("#fMassaAreas").innerHTML = estado.areas
+      .map(
+        (a) =>
+          `<button type="button" class="area-opcao area-opcao--massa" data-area="${esc(a.nome)}" data-estado="">` +
+          `<span class="area-opcao__sinal" aria-hidden="true"></span>${ICONES ? ICONES.svg(a.icone, 16) : ""}<span>${esc(a.nome)}</span></button>`,
+      )
+      .join("");
+  }
+  function areasMassa() {
+    const r = { add: [], rem: [] };
+    if (!api.areasDisponiveis()) return r;
+    $("#fMassaAreas").querySelectorAll("button[data-area]").forEach((b) => {
+      if (b.dataset.estado === "add") r.add.push(b.dataset.area);
+      if (b.dataset.estado === "rem") r.rem.push(b.dataset.area);
+    });
+    return r;
+  }
+  function mudaAreas(p, ar) {
+    const tem = new Set(p.areas.map(chaveCat));
+    return ar.add.some((a) => !tem.has(chaveCat(a))) || ar.rem.some((a) => tem.has(chaveCat(a)));
+  }
+  $("#fMassaAreas").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-area]");
+    if (!b) return;
+    b.dataset.estado = CICLO_MASSA[b.dataset.estado || ""];
+    const rotulo = { add: "vai adicionar", rem: "vai remover", "": "não altera" }[b.dataset.estado];
+    b.setAttribute("aria-label", `${b.dataset.area}: ${rotulo}`);
+    atualizarMassa();
+  });
+
+  /* ---------------- aba Áreas (nova / editar / mesclar / excluir) ---------------- */
+
+  const MSG_FALTA_011 =
+    "As áreas de atuação ainda não existem no Supabase. Rode o arquivo supabase/migracoes/011_areas_atuacao.sql no SQL Editor (veja o SETUP-SUPABASE.md).";
+  const produtosDaArea = (nome) => estado.produtos.filter((p) => p.areas.some((a) => chaveCat(a) === chaveCat(nome)));
+
+  function renderizarAreas() {
+    const sem = estado.produtos.filter((p) => p.areas.length === 0).length;
+    $("#infoAreas").textContent = `${fmt.format(estado.areas.length)} áreas · ${fmt.format(sem)} produtos sem área`;
+    $("#corpoAreas").innerHTML = estado.areas.length
+      ? estado.areas
+          .map(
+            (a) => `<tr>
+        <td class="c-ico"><span class="area-ico-admin">${ICONES ? ICONES.svg(a.icone, 20) : ""}</span></td>
+        <td><strong>${esc(a.nome)}</strong></td>
+        <td class="c-num">${fmt.format(produtosDaArea(a.nome).length)}</td>
+        <td class="c-acoes">
+          <button class="btn btn--secundario btn--sm" data-area-acao="ver" data-area="${esc(a.nome)}">${window.CBSIcon("search", 14)}Ver produtos</button>
+          <button class="btn btn--secundario btn--sm" data-area-acao="editar" data-area="${esc(a.nome)}">${window.CBSIcon("pencil", 14)}Editar</button>
+        </td>
+      </tr>`,
+          )
+          .join("")
+      : `<tr><td colspan="4" class="vazio">Nenhuma área cadastrada.</td></tr>`;
+  }
+
+  let areaEmEdicao = null; // null = nova
+  let confirmandoExclusaoArea = false;
+
+  function desenharIcones(atual) {
+    if (!ICONES) return;
+    $("#areaIcones").innerHTML = ICONES.chaves
+      .map(
+        (k) =>
+          `<label class="icone-opcao" title="${esc(ICONES.rotulo(k))}"><input type="radio" name="areaIcone" value="${k}"${k === atual ? " checked" : ""} />` +
+          `${ICONES.svg(k, 22)}<span class="sr-only">${esc(ICONES.rotulo(k))}</span></label>`,
+      )
+      .join("");
+  }
+
+  function abrirArea(nome) {
+    const area = nome ? estado.areas.find((a) => a.nome === nome) : null;
+    areaEmEdicao = area ? area.nome : null;
+    confirmandoExclusaoArea = false;
+    $("#areaTitulo").textContent = area ? `Editar área: ${area.nome}` : "Nova área";
+    $("#areaNome").value = area ? area.nome : "";
+    desenharIcones(area && area.icone ? area.icone : "briefcase-medical");
+    $("#btnExcluirArea").hidden = !area;
+    $("#areaExcluirConfirma").hidden = true;
+    $("#btnSalvarArea").textContent = "Salvar";
+    $("#btnSalvarArea").className = "btn btn--primario";
+    $("#areaErro").textContent = "";
+    atualizarPreviaArea();
+    $("#dlgArea").showModal();
+    $("#areaNome").focus();
+  }
+
+  function atualizarPreviaArea() {
+    const novo = nomeCategoriaValido($("#areaNome").value);
+    const alvo = $("#areaPreview");
+    if (!areaEmEdicao || !novo || chaveCat(novo) === chaveCat(areaEmEdicao)) {
+      alvo.innerHTML = "";
+      return;
+    }
+    const destino = estado.areas.find((a) => chaveCat(a.nome) === chaveCat(novo));
+    const n = produtosDaArea(areaEmEdicao).length;
+    alvo.innerHTML = destino
+      ? `<strong>Mesclar:</strong> a área <strong>${esc(destino.nome)}</strong> já existe (${fmt.format(produtosDaArea(destino.nome).length)} produtos). ${fmt.format(n)} produto(s) passam a usá-la.`
+      : `Vai trocar o nome em ${fmt.format(n)} produto(s).`;
+  }
+
+  $("#areaNome").addEventListener("input", atualizarPreviaArea);
+  $("#btnNovaArea").addEventListener("click", () => abrirArea(null));
+  $("#btnCancelarArea").addEventListener("click", () => $("#dlgArea").close());
+  $("#btnFecharArea").addEventListener("click", () => $("#dlgArea").close());
+  $("#corpoAreas").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-area-acao]");
+    if (!b) return;
+    if (b.dataset.areaAcao === "ver") {
+      estado.area = b.dataset.area;
+      estado.pagina = 1;
+      $("#filtroArea").value = b.dataset.area;
+      mostrarAba("produtos");
+      renderizarLista();
+    } else abrirArea(b.dataset.area);
+  });
+
+  // Excluir: o primeiro clique pede confirmação (o botão Salvar vira "Excluir área")
+  $("#btnExcluirArea").addEventListener("click", () => {
+    confirmandoExclusaoArea = true;
+    const n = produtosDaArea(areaEmEdicao).length;
+    const conf = $("#areaExcluirConfirma");
+    conf.hidden = false;
+    conf.innerHTML = `${window.CBSIcon("triangle-alert", 20)}<div>Excluir a área <strong>${esc(areaEmEdicao)}</strong>? Ela sai de ${fmt.format(n)} produto(s). Dá para desfazer no Histórico.</div>`;
+    $("#btnExcluirArea").hidden = true;
+    $("#btnSalvarArea").textContent = "Excluir área";
+    $("#btnSalvarArea").className = "btn btn--perigo";
+  });
+
+  $("#formArea").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const erro = $("#areaErro");
+    erro.textContent = "";
+    const nome = nomeCategoriaValido($("#areaNome").value);
+    const icone = ($("#areaIcones input:checked") || {}).value || "";
+    if (!confirmandoExclusaoArea && (!nome || nome === "-")) {
+      erro.textContent = "Digite o nome da área.";
+      return;
+    }
+    if (!confirmandoExclusaoArea && !areaEmEdicao && estado.areas.some((a) => chaveCat(a.nome) === chaveCat(nome))) {
+      erro.textContent = `A área "${nome}" já existe.`;
+      return;
+    }
+    const btn = $("#btnSalvarArea");
+    const texto = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Aplicando...";
+    try {
+      let msg;
+      if (confirmandoExclusaoArea) {
+        const r = await api.excluirArea(areaEmEdicao);
+        msg = `Área excluída (saiu de ${fmt.format(r.alterados)} produto(s)). Dá para desfazer no Histórico.`;
+      } else {
+        const r = await api.salvarArea(areaEmEdicao || "", nome, icone);
+        msg = areaEmEdicao ? `Área atualizada em ${fmt.format(r.alterados)} produto(s).` : `Área "${nome}" criada.`;
+      }
+      await carregarProdutos();
+      renderizarAreas();
+      $("#dlgArea").close();
+      aviso(msg);
+    } catch (err) {
+      erro.textContent = err.status === 404 ? MSG_FALTA_011 : err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = texto;
+    }
+  });
 
   /* ---------------- aba Categorias (criar / renomear / mesclar / excluir) ---------------- */
 

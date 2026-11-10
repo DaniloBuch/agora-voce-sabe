@@ -1,0 +1,112 @@
+/* ==========================================================================
+   Tema escuro. O claro é o padrão; o botão do cabeçalho troca (fica guardado
+   neste navegador). Em vez de reescrever cada regra, redefine a paleta do
+   Design System: os neutros invertem (fundo escuro, texto claro) e o roxo
+   clareia para continuar legível como texto e como fundo de botão.
+   Carregado depois de design-system/styles.css e antes do CSS de cada página.
+   ========================================================================== */
+/* só na tela: impressão sai sempre no tema claro */
+@media screen {
+  :root[data-tema="escuro"] {
+    color-scheme: dark;
+
+    --cbs-neutro-000: #171b26;   /* cartões, campos */
+    --cbs-neutro-025: #10131b;   /* fundo da página */
+    --cbs-neutro-050: #1c2130;
+    --cbs-neutro-100: #262c3c;
+    --cbs-neutro-200: #343c50;
+    --cbs-neutro-300: #4b5469;
+    --cbs-neutro-400: #6a7590;
+    --cbs-neutro-500: #939db3;
+    --cbs-neutro-600: #adb6c8;
+    --cbs-neutro-700: #c6cddb;
+    --cbs-neutro-800: #dfe4ed;
+    --cbs-neutro-900: #f1f4f9;
+
+    --cbs-roxo: #a99ff3;
+    --cbs-roxo-900: #e2defd;
+    --cbs-roxo-800: #d3cdfb;
+    --cbs-roxo-700: #c0b8f8;
+    --cbs-roxo-600: #a99ff3;
+    --cbs-roxo-500: #8f84e4;
+    --cbs-roxo-400: #776dcc;
+    --cbs-roxo-200: #4b4486;
+    --cbs-roxo-100: #2f2a58;
+    --cbs-roxo-050: #211e3e;
+
+    --cbs-azul: #3fbfd3;
+    --cbs-azul-700: #6ccfdf;
+    --cbs-azul-600: #4fc4d6;
+    --cbs-azul-500: #3fbfd3;
+    --cbs-azul-400: #2b9fb1;
+    --cbs-azul-200: #1d5560;
+    --cbs-azul-100: #163d45;
+    --cbs-azul-050: #112c32;
+
+    --cbs-amarelo: #e9b23a;
+    --cbs-laranja: #e9b23a;
+    --cbs-amarelo-700: #f2c463;
+    --cbs-amarelo-600: #eab53c;
+    --cbs-amarelo-500: #e9b23a;
+    --cbs-amarelo-200: #5a4615;
+    --cbs-amarelo-100: #3d3113;
+    --cbs-amarelo-050: #2c2410;
+
+    --cbs-sucesso: #4fd19c;
+    --cbs-sucesso-bg: #12291f;
+    --cbs-atencao: #e9b23a;
+    --cbs-atencao-bg: #2c2410;
+    --cbs-erro: #ff8577;
+    --cbs-erro-bg: #3a1b18;
+    --cbs-info: #3fbfd3;
+    --cbs-info-bg: #112c32;
+
+    --surface-inverse: #1e1a44;
+    --surface-inverse-deep: #141130;
+    --surface-info-deep: #0f3a42;
+    --text-on-brand-muted: #c9c3f8;
+    --text-link-hover: var(--cbs-roxo-700);
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, .35);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, .4), 0 1px 2px rgba(0, 0, 0, .3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, .45);
+    --shadow-lg: 0 12px 28px rgba(0, 0, 0, .55);
+    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, .04);
+  }
+  :root[data-tema="escuro"] ::selection { background: #2f5c66; color: #fff; }
+
+  /* cabeçalhos translúcidos (o valor claro estava fixo no CSS) */
+  :root[data-tema="escuro"] .site-header,
+  :root[data-tema="escuro"] .topo { background: rgba(16, 19, 27, 0.88); }
+
+  /* rodapé roxo: no escuro vira um roxo bem fechado com texto claro */
+  :root[data-tema="escuro"] .site-footer { background: var(--surface-inverse-deep); color: var(--cbs-neutro-800); }
+
+  /* grafismos roxos decorativos: mais discretos sobre o fundo escuro */
+  :root[data-tema="escuro"] .faixa-busca__grafismo,
+  :root[data-tema="escuro"] .faixa__grafismo { opacity: .18; filter: brightness(2.2); }
+
+  /* imagens de produto (prévia) continuam com fundo branco, como no site oficial */
+  :root[data-tema="escuro"] .previa-foto img { background: #fff; }
+}
+
+/* botão do tema (cabeçalho de todas as páginas) */
+.btn-tema {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  padding: 0;
+  color: var(--cbs-roxo);
+  background: var(--cbs-neutro-000);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill, 999px);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.btn-tema:hover { border-color: var(--cbs-roxo); background: var(--cbs-roxo-050); }
+.btn-tema .tema-sol { display: none; }
+:root[data-tema="escuro"] .btn-tema .tema-sol { display: block; }
+:root[data-tema="escuro"] .btn-tema .tema-lua { display: none; }

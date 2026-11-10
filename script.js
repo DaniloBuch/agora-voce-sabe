@@ -5,6 +5,9 @@ let timeoutBusca = null;
 let timeoutFade = null;
 let vocabulario = null; // palavras da base, para sugerir correções de digitação
 let categoriaAtual = ""; // categoria escolhida na gaveta ("" = todas)
+let areaAtual = ""; // área de atuação escolhida na gaveta ("" = todas)
+let areasLista = []; // [{nome, icone, n}] só as que têm produtos, na ordem do painel
+const iconesArea = new Map(); // nome da área -> chave do ícone
 let categoriasLista = []; // [[nome, quantidade]], da mais usada para a menos usada
 // Aberto pelo botão "Abrir o app" (protocolo web+agoravocesabe:): o endereço vem em ?abrir=...
 (function abertoPeloAtalho() {
@@ -16,6 +19,7 @@ let categoriasLista = []; // [[nome, quantidade]], da mais usada para a menos us
 })();
 const parametrosIniciais = new URLSearchParams(location.search);
 let categoriaDoLink = parametrosIniciais.get("cat") || "";
+let areaDoLink = parametrosIniciais.get("area") || "";
 let paginaDoLink = Math.max(1, parseInt(parametrosIniciais.get("p"), 10) || 1);
 let modoExplorar = parametrosIniciais.get("ver") === "todos"; // catálogo completo, em ordem alfabética
 let paginaAtual = 1;
@@ -255,6 +259,22 @@ async function lerSinonimos() {
   }
 }
 
+// Áreas de atuação cadastradas no painel (nome + ícone). Offline: as da última vez.
+async function lerAreas() {
+  if (!window.CBS_API || !CBS_API.configurado || !CBS_API.listarAreas) return [];
+  try {
+    const areas = await CBS_API.listarAreas();
+    if (areas.length) BaseOffline.salvar("areas", areas);
+    return areas;
+  } catch (_) {
+    return (await BaseOffline.ler("areas")) || [];
+  }
+}
+
+const temFiltro = () => Boolean(categoriaAtual || areaAtual);
+// "Luvas · Hospitais" (para mensagens e nome do arquivo)
+const rotuloFiltro = () => [categoriaAtual, areaAtual].filter(Boolean).join(" · ");
+
 function montarSinonimos(grupos) {
   indiceSinonimos = new Map();
   for (const g of grupos || []) {
@@ -273,7 +293,7 @@ async function carregarDados() {
   const infoNumero = document.getElementById("infoBaseNumero");
   const infoTexto = document.getElementById("infoBaseTexto");
   try {
-    const [{ dados: dadosBrutos, contingencia, salvoEm }, grupos] = await Promise.all([lerDb(), lerSinonimos()]);
+    const [{ dados: dadosBrutos, contingencia, salvoEm }, grupos, areasCadastradas] = await Promise.all([lerDb(), lerSinonimos(), lerAreas()]);
     montarSinonimos(grupos);
 
     database = dadosBrutos
@@ -298,6 +318,7 @@ async function carregarDados() {
           referencia,
           referenciaOriginal,
           categoria: String(item.categoria ?? "").trim() || "-", // "-" = sem categoria
+          areas: Array.isArray(item.areas) ? item.areas.map((a) => String(a).trim()).filter(Boolean) : [],
           tags: tagsArray,
           _sku: normalizar(sku),
           _desc: normalizarEspacos(descricao),
@@ -317,6 +338,7 @@ async function carregarDados() {
     cacheParecidas.clear();
     carregado = true;
     console.log("Sistema CBS Online. Itens:", database.length);
+    montarAreas(areasCadastradas);
     montarCategorias();
 
     // Atualiza o painel com o número real
@@ -333,8 +355,8 @@ async function carregarDados() {
 
     // Se o usuário já digitou algo (ou abriu um link com categoria/catálogo) enquanto carregava, busca agora
     const termo = input.value.trim();
-    if (termo || categoriaAtual || modoExplorar) {
-      if (!termo && !categoriaAtual) modoExplorar = true;
+    if (termo || temFiltro() || modoExplorar) {
+      if (!termo && !temFiltro()) modoExplorar = true;
       mostrarBusca();
       executarBusca(termo, paginaDoLink);
       atualizarEndereco();
@@ -394,7 +416,7 @@ input.addEventListener("input", function (e) {
     fecharHistorico();
   }
 
-  if (termo === "" && !categoriaAtual) {
+  if (termo === "" && !temFiltro()) {
     mostrarHome();
     atualizarEndereco();
     abrirHistorico(); // campo limpo: mostra as buscas recentes (como no Google)
@@ -611,6 +633,7 @@ function executarBusca(termoOriginal, pagina = 1) {
 
   // com categoria escolhida, a busca acontece só dentro dela; "-palavra" tira produtos da base
   let base = categoriaAtual ? database.filter((item) => item.categoria === categoriaAtual) : database;
+  if (areaAtual) base = base.filter((item) => item.areas.includes(areaAtual));
   if (consulta.excluidos.length) {
     base = base.filter((item) => !consulta.excluidos.some((e) => item._buscaFull.includes(e)));
   }
@@ -628,7 +651,7 @@ function executarBusca(termoOriginal, pagina = 1) {
 
   if (grupos.length === 0) {
     // sem termos: navega pela categoria (ou pelo catálogo inteiro) em ordem alfabética
-    estado.modo = categoriaAtual ? "categoria" : modoExplorar && !consulta.excluidos.length ? "explorar" : "navegar";
+    estado.modo = temFiltro() ? "categoria" : modoExplorar && !consulta.excluidos.length ? "explorar" : "navegar";
     estado.itens = [...base].sort((a, b) => a._alfa - b._alfa);
     estado.nExatos = estado.itens.length;
   } else {
@@ -877,7 +900,7 @@ function linhaProduto(item, termos) {
         <tr>
           ${celulaCotacao(item)}
           <td class="col-sku"><button type="button" class="sku-copiar" data-sku="${escaparHtml(item.sku)}" title="Clique para copiar o código" aria-label="Copiar código ${escaparHtml(item.sku)}">${destacar(item.sku, termos)}</button></td>
-          <td class="col-desc"><span class="desc-texto">${destacar(item.descricao, termos)}</span>${apelidosHtml}${lista.resumoMobile}</td>
+          <td class="col-desc"><span class="desc-texto">${destacar(item.descricao, termos)}</span>${htmlAreasDoItem(item)}${apelidosHtml}${lista.resumoMobile}</td>
           ${lista.colunas}
           <td class="col-ref">${destacar(item.referenciaOriginal, termos, item.referenciaOriginal.length - item.referencia.length)}</td>
           ${celulaSite(item)}
@@ -899,12 +922,12 @@ function renderizarPagina() {
   const estado = estadoLista;
   if (!estado) return;
   const total = estado.itens.length;
-  const emCategoria = categoriaAtual ? ` em <strong>${escaparHtml(categoriaAtual)}</strong>` : "";
+  const emCategoria = temFiltro() ? ` em <strong>${escaparHtml(rotuloFiltro())}</strong>` : "";
 
   if (total === 0) {
     let msg;
-    if (categoriaAtual) {
-      msg = `Não encontramos nenhum produto em <strong>${escaparHtml(categoriaAtual)}</strong> com esse termo. <button type="button" class="btn-link" data-limpar-categoria>Buscar em todas as categorias</button>`;
+    if (temFiltro()) {
+      msg = `Não encontramos nenhum produto em <strong>${escaparHtml(rotuloFiltro())}</strong> com esse termo. <button type="button" class="btn-link" data-limpar-categoria>${areaAtual && !categoriaAtual ? "Buscar em todas as áreas" : areaAtual ? "Tirar os filtros" : "Buscar em todas as categorias"}</button>`;
     } else if (estado.consulta.exatos.length || estado.consulta.excluidos.length) {
       msg = "Não encontramos nenhum produto com esse termo. Confira o trecho entre aspas e as palavras com hífen (-), que tiram produtos da lista.";
     } else {
@@ -1083,7 +1106,9 @@ function abrirCatalogo() {
   input.value = "";
   atualizarBotaoLimpar();
   categoriaAtual = "";
+  areaAtual = "";
   modoExplorar = true;
+  renderizarAreas();
   renderizarCategorias();
   mostrarBusca();
   executarBusca("");
@@ -1183,7 +1208,7 @@ function carregarLeitorExcel() {
 }
 
 function nomeArquivoExportacao() {
-  const partes = [input.value.trim(), categoriaAtual, estadoLista && estadoLista.modo === "explorar" ? "catalogo-completo" : ""]
+  const partes = [input.value.trim(), categoriaAtual, areaAtual, estadoLista && estadoLista.modo === "explorar" ? "catalogo-completo" : ""]
     .filter(Boolean)
     .join(" ");
   const base = slugProduto(partes).slice(0, 50) || "busca";
@@ -1202,12 +1227,12 @@ async function exportarParaExcel() {
     await carregarLeitorExcel();
     const comLista = window.ListaDiaria && window.ListaDiaria.ativa();
     const temParecidos = estadoLista.itens.length > estadoLista.nExatos;
-    const cab = ["SKU", "Descrição", "Referência", "Categoria", "Também conhecido por"];
+    const cab = ["SKU", "Descrição", "Referência", "Categoria", "Áreas de atuação", "Também conhecido por"];
     if (comLista) cab.push("Saldo (Lista Diária)", "Preço campanha (Lista Diária)");
     cab.push("Página no site");
     if (temParecidos) cab.push("Observação");
     const linhas = estadoLista.itens.map((item, i) => {
-      const l = [item.sku, item.descricao, item.referencia, item.categoria === "-" ? "" : item.categoria, item.tags.join(", ")];
+      const l = [item.sku, item.descricao, item.referencia, item.categoria === "-" ? "" : item.categoria, item.areas.join(", "), item.tags.join(", ")];
       if (comLista) {
         const v = window.ListaDiaria.obter(item.sku);
         l.push(v && v.saldo !== null && v.saldo !== undefined ? v.saldo : "", v && v.preco ? v.preco : "");
@@ -1225,13 +1250,13 @@ async function exportarParaExcel() {
         if (cel) { cel.t = "s"; cel.v = String(cel.v); cel.z = "@"; }
       }
       if (comLista) {
-        const saldo = ws[window.XLSX.utils.encode_cell({ r, c: 5 })];
+        const saldo = ws[window.XLSX.utils.encode_cell({ r, c: cab.indexOf("Saldo (Lista Diária)") })];
         if (saldo && saldo.t === "n") saldo.z = "#,##0.##";
-        const preco = ws[window.XLSX.utils.encode_cell({ r, c: 6 })];
+        const preco = ws[window.XLSX.utils.encode_cell({ r, c: cab.indexOf("Preço campanha (Lista Diária)") })];
         if (preco && preco.t === "n") preco.z = '"R$" #,##0.0000';
       }
     }
-    ws["!cols"] = cab.map((c) => ({ wch: { SKU: 9, "Descrição": 62, "Referência": 20, Categoria: 24, "Também conhecido por": 40, "Página no site": 60 }[c] || 18 }));
+    ws["!cols"] = cab.map((c) => ({ wch: { SKU: 9, "Descrição": 62, "Referência": 20, Categoria: 24, "Áreas de atuação": 28, "Também conhecido por": 40, "Página no site": 60 }[c] || 18 }));
     ws["!autofilter"] = { ref: ws["!ref"] };
     const wb = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(wb, ws, "Resultados");
@@ -1284,6 +1309,8 @@ function sinalizarCopiado(el, textoOriginal) {
 
 tbody.addEventListener("click", async (e) => {
   if (e.target.closest("[data-limpar-categoria]")) {
+    areaAtual = "";
+    renderizarAreas();
     escolherCategoria("");
     return;
   }
@@ -1304,9 +1331,10 @@ tbody.addEventListener("click", async (e) => {
 function parametrosDaBusca() {
   const params = new URLSearchParams();
   if (categoriaAtual) params.set("cat", categoriaAtual);
+  if (areaAtual) params.set("area", areaAtual);
   const termo = input.value.trim();
   if (termo) params.set("q", termo);
-  if (modoExplorar && !termo && !categoriaAtual) params.set("ver", "todos");
+  if (modoExplorar && !termo && !temFiltro()) params.set("ver", "todos");
   if (estadoLista && paginaAtual > 1 && params.toString()) params.set("p", String(paginaAtual));
   return params.toString();
 }
@@ -1552,8 +1580,8 @@ function esconderCategorias() {
 }
 
 function renderizarCategorias() {
-  if (categoriasLista.length === 0) {
-    esconderCategorias(); // banco sem categorias: o botão do cabeçalho some
+  if (categoriasLista.length === 0 && areasLista.length === 0) {
+    esconderCategorias(); // banco sem categorias nem áreas: o botão do cabeçalho some
     return;
   }
   botaoCategorias.hidden = false;
@@ -1568,13 +1596,86 @@ function renderizarCategorias() {
     categoriasLista.map(([nome, n]) => item(nome, n, nome)).join("");
   filtrarCategorias();
 
-  botaoCategorias.classList.toggle("tem-selecao", Boolean(categoriaAtual));
-  botaoCategorias.setAttribute("aria-label", categoriaAtual ? `Abrir categorias (selecionada: ${categoriaAtual})` : "Abrir categorias");
-  filtroAtivo.hidden = !categoriaAtual;
-  filtroAtivoNome.textContent = categoriaAtual;
-  input.placeholder = categoriaAtual
-    ? `Refine em ${categoriaAtual}: tamanho, marca, código...`
+  atualizarFiltroAtivo();
+}
+
+// Faixa "Categoria: Luvas · Área: Hospitais  ×" sob o campo de busca
+function atualizarFiltroAtivo() {
+  botaoCategorias.classList.toggle("tem-selecao", temFiltro());
+  botaoCategorias.setAttribute("aria-label", temFiltro() ? `Abrir categorias (selecionado: ${rotuloFiltro()})` : "Abrir categorias");
+  filtroAtivo.hidden = !temFiltro();
+  const partes = [];
+  if (categoriaAtual) partes.push(`Categoria: <strong>${escaparHtml(categoriaAtual)}</strong>`);
+  if (areaAtual) partes.push(`Área: ${htmlIconeArea(areaAtual, 14)}<strong>${escaparHtml(areaAtual)}</strong>`);
+  filtroAtivoNome.innerHTML = partes.join('<span class="filtro-ativo__sep">·</span>');
+  input.placeholder = temFiltro()
+    ? `Refine em ${rotuloFiltro()}: tamanho, marca, código...`
     : PLACEHOLDER_PADRAO;
+}
+
+/* ---------- Áreas de atuação (gaveta + selos na busca) ---------- */
+
+const caixaAreas = document.getElementById("areasFiltro");
+const listaAreas = document.getElementById("areasLista");
+
+function htmlIconeArea(nome, tam = 16) {
+  return window.CBS_AREAS_ICONES ? window.CBS_AREAS_ICONES.svg(iconesArea.get(nome), tam) : "";
+}
+
+// cadastradas: [{nome, icone, ordem}] do banco. Só aparecem as que têm produtos.
+function montarAreas(cadastradas) {
+  iconesArea.clear();
+  const ordem = new Map();
+  (cadastradas || []).forEach((a, i) => {
+    iconesArea.set(a.nome, a.icone);
+    ordem.set(a.nome, i);
+  });
+  const contagem = new Map();
+  for (const item of database) for (const a of item.areas) contagem.set(a, (contagem.get(a) || 0) + 1);
+  areasLista = [...contagem.entries()]
+    .map(([nome, n]) => ({ nome, n }))
+    .sort((a, b) => (ordem.get(a.nome) ?? 999) - (ordem.get(b.nome) ?? 999) || a.nome.localeCompare(b.nome, "pt-BR"));
+  if (areaDoLink) {
+    const achada = areasLista.find((a) => normalizar(a.nome) === normalizar(areaDoLink));
+    if (achada) areaAtual = achada.nome;
+    areaDoLink = "";
+  }
+  if (areaAtual && !contagem.has(areaAtual)) areaAtual = "";
+  renderizarAreas();
+}
+
+function renderizarAreas() {
+  if (!caixaAreas) return;
+  caixaAreas.hidden = areasLista.length === 0;
+  document.getElementById("gavetaTitulo").textContent = areasLista.length ? "Filtros" : "Categorias";
+  listaAreas.innerHTML = areasLista
+    .map(
+      (a) =>
+        `<button type="button" class="area-chip" data-area="${escaparHtml(a.nome)}" aria-pressed="${a.nome === areaAtual}">` +
+        `${htmlIconeArea(a.nome)}<span>${escaparHtml(a.nome)}</span><span class="area-chip__n">${fmtNum.format(a.n)}</span></button>`,
+    )
+    .join("");
+  if (botaoCategorias) atualizarFiltroAtivo();
+}
+
+if (listaAreas) {
+  listaAreas.addEventListener("click", (e) => {
+    const botao = e.target.closest("button[data-area]");
+    if (!botao) return;
+    areaAtual = botao.dataset.area === areaAtual ? "" : botao.dataset.area; // clicar de novo desmarca
+    renderizarAreas();
+    escolherCategoria(categoriaAtual); // refaz a busca com o filtro novo
+    definirGavetaAberta(false);
+  });
+}
+
+// Selos "Indicado para" na linha do produto (ícone + nome da área)
+function htmlAreasDoItem(item) {
+  if (!item.areas.length) return "";
+  const selos = item.areas
+    .map((a) => `<span class="area-selo${a === areaAtual ? " area-selo--ativa" : ""}" title="Área de atuação: ${escaparHtml(a)}">${htmlIconeArea(a, 14)}${escaparHtml(a)}</span>`)
+    .join("");
+  return `<div class="areas-item"><span class="apelidos__rotulo">Indicado para</span>${selos}</div>`;
 }
 
 function escolherCategoria(nome) {
@@ -1583,7 +1684,7 @@ function escolherCategoria(nome) {
   renderizarCategorias();
   clearTimeout(timeoutBusca);
   const termo = input.value.trim();
-  if (!termo && !categoriaAtual) {
+  if (!termo && !temFiltro()) {
     mostrarHome();
     atualizarEndereco();
     return;
@@ -1678,6 +1779,8 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && caixaCategorias.classList.contains("is-aberta")) definirGavetaAberta(false);
 });
 document.getElementById("filtroAtivoLimpar").addEventListener("click", () => {
+  areaAtual = "";
+  renderizarAreas();
   escolherCategoria("");
   input.focus();
 });

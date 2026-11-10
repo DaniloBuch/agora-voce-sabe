@@ -11,6 +11,7 @@
   const configurado = Boolean(BASE && KEY);
 
   const PAGINA = 1000; // limite padrão de linhas por requisição no Supabase
+  let semColunaAreas = false;
   const COLUNAS = "sku,descricao_tecnica,referencia,tags,fixo";
   // Se a migração das categorias ainda não rodou, a coluna não existe: cai para COLUNAS.
   let semColunaCategoria = false;
@@ -168,15 +169,20 @@
 
   // Lê TODOS os produtos (o Supabase entrega no máx. 1000 por vez).
   async function listarProdutos() {
-    if (!semColunaCategoria) {
+    // tenta com as colunas mais novas; banco antigo (sem a migração) cai para as anteriores
+    const tentativas = [];
+    if (!semColunaCategoria && !semColunaAreas) tentativas.push(`${COLUNAS},categoria,areas,criado_em`);
+    if (!semColunaCategoria) tentativas.push(`${COLUNAS},categoria`);
+    tentativas.push(COLUNAS);
+    for (let i = 0; i < tentativas.length; i++) {
       try {
-        return await lerPaginas(`${COLUNAS},categoria`);
+        return await lerPaginas(tentativas[i]);
       } catch (erro) {
-        if (erro.status !== 400) throw erro;
-        semColunaCategoria = true; // banco antigo, sem a coluna "categoria"
+        if (erro.status !== 400 || i === tentativas.length - 1) throw erro;
+        if (tentativas[i].includes("areas")) semColunaAreas = true; // sem a migração 011
+        else semColunaCategoria = true; // sem a migração 005
       }
     }
-    return lerPaginas(COLUNAS);
   }
 
   async function lerPaginas(colunas) {
@@ -227,6 +233,40 @@
     const resp = await requisitar("rpc/renomear_categoria", {
       method: "POST",
       corpo: { p_origem: origem, p_novo: novo },
+    });
+    return resp.json();
+  }
+
+  /* ---------- Áreas de atuação (migração 011) ---------- */
+
+  // [{ nome, icone, ordem }]; [] se a tabela ainda não existe.
+  async function listarAreas() {
+    try {
+      const resp = await requisitar("areas?select=nome,icone,ordem&order=ordem.asc,nome.asc", { anonimo: true });
+      return await resp.json();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // origem vazia = área nova; nome de outra área existente = mescla.
+  async function salvarArea(origem, nome, icone) {
+    const resp = await requisitar("rpc/salvar_area", {
+      method: "POST",
+      corpo: { p_origem: origem || "", p_nome: nome, p_icone: icone || null },
+    });
+    return resp.json();
+  }
+
+  async function excluirArea(nome) {
+    const resp = await requisitar("rpc/excluir_area", { method: "POST", corpo: { p_nome: nome } });
+    return resp.json();
+  }
+
+  async function editarAreasEmMassa(skus, adicionar, remover) {
+    const resp = await requisitar("rpc/editar_areas_em_massa", {
+      method: "POST",
+      corpo: { p_skus: skus, p_adicionar: adicionar, p_remover: remover },
     });
     return resp.json();
   }
@@ -393,7 +433,12 @@
 
   // Restaura várias versões de uma vez (um único pedido = uma transação).
   async function restaurarVarios(listaDados) {
-    const produtos = listaDados.map(({ atualizado_em, ...produto }) => produto);
+    let produtos = listaDados.map(({ atualizado_em, ...produto }) => produto);
+    // um envio em lote exige as mesmas colunas em todos: versões antigas do histórico
+    // não têm "areas"/"criado_em"; nesse caso essas colunas ficam de fora (o banco mantém as atuais)
+    for (const col of ["areas", "criado_em"]) {
+      if (produtos.some((p) => !(col in p))) produtos = produtos.map(({ [col]: _, ...p }) => p);
+    }
     await requisitar("produtos?on_conflict=sku", {
       method: "POST",
       corpo: produtos,
@@ -421,6 +466,11 @@
     criarCategoria,
     renomearCategoria,
     categoriasDisponiveis: () => !semColunaCategoria,
+    areasDisponiveis: () => !semColunaAreas && !semColunaCategoria,
+    listarAreas,
+    salvarArea,
+    excluirArea,
+    editarAreasEmMassa,
     listarLinksSite,
     resumoLinksSite,
     linksSitePorSkus,

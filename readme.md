@@ -25,6 +25,8 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 - **Sinônimos:** um dicionário editável no painel (aba **Sinônimos**) faz abreviações e jargões valerem como a palavra por extenso, nos dois sentidos: quem busca `caixa` também acha "CX", quem busca `cirurgica` acha "AVENTAL CIR". Abreviações de até 4 letras só contam como palavra inteira (`est` não pega "estilo").
 - **Ignora acentos e maiúsculas:** `esfigmomanometro` encontra "Esfigmomanômetro".
 - **Categorias:** o botão **Categorias** no cabeçalho abre uma gaveta lateral (por cima da página, fecha com Esc, clique fora, « ou ao escolher) com Luvas, Cateteres, Fraldas…, da mais cheia para a menos cheia. O campo **Buscar categoria...** no topo da gaveta filtra a lista enquanto você digita (Enter escolhe a primeira; limpa ao fechar). A categoria filtra a base por tipo de produto e aparece como um selo abaixo do campo de busca (com × para remover); depois é só digitar para refinar dentro dela. O botão já aparece ao abrir a página; se a gaveta for aberta antes de a base terminar de carregar, mostra um esqueleto animado no lugar da lista. O link compartilhado guarda categoria e busca (`?cat=Luvas&q=nitril`).
+- **Áreas de atuação:** cada produto pode ser indicado para uma ou mais áreas (Hospitais, Clínicas, Laboratórios, Veterinária...), mostradas como selos com ícone ("Indicado para") sob a descrição, para o vendedor montar o kit de cada cliente. Na gaveta, a seção **Área de atuação** filtra a busca (e combina com a categoria); só aparecem as áreas que já têm produtos. O link guarda a área (`?area=Hospitais`).
+- **Tema escuro:** o botão de lua no cabeçalho troca para o tema escuro (o claro é o padrão); a escolha fica guardada no navegador e vale para a busca, a cotação e o painel. A impressão sai sempre clara.
 - **Quatro campos ao mesmo tempo:** SKU, descrição técnica, referência (Ref.) e tags.
 - **Ordenado por relevância:** código exato, referência exata e tags vêm antes de coincidências soltas na descrição.
 - **Termos destacados** nos resultados; tags que casaram com a busca aparecem primeiro.
@@ -52,6 +54,8 @@ Painel para manter a base sem mexer em arquivos JSON. O acesso é pelo botão **
 - **CRUD de produtos e tags**, com chips, sugestões e filtro de produtos sem tags;
 - **Sinônimos:** grupos de palavras equivalentes para a busca do site (`cx, caixa`), com a contagem de produtos de cada palavra;
 - **Categorias:** uma por produto (`-` quando não há), com aba própria para criar, renomear, mesclar e excluir, filtro na lista e campo no cadastro e na edição em massa;
+- **Áreas de atuação:** várias por produto, com ícone; aba própria para criar, trocar nome e ícone, mesclar e excluir, filtro na lista e escolha no cadastro e na edição em massa (cada área alterna entre adicionar, remover e não alterar);
+- **Adicionados recentemente:** filtro por data de inclusão (hoje, 7, 30 ou 90 dias), do mais novo ao mais antigo, com selo "novo" e a data;
 - **Gerenciamento de tags:** lista com contagem, renomear, mesclar e excluir em todos os produtos, com alerta de possíveis duplicadas;
 - **Edição de tags em massa**, com seleção múltipla e prévia do resultado;
 - **Importação de CSV** do sistema (inclui novos SKUs, atualiza descrição e referência e remove descontinuados), com resumo e confirmação antes de gravar. Colunas opcionais **Categoria** e **Tags**: as tags do CSV são só **acrescentadas** às existentes, nunca removidas; CSV enxuto só com `Codigo` + `Categoria`/`Tags` (botão **Exportar p/ categorizar**) e opção de não alterar referências; referências que o Excel estragou (notação científica, pontos de milhar, zeros perdidos) são detectadas e não sobrescrevem o banco;
@@ -70,6 +74,8 @@ Supabase (PostgreSQL + PostgREST)
 | Arquivo / pasta | Função |
 | --- | --- |
 | `index.html`, `script.js`, `style.css` | Site público de busca |
+| `tema.css`, `tema.js` | Tema escuro (redefine a paleta do Design System; a escolha fica no navegador) |
+| `areas-icones.js` | Ícones das áreas de atuação (Lucide, ISC), usados pelo site e pelo painel |
 | `cotacao/`, `cotacao-store.js` | Lista de cotação: página com a tabela para o papel timbrado e a lista guardada no navegador |
 | `manifest.webmanifest`, `sw.js`, `icons/` | App instalável (PWA): nome, ícones e cores do app; service worker que guarda o site para abrir sem internet |
 | `lista-diaria.js`, `vendor/xlsx.full.min.js` | Lista Diária: leitura local do Excel (SheetJS 0.18.5, Apache-2.0, carregado só quando alguém envia uma planilha) e armazenamento de 24 h no navegador |
@@ -77,7 +83,7 @@ Supabase (PostgreSQL + PostgREST)
 | `api.js` | Camada de acesso ao Supabase (login, listar, CRUD, importar, histórico, tags) |
 | `config.js` | Endereço do projeto e chave pública (`anon`) do Supabase |
 | `supabase/schema.sql` | Tabelas, políticas, triggers e funções do banco |
-| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags, `005` categorias, `006` categorias iniciais, `007` correção de referências estragadas pelo Excel, `008` sinônimos da busca, `009` links do site oficial, `010` sincronização com o site pelo Supabase) |
+| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags, `005` categorias, `006` categorias iniciais, `007` correção de referências estragadas pelo Excel, `008` sinônimos da busca, `009` links do site oficial, `010` sincronização com o site pelo Supabase, `011` áreas de atuação e data de inclusão) |
 | `supabase/produtos_seed.csv` | Carga inicial dos produtos |
 | `db.json` | Cópia estática usada como contingência |
 | `design-system/` | CBS Design System vendorizado ([detalhes](design-system/README.md)) |
@@ -126,8 +132,9 @@ O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/
 - [x] App instalável (PWA) com modo offline, "Abrir o app" e ajuda para quem usa Firefox
 - [x] Exportar o resultado da busca para Excel e atalhos de teclado ("/" e Esc)
 - [x] Lista de cotação: marcar produtos, ajustar quantidade e valor e copiar a tabela para o papel timbrado
+- [x] Tema escuro, áreas de atuação (filtro e painel) e filtro de adicionados recentemente
 - [ ] Alternativas ("De/Para"): ligar produtos equivalentes no painel e, quando a Lista Diária mostrar saldo zero, sugerir os substitutos com saldo
-- [ ] Selo "Novo" nos produtos que entraram na base nos últimos 30 dias
+- [ ] "Outros clientes também compram": sugerir itens que costumam ir juntos (ex.: agulha de coleta a vácuo + swab com álcool + garrote)
 - [ ] Backup automático agendado da base
 
 ---

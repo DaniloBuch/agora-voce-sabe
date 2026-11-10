@@ -123,11 +123,27 @@ O navegador não pode ler a lista de produtos do site (o site não libera CORS),
 5 mil registros pequenos (menos de 2 MB no banco). A busca só pede os links dos 50 produtos da
 página que está na tela, então o tráfego por pesquisa é de poucos KB.
 
+## 10. Áreas de atuação e "adicionados recentemente" (migração 011)
+
+No **SQL Editor**, rode `supabase/migracoes/011_areas_atuacao.sql`. Ela:
+
+- cria a lista de **áreas de atuação** (tabela `areas`, com nome e ícone) já com 8 sugestões
+  (Hospitais, Clínicas, Laboratórios, Veterinária, Odontologia, Home Care, Emergência e APH,
+  Farmácias). **Nenhum produto é marcado**: isso é feito no painel;
+- acrescenta a coluna `areas` nos produtos (um produto pode ter várias);
+- acrescenta a coluna `criado_em` (data de inclusão no catálogo). Os produtos que já existem ficam
+  **sem data**; os novos (cadastro ou importação de CSV) ganham a data sozinhos. É ela que alimenta o
+  filtro "Adicionados recentemente" do painel;
+- faz o Histórico registrar também as mudanças de área.
+
+Antes de rodar, o site e o painel funcionam normalmente, só sem as áreas (o painel mostra um aviso).
+
 ## Como usar o painel de administração
 
 | Aba | Para quê |
 | --- | --- |
-| **Produtos** | Buscar, criar, editar (inclusive tags) e excluir. O botão **Exportar CSV** baixa todos os produtos, com Categoria e Tags (use como backup). O filtro **"Só sem tags"** mostra o que falta etiquetar. |
+| **Produtos** | Buscar, criar, editar (inclusive tags) e excluir. O botão **Exportar CSV** baixa todos os produtos, com Categoria e Tags (use como backup). O filtro **"Só sem tags"** mostra o que falta etiquetar; o filtro **Adicionados** (hoje, 7, 30 ou 90 dias) mostra os produtos que entraram no catálogo, do mais novo ao mais antigo, com o selo "novo". |
+| **Áreas** | Áreas de atuação (Hospitais, Laboratórios...): criar, trocar nome e ícone, mesclar e excluir. Cada produto pode ter várias, marcadas no cadastro ou na edição em massa. |
 | **Tags** | Lista todas as tags com a contagem de produtos. **Renomear** troca a tag em todos os produtos; se o novo nome já existir, as duas viram uma só (mescla). **Excluir** tira a tag de todos. Marca possíveis duplicadas (acento, plural, maiúscula). Tudo vai para o Histórico. |
 | **Categorias** | Lista as categorias com a contagem de produtos. Permite **criar**, **renomear** (se o nome já existir, mescla) e **excluir** (os produtos voltam para `-`). "Ver produtos" abre a lista já filtrada. Categoria de um produto: no cadastro dele ou na **Edição em massa**. |
 | **Sinônimos** | Dicionário de abreviações e jargões da busca do site. Cada grupo (ex.: `cx, caixa`) faz a busca tratar as palavras como iguais, nos dois sentidos. Mostra quantos produtos têm cada palavra. Palavras de até 4 letras só valem como palavra inteira. Uma palavra só pode estar em um grupo. |
