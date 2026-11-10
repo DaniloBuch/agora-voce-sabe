@@ -81,10 +81,17 @@
 
   /* ---------- preços da lista anterior (variação) ---------- */
 
-  const diaDe = (ms) => {
-    const d = new Date(ms);
-    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-  };
+  // Data da lista: a do nome do arquivo ("LISTA DIÁRIA 10-11-2026.xlsx"); sem data no nome, o dia
+  // em que foi carregada. É ela que decide qual lista é "anterior" (não a hora do upload).
+  const inicioDoDia = (ms) => new Date(ms).setHours(0, 0, 0, 0);
+  function dataDoNome(nome) {
+    const m = String(nome || "").match(/(?:^|\D)(\d{1,2})[-_. ](\d{1,2})[-_. ](\d{4}|\d{2})(?!\d)/);
+    if (!m) return null;
+    const dia = +m[1], mes = +m[2], ano = m[3].length === 2 ? 2000 + +m[3] : +m[3];
+    const d = new Date(ano, mes - 1, dia);
+    return d.getDate() === dia && d.getMonth() === mes - 1 ? d.getTime() : null;
+  }
+  const dataDe = (o) => (Number.isFinite(o.dataLista) ? o.dataLista : inicioDoDia(o.atualizadoEm));
 
   function lerAnterior() {
     try {
@@ -100,15 +107,16 @@
     }
   }
 
-  // Guarda os preços de uma lista de dia anterior (a mais recente vence)
-  function guardarAnterior(lista) {
-    if (!lista || diaDe(lista.atualizadoEm) === diaDe(Date.now())) return;
-    const atual = lerAnterior();
-    if (atual && atual.atualizadoEm >= lista.atualizadoEm) return;
+  // Guarda os preços de uma lista mais antiga que "limite" (data da lista nova); a de data mais recente vence
+  function guardarAnterior(lista, limite = Infinity) {
+    if (!lista || dataDe(lista) >= limite) return;
     if (Date.now() > lista.atualizadoEm + ANTERIOR_MS) return;
+    const atual = lerAnterior();
+    if (atual && atual.precos.length && (dataDe(atual) > dataDe(lista) || (dataDe(atual) === dataDe(lista) && atual.atualizadoEm >= lista.atualizadoEm))) return;
     try {
       localStorage.setItem(CHAVE_ANTERIOR, JSON.stringify({
         atualizadoEm: lista.atualizadoEm,
+        dataLista: dataDe(lista),
         precos: lista.itens.filter((i) => i[2] > 0).map((i) => [i[0], i[2]]),
       }));
     } catch (_) {
@@ -405,9 +413,11 @@
     try {
       const r = await lerLista(arquivo);
       const agora = Date.now();
-      // a lista que está saindo vira base de comparação (se for de outro dia)
-      guardarAnterior(lerArmazenado());
-      const anterior = lerAnterior();
+      // a lista que está saindo vira base de comparação (se for de uma data anterior à da nova)
+      const dataLista = dataDoNome(arquivo.name) ?? inicioDoDia(agora);
+      guardarAnterior(lerArmazenado(), dataLista);
+      let anterior = lerAnterior();
+      if (anterior && dataDe(anterior) >= dataLista) anterior = null; // só compara com lista de data anterior
       const itens = [...r.mapa].map(([sku, v]) => [sku, v.saldo, v.preco]);
       const variacoes = calcularVariacoes(itens, anterior);
       const obj = {
@@ -415,16 +425,17 @@
         nome: arquivo.name,
         atualizadoEm: agora,
         expiraEm: agora + VALIDADE_MS,
+        dataLista,
         itens,
         variacoes,
-        comparadaCom: anterior ? anterior.atualizadoEm : null,
+        comparadaCom: anterior ? dataDe(anterior) : null,
       };
       salvarArmazenado(obj);
       sincronizar();
       const fora = r.foraDoCatalogo ? ` ${r.foraDoCatalogo.toLocaleString("pt-BR")} código(s) da lista não estão no catálogo e foram ignorados.` : "";
       const mudou = anterior
-        ? ` <strong>${variacoes.length.toLocaleString("pt-BR")}</strong> preço(s) mudaram desde a lista de ${textoData(anterior.atualizadoEm)}.`
-        : " Ainda não há lista de um dia anterior neste navegador para comparar os preços: a variação aparece a partir da próxima lista.";
+        ? ` <strong>${variacoes.length.toLocaleString("pt-BR")}</strong> preço(s) mudaram desde a lista de ${fmtData.format(new Date(dataDe(anterior)))}.`
+        : " Sem lista de data anterior neste navegador para comparar os preços: a variação aparece quando você carregar uma lista mais nova que esta.";
       mostrarMsg("ok", `Lista Diária carregada: saldo e preço de <strong>${r.mapa.size.toLocaleString("pt-BR")}</strong> produtos.${mudou}${fora}`);
     } catch (err) {
       console.error(err);
