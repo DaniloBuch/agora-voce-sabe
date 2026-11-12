@@ -479,3 +479,28 @@ fieldset.campo legend { padding: 0; margin-bottom: 6px; font-size: var(--fs-xs);
 .massa-unir[hidden] { display: none; }
 .massa-unir > div { flex: 1 1 280px; }
 .massa-unir s { color: var(--cbs-erro); }
+
+/* "Copiar tags de outro produto" (cadastro e edição) */
+.copiar-de { display: flex; flex-direction: column; gap: 6px; padding: var(--sp-3); background: var(--surface-sunken); border: 1px dashed var(--border-default); border-radius: var(--radius-card); }
+.copiar-de label { font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--cbs-neutro-700); }
+#fCopiarBusca { width: 100%; height: 36px; padding: 0 12px; background: var(--cbs-neutro-000); border: 1px solid var(--border-default); border-radius: var(--radius-control); outline: none; }
+#fCopiarBusca:focus { border-color: var(--cbs-azul); box-shadow: var(--ring-focus); }
+.copiar-de .dica { margin: 0; }
+.copiar-de .dica:empty { display: none; }
+.copiar-lista { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.copiar-item { display: flex; align-items: center; gap: var(--sp-3); padding: 8px 10px; font-size: var(--fs-2xs); background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); }
+.copiar-item__texto { flex: 1; min-width: 0; line-height: 1.4; }
+.copiar-item__tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.copiar-item__tags .tag-pill { margin: 0; }
+.copiar-item .btn { flex: 0 0 auto; }
+
+/* Microanimações do painel (somem com "reduzir movimento") */
+@keyframes linha-salva { from { background: var(--cbs-amarelo-100); } to { background: transparent; } }
+tr.linha-salva td { animation: linha-salva 1.6s var(--ease-out); }
+@keyframes chips-piscou { 0% { box-shadow: 0 0 0 0 rgba(0,156,180,.45); } 100% { box-shadow: 0 0 0 8px rgba(0,156,180,0); } }
+.chips--piscou { animation: chips-piscou 700ms var(--ease-out); }
+.dialogo::backdrop { animation: fundo-entra 200ms var(--ease-standard); }
+@keyframes fundo-entra { from { opacity: 0; } to { opacity: 1; } }
+@keyframes surgir-item { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.copiar-item, .nov-sugestao, .massa-unir:not([hidden]) { animation: surgir-item 220ms var(--ease-out) both; }
+.btn--primario:hover:not(:disabled) { transform: translateY(-1px); }

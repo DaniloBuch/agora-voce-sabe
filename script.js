@@ -1089,6 +1089,10 @@ function renderizarPagina() {
     html += linhaProduto(itens[i], i >= estado.nExatos ? destaqueParecidos : estado.destaque);
   }
   tbody.innerHTML = html;
+  // linhas entram em cascata (reinicia a animação a cada busca/página)
+  tbody.classList.remove("entrando");
+  void tbody.offsetWidth;
+  tbody.classList.add("entrando");
   btnExportar.hidden = false;
   ajustarTags();
   carregarLinksDaPagina(estado.itens.slice(inicio, fim));
@@ -1262,8 +1266,18 @@ function celulaCotacao(item) {
 const contadorCotacao = document.getElementById("contadorCotacao");
 const avisoCotacao = document.getElementById("avisoCotacao");
 let timeoutAvisoCotacao = null;
+let ultimoContadorCotacao = null;
+function animar(el, classe = "pulou") {
+  if (!el) return;
+  el.classList.remove(classe);
+  void el.offsetWidth; // reinicia a animação
+  el.classList.add(classe);
+  el.addEventListener("animationend", () => el.classList.remove(classe), { once: true });
+}
 function atualizarContadorCotacao() {
   const n = cotacao ? cotacao.quantidade() : 0;
+  if (ultimoContadorCotacao !== null && n > ultimoContadorCotacao) requestAnimationFrame(() => animar(contadorCotacao));
+  ultimoContadorCotacao = n;
   contadorCotacao.textContent = String(n);
   contadorCotacao.hidden = n === 0;
   document.getElementById("linkCotacao").setAttribute("aria-label", n ? `Ver a cotação (${n} ${n === 1 ? "item" : "itens"})` : "Ver a cotação (vazia)");
@@ -1305,7 +1319,10 @@ if (cotacao) {
       mostrarAvisoCotacao(`<strong>${escaparHtml(sku)}</strong> adicionado à cotação${copiou ? " e código copiado" : ""} (${n} ${n === 1 ? "item" : "itens"}).`);
     }
     const novo = tbody.querySelector(`button.cot-btn[data-cot="${CSS.escape(sku)}"]`);
-    if (novo) novo.focus();
+    if (novo) {
+      novo.focus();
+      if (cotacao.tem(sku)) animar(novo);
+    }
   });
 }
 

@@ -1729,3 +1729,46 @@ td.col-preco .preco-var {
   line-height: 1.2;
   white-space: nowrap;
 }
+
+
+/* ==========================================================================
+   Microanimações (discretas; somem com "reduzir movimento" do sistema, pela
+   regra prefers-reduced-motion acima). O movimento desliza, não pula (DS 5.8).
+   ========================================================================== */
+@keyframes linha-entra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes surgir { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes subir-aviso { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes pulo { 0% { transform: scale(1); } 40% { transform: scale(1.22); } 70% { transform: scale(.94); } 100% { transform: scale(1); } }
+
+/* resultados entram em cascata (só as primeiras linhas; o resto entra junto) */
+#tableBody.entrando > tr { animation: linha-entra 260ms var(--ease-out) both; }
+#tableBody.entrando > tr:nth-child(2) { animation-delay: 20ms; }
+#tableBody.entrando > tr:nth-child(3) { animation-delay: 40ms; }
+#tableBody.entrando > tr:nth-child(4) { animation-delay: 60ms; }
+#tableBody.entrando > tr:nth-child(5) { animation-delay: 80ms; }
+#tableBody.entrando > tr:nth-child(6) { animation-delay: 100ms; }
+#tableBody.entrando > tr:nth-child(7) { animation-delay: 120ms; }
+#tableBody.entrando > tr:nth-child(8) { animation-delay: 140ms; }
+#tableBody.entrando > tr:nth-child(n+9) { animation-delay: 160ms; }
+
+/* + da cotação e contador do cabeçalho dão um "pulinho" ao adicionar */
+.cot-btn.pulou { animation: pulo 360ms var(--ease-out); }
+.contador-cotacao.pulou { animation: pulo 420ms var(--ease-out); }
+
+/* menus que abrem: sino, buscas recentes, ajuda do instalar */
+.sino-painel:not([hidden]),
+.historico:not([hidden]),
+.instalar-ajuda:not([hidden]) { animation: surgir 180ms var(--ease-out); transform-origin: top right; }
+.historico:not([hidden]) { transform-origin: top left; }
+
+/* aviso "adicionado à cotação" sobe ao aparecer */
+.aviso-cotacao:not([hidden]) { animation: subir-aviso 220ms var(--ease-out); }
+
+/* cartões e botões principais: leve elevação ao passar o mouse */
+.painel-info__base .btn-explorar:hover,
+.btn-lista:hover { transform: translateY(-1px); }
+
+/* troca de tema suave (a classe fica só durante a troca) */
+html.tema-trocando, html.tema-trocando *, html.tema-trocando *::before, html.tema-trocando *::after {
+  transition: background-color 280ms var(--ease-standard), color 280ms var(--ease-standard), border-color 280ms var(--ease-standard), fill 280ms, stroke 280ms !important;
+}

@@ -26,7 +26,14 @@
     }
   }
 
+  let timerTroca = null;
   function aplicar(novo, salvar) {
+    // troca feita pelo botão: cores mudam suavemente (não na abertura da página)
+    if (salvar && document.readyState !== "loading" && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      raiz.classList.add("tema-trocando");
+      clearTimeout(timerTroca);
+      timerTroca = setTimeout(() => raiz.classList.remove("tema-trocando"), 320);
+    }
     tema = novo === "escuro" ? "escuro" : "claro";
     if (tema === "escuro") raiz.setAttribute("data-tema", "escuro");
     else raiz.removeAttribute("data-tema");

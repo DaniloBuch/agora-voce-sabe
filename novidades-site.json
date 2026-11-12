@@ -1,5 +1,11 @@
 [
   {
+    "chave": "2026-11-12-animacoes",
+    "data": "2026-11-12",
+    "titulo": "Mais fluido",
+    "texto": "O site ganhou pequenas animações: os resultados entram suavemente, o + da cotação dá um pulinho ao adicionar, os menus abrem deslizando e a troca de tema fica suave.\nSe preferir sem movimento, é só ligar \"reduzir movimento\" (ou \"mostrar animações\" desligado) nas configurações de acessibilidade do Windows: o site respeita."
+  },
+  {
     "chave": "2026-11-10-ordenar-busca",
     "data": "2026-11-10",
     "titulo": "Ordene a busca do seu jeito",
