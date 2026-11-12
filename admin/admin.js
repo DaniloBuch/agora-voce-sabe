@@ -82,7 +82,8 @@
       categoria,
       areas: Array.isArray(p.areas) ? p.areas.map(String) : [],
       criado_em: p.criado_em || null,
-      _busca: normalizar(`${p.sku} ${p.descricao_tecnica} ${p.referencia} ${tags} ${categoria === "-" ? "" : categoria}`),
+      _busca: normalizar(`${p.sku} ${p.descricao_tecnica} ${p.referencia} ${String(p.referencia ?? "").trim().replace(/^0+(?=\d)/, "")} ${tags} ${categoria === "-" ? "" : categoria}`).replace(/\s+/g, " "),
+      _desc: normalizar(p.descricao_tecnica).replace(/\s+/g, " "),
     };
   }
 
@@ -93,6 +94,9 @@
     estado.produtos = dados.map(prepararProduto);
     await carregarCategorias();
     await carregarAreas();
+    if (!sinonimos.length) {
+      try { sinonimos = await api.listarSinonimos(); } catch (_) { /* sem a tabela: filtro sem sinônimos */ }
+    }
     if (!estado._novidadesConferidas) {
       estado._novidadesConferidas = true;
       carregarNovidades(); // mostra no rótulo da aba quantas sugestões estão esperando
@@ -210,19 +214,85 @@
   }
   const ehRecente = (p, dias = 30) => Boolean(p.criado_em) && Date.parse(p.criado_em) >= inicioDoPeriodo(dias);
 
+  /* ---- Filtro da lista: mesma lógica da busca do site ----
+     "trecho exato" entre aspas, -palavra (ou -"trecho") para tirar, sinônimos do dicionário,
+     palavras de ligação ignoradas (de, para...), referência com ou sem zeros à esquerda e
+     resultado em ordem de relevância (código exato primeiro). */
+  const CONECTIVOS = new Set(["de", "da", "do", "das", "dos", "para", "pra", "p/", "e", "a", "o", "as", "os", "em", "no", "na", "nos", "nas", "ao"]);
+  let indiceSinCache = { origem: null, mapa: new Map() };
+  function indiceSinonimos() {
+    if (indiceSinCache.origem === sinonimos) return indiceSinCache.mapa;
+    const mapa = new Map();
+    for (const g of sinonimos || []) {
+      const ps = [...new Set((g.palavras || []).map((x) => normalizar(x).replace(/\s+/g, " ").trim()).filter(Boolean))];
+      for (const pal of ps) mapa.set(pal, new Set([...(mapa.get(pal) || []), ...ps.filter((x) => x !== pal)]));
+    }
+    indiceSinCache = { origem: sinonimos, mapa };
+    return mapa;
+  }
+  const escRegex = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // palavra curta (até 4 letras) vinda de sinônimo só vale como palavra inteira ("est" não pega "estilo")
+  function casaAlt(texto, alt) {
+    return alt.inteira ? alt.re.test(texto) : texto.includes(alt.t);
+  }
+  function montarConsulta(bruto) {
+    let resto = ` ${normalizar(bruto).replace(/[“”„″«»]/g, '"').replace(/\s+/g, " ")} `;
+    const exatos = [];
+    const excluidos = [];
+    resto = resto.replace(/(?:(\s)-)?"([^"]*)("|$)/g, (_, menos, frase) => {
+      const f = frase.replace(/\s+/g, " ").trim();
+      if (f) (menos !== undefined ? excluidos : exatos).push(f);
+      return " ";
+    });
+    let termos = [];
+    for (const t of resto.split(" ")) {
+      if (!t) continue;
+      if (t.startsWith("-")) { if (t.length > 1) excluidos.push(t.slice(1)); continue; }
+      termos.push(t);
+    }
+    const fortes = termos.filter((t) => !CONECTIVOS.has(t));
+    if (fortes.length && fortes.length < termos.length) termos = fortes;
+    const sin = indiceSinonimos();
+    const grupos = termos.map((t) => [{ t, inteira: false }, ...[...(sin.get(t) || [])].map((x) => ({ t: x, inteira: x.length <= 4, re: new RegExp(`(^|[^a-z0-9])${escRegex(x)}([^a-z0-9]|$)`) }))]);
+    return { termos, grupos, exatos, excluidos, vazia: !termos.length && !exatos.length && !excluidos.length };
+  }
+  function casaConsulta(p, c) {
+    return (
+      c.grupos.every((alts) => alts.some((a) => casaAlt(p._busca, a))) &&
+      c.exatos.every((f) => p._busca.includes(f)) &&
+      !c.excluidos.some((f) => p._busca.includes(f))
+    );
+  }
+  // relevância: código exato, código/referência começando, descrição começando, depois o resto
+  function pesoRelevancia(p, c) {
+    const q = c.termos.join(" ");
+    const sku = normalizar(p.sku);
+    const ref = normalizar(p.referencia);
+    if (sku === q) return 0;
+    if (ref === q || ref.replace(/^0+(?=\d)/, "") === q) return 1;
+    if (c.termos.some((t) => sku.startsWith(t) || ref.startsWith(t))) return 2;
+    if (c.termos.length && p._desc.startsWith(c.termos[0])) return 3;
+    if (c.exatos.some((f) => p._desc.includes(f))) return 3;
+    return 4;
+  }
+
   function filtrados() {
-    const termos = normalizar(estado.filtro).split(/\s+/).filter(Boolean);
+    const consulta = montarConsulta(estado.filtro);
     const desde = estado.recentes ? inicioDoPeriodo(estado.recentes) : 0;
     const lista = estado.produtos.filter(
       (p) =>
-        termos.every((t) => p._busca.includes(t)) &&
+        (consulta.vazia || casaConsulta(p, consulta)) &&
         (!estado.semTags || p.tags.trim() === "") &&
         (!estado.categoria || chaveCat(p.categoria) === chaveCat(estado.categoria)) &&
         (!estado.area || (estado.area === "-" ? p.areas.length === 0 : p.areas.some((a) => chaveCat(a) === chaveCat(estado.area)))) &&
         (!desde || (p.criado_em && Date.parse(p.criado_em) >= desde)),
     );
-    // filtrando por data: do mais novo para o mais antigo
+    // filtrando por data: do mais novo para o mais antigo; com texto: por relevância
     if (desde) lista.sort((a, b) => Date.parse(b.criado_em) - Date.parse(a.criado_em));
+    else if (!consulta.vazia && consulta.termos.length) {
+      const peso = new Map(lista.map((p) => [p, pesoRelevancia(p, consulta)]));
+      lista.sort((a, b) => peso.get(a) - peso.get(b)); // sort estável: empates ficam em ordem alfabética
+    }
     return lista;
   }
 
@@ -720,26 +790,37 @@
     }
     const areas = new Map();
     for (const p of sel) for (const a of p.areas || []) areas.set(chaveCat(a), a);
-    return { adicionar, remover, areas: [...areas.values()], faltam };
+    // categoria: a mais usada na seleção (sem contar "sem categoria")
+    const cats = new Map();
+    for (const p of sel) if (p.categoria && p.categoria !== "-") cats.set(p.categoria, (cats.get(p.categoria) || 0) + 1);
+    const categoria = [...cats.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"))[0]?.[0] || null;
+    const mudaCat = Boolean(categoria) && sel.some((p) => chaveCat(p.categoria) !== chaveCat(categoria));
+    return { adicionar, remover, areas: [...areas.values()], faltam, categoria, mudaCat, outrasCats: [...cats.keys()].filter((c) => c !== categoria) };
   }
 
   function desenharUnir(sel) {
     const caixa = $("#massaUnir");
     const plano = sel.length > 1 ? planoUnir(sel) : null;
-    const util = plano && (plano.faltam > 0 || plano.remover.length > 0 || plano.areas.some((a) => sel.some((p) => !(p.areas || []).some((x) => chaveCat(x) === chaveCat(a)))));
+    const util = plano && (plano.mudaCat || plano.faltam > 0 || plano.remover.length > 0 || plano.areas.some((a) => sel.some((p) => !(p.areas || []).some((x) => chaveCat(x) === chaveCat(a)))));
     caixa.hidden = !util;
     if (!util) return;
+    const partes = [];
+    if (plano.adicionar.length) partes.push(`<strong>${fmt.format(plano.adicionar.length)}</strong> tag(s)`);
+    if (plano.areas.length) partes.push(`<strong>${fmt.format(plano.areas.length)}</strong> área(s)`);
     caixa.innerHTML =
-      `<div><strong>Produtos parecidos?</strong> Juntos eles têm <strong>${fmt.format(plano.adicionar.length)}</strong> tag(s)` +
-      (plano.areas.length ? ` e <strong>${fmt.format(plano.areas.length)}</strong> área(s)` : "") +
-      `, mas nem todos têm todas. Una para que todos fiquem com o mesmo conjunto, sem repetir.` +
+      `<div><strong>Produtos parecidos?</strong> ` +
+      (partes.length ? `Juntos eles têm ${partes.join(" e ")}. ` : "") +
+      `Una para que todos fiquem com o mesmo conjunto, sem repetir` +
+      (plano.mudaCat ? `, e na mesma categoria: <strong>${esc(plano.categoria)}</strong>${plano.outrasCats.length ? ` (a mais usada; hoje também há ${plano.outrasCats.map(esc).join(", ")})` : ""}` : "") +
+      `.` +
       (plano.remover.length ? ` <span class="dica">Grafias que só mudam no acento viram uma só: ${plano.remover.map((t) => `<s>${esc(t)}</s>`).join(", ")}.</span>` : "") +
-      `</div><button type="button" class="btn btn--primario btn--sm" id="btnUnirTags">${window.CBSIcon("plus", 14)}Unir tags da seleção</button>`;
+      `</div><button type="button" class="btn btn--primario btn--sm" id="btnUnirTags">${window.CBSIcon("plus", 14)}${plano.mudaCat ? "Unir tags e categoria" : "Unir tags da seleção"}</button>`;
   }
 
   $("#massaUnir").addEventListener("click", (e) => {
     if (!e.target.closest("#btnUnirTags")) return;
     const plano = planoUnir(produtosSelecionados());
+    if (plano.mudaCat && api.categoriasDisponiveis()) $("#fMassaCategoria").value = plano.categoria;
     editorAdd.definir([]);
     editorAdd.adicionar(plano.adicionar.join(","));
     if (plano.remover.length) editorRem.adicionar(plano.remover.join(","));
