@@ -514,3 +514,9 @@ tr.linha-salva td { animation: linha-salva 1.6s var(--ease-out); }
 .c-acoes { width: 1%; } /* só o necessário para os dois botões */
 .c-ref { min-width: 96px; white-space: nowrap; overflow-wrap: normal; }
 .c-cat { min-width: 130px; }
+
+/* Unidade de medida (UM): ao lado da referência no cadastro e sob ela na lista */
+.campos-linha { display: grid; grid-template-columns: 1fr 120px; gap: var(--sp-4); }
+.campos-linha .campo[hidden] { display: none; }
+.campos-linha:has(.campo[hidden]) { grid-template-columns: 1fr; }
+.c-ref__um { display: block; margin-top: 2px; font-size: var(--fs-2xs); color: var(--text-muted); white-space: nowrap; }

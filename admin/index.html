@@ -330,13 +330,14 @@
         <p class="ajuda">
           <strong>Dica:</strong> para só categorizar ou etiquetar, use <strong>Exportar p/ categorizar</strong>
           (aba Produtos): o arquivo vem sem a referência, então o Excel não tem como estragá-la, e
-          pode voltar com apenas <strong>Codigo</strong> e <strong>Categoria</strong>/<strong>Tags</strong>.
+          pode voltar com apenas <strong>Codigo</strong> e <strong>Categoria</strong>/<strong>Tags</strong>/<strong>UM</strong>.
         </p>
         <p class="ajuda">
           Colunas opcionais: <strong>Categoria</strong> (define a categoria do produto;
           célula vazia ou "-" mantém a atual) e <strong>Tags</strong> (separadas por vírgula).
           As tags do CSV são <strong>somente acrescentadas</strong> às que o produto já tem:
-          a importação <strong>nunca remove tags</strong>. Sem essas colunas, categorias e tags
+          a importação <strong>nunca remove tags</strong>. <strong>UM</strong> (unidade de medida:
+          UN, CX, PC...; célula vazia mantém a atual). Sem essas colunas, categorias, tags e UM
           ficam como estão.
         </p>
         <label class="upload" id="areaUpload">
@@ -419,9 +420,16 @@
             <label for="fDesc">Descrição técnica</label>
             <input id="fDesc" autocomplete="off" />
           </div>
-          <div class="campo">
-            <label for="fRef">Referência (Cod prd forn)</label>
-            <input id="fRef" autocomplete="off" />
+          <div class="campos-linha">
+            <div class="campo">
+              <label for="fRef">Referência (Cod prd forn)</label>
+              <input id="fRef" autocomplete="off" />
+            </div>
+            <div class="campo campo--um" id="campoUnidade">
+              <label for="fUnidade">Unidade (UM)</label>
+              <input id="fUnidade" maxlength="6" autocomplete="off" list="listaUnidades" placeholder="UN, CX, PC..." />
+              <datalist id="listaUnidades"></datalist>
+            </div>
           </div>
           <div class="copiar-de" id="copiarDe">
             <label for="fCopiarBusca">Copiar tags de outro produto</label>

@@ -151,6 +151,18 @@ No **SQL Editor**, rode `supabase/migracoes/012_novidades.sql`. Ela cria:
 Antes de rodar, o site funciona normalmente: o sino fica sem mensagens e a aba "Removidos" avisa
 que não está disponível.
 
+## 12. Unidade de medida (migração 013)
+
+No **SQL Editor**, rode `supabase/migracoes/013_unidade_medida.sql`. Ela:
+
+- cria a coluna `unidade` em `produtos` (UN, CX, PC...; sempre em maiúsculas; vazio = não informada);
+- faz o Histórico registrar mudança de unidade;
+- atualiza a importação de CSV para aceitar a coluna `UM` (ou `Unidade`): célula vazia mantém a atual.
+
+Para preencher: importe um CSV com `Codigo;UM` (só essas duas colunas já bastam) ou edite no cadastro
+do produto. Antes de rodar, o site funciona normalmente: a coluna UM aparece com "—" e o campo some
+do cadastro.
+
 ## Como usar o painel de administração
 
 | Aba | Para quê |
@@ -167,9 +179,9 @@ que não está disponível.
 ### Importação de CSV
 
 **Atalho para só categorizar/etiquetar (sem risco para as referências):** na aba **Produtos**, use
-**Exportar p/ categorizar** (colunas `Codigo;Descricao;Categoria;Tags`, sem `Cod prd forn`). Edite no
+**Exportar p/ categorizar** (colunas `Codigo;Descricao;Categoria;Tags;UM`, sem `Cod prd forn`). Edite no
 Excel e importe de volta. Um CSV sem `Descricao` e/ou `Cod prd forn` mas com `Categoria` e/ou `Tags`
-(pode ser só `Codigo;Categoria;Tags`) atualiza somente categoria e tags: não mexe em descrição nem
+(pode ser só `Codigo;Categoria;Tags`, ou `Codigo;UM`) atualiza somente categoria, tags e UM: não mexe em descrição nem
 referência, não exclui nada e ignora códigos que não existem no banco. Na importação completa, a caixa
 **"Não alterar as referências dos produtos que já existem"** ignora a coluna `Cod prd forn`.
 

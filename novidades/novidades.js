@@ -47,6 +47,7 @@ import * as baseOffline from "../js/comum/base-offline.js";
         descricao: p.descricao_tecnica || p.descricao || "",
         referencia: formatarRef(p.referencia),
         categoria: String(p.categoria ?? "").trim() || "-",
+        unidade: String(p.unidade ?? "").trim().toUpperCase(),
         criado_em: p.criado_em ? Date.parse(p.criado_em) : null,
       }]),
     );
@@ -322,7 +323,7 @@ import * as baseOffline from "../js/comum/base-offline.js";
       const copia = copiarTexto(sku);
       const p = estado.catalogo.get(sku);
       const v = estado.lista ? estado.lista.itens.find((x) => x.sku === sku) : null;
-      cot.adicionar({ sku, descricao: p.descricao, referencia: p.referencia, preco: v ? v.atual : null });
+      cot.adicionar({ sku, descricao: p.descricao, referencia: p.referencia, um: p.unidade, preco: v ? v.atual : null });
       const copiou = await copia;
       avisar(`<strong>${esc(sku)}</strong> adicionado à cotação${copiou ? " e código copiado" : ""} (${cot.quantidade()} ${cot.quantidade() === 1 ? "item" : "itens"}).`);
     }

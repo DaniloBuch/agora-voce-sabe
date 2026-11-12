@@ -1,13 +1,13 @@
 {
   "info": "7 resultado(s) encontrado(s).",
   "linhas": [
-    "001200 ESFIGMOMANOMETRO ANEROIDE ADULTO Indicado para Laboratórios Também conhecido por APARELHO DE PRESSÃO ESF-AD",
-    "100001 LUVA PROCEDIMENTO LATEX TAM M CX C/100 LOTE 01 Também conhecido por LUVA DE LÁTEX LV1",
-    "000437 SONDA URETRAL N 12 Indicado para Hospitais Também conhecido por SONDA DE ALÍVIO SU12",
-    "001201 APARELHO DE PRESSAO DIGITAL DE PULSO APD",
-    "004000 CLORETO DE SODIO 0,9% 500ML Também conhecido por SORO FISIOLÓGICO CS500",
-    "004001 COMPRESSA DE GAZE CX C/500 GZ500",
-    "003000 FIXADOR DE CATETER TRANSPARENTE Também conhecido por TRANSOFIX TFX"
+    "001200 ESFIGMOMANOMETRO ANEROIDE ADULTO Indicado para Laboratórios Também conhecido por APARELHO DE PRESSÃO UN ESF-AD",
+    "100001 LUVA PROCEDIMENTO LATEX TAM M CX C/100 LOTE 01 Também conhecido por LUVA DE LÁTEX CX LV1",
+    "000437 SONDA URETRAL N 12 Indicado para Hospitais Também conhecido por SONDA DE ALÍVIO UN SU12",
+    "001201 APARELHO DE PRESSAO DIGITAL DE PULSO — APD",
+    "004000 CLORETO DE SODIO 0,9% 500ML Também conhecido por SORO FISIOLÓGICO FR CS500",
+    "004001 COMPRESSA DE GAZE CX C/500 PC GZ500",
+    "003000 FIXADOR DE CATETER TRANSPARENTE Também conhecido por TRANSOFIX — TFX"
   ],
   "total": 7,
   "paginacao": null,

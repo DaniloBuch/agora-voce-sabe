@@ -19,7 +19,7 @@ function conferir(nome, valor) {
 }
 
 /** Compara a tela com a imagem de referência (pixel a pixel, com pequena tolerância de antialiasing). */
-async function conferirTela(pagina, nome, { limite = 0.002, paginaInteira = true } = {}) {
+async function conferirTela(pagina, nome, { limite = 0.0001, paginaInteira = true } = {}) {
   const pasta = path.join(PASTA, "telas");
   fs.mkdirSync(pasta, { recursive: true });
   const arquivo = path.join(pasta, `${nome}.png`);

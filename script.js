@@ -1,14 +1,16 @@
-import { normalizar, normalizarEspacos, formatarRef, escaparHtml, escaparRegex, ordemTexto } from "./js/comum/texto.js";
+import { normalizar, normalizarEspacos, formatarRef, escaparHtml, ordemTexto } from "./js/comum/texto.js";
 import { fmtNum, fmtPct, formatarDifReais } from "./js/comum/numeros.js";
 import { copiarTexto } from "./js/comum/copiar.js";
 import * as baseOffline from "./js/comum/base-offline.js";
+import { criarMotor, prepararItem, casaAlternativa, destacar } from "./js/busca/motor.js";
+
+const motor = criarMotor();
 
 let database = [];
 let carregado = false;
 let erroCarga = false;
 let timeoutBusca = null;
 let timeoutFade = null;
-let vocabulario = null; // palavras da base, para sugerir correções de digitação
 let categoriaAtual = ""; // categoria escolhida na gaveta ("" = todas)
 let areaAtual = ""; // área de atuação escolhida na gaveta ("" = todas)
 let areasLista = []; // [{nome, icone, n}] só as que têm produtos, na ordem do painel
@@ -28,15 +30,12 @@ let areaDoLink = parametrosIniciais.get("area") || "";
 let paginaDoLink = Math.max(1, parseInt(parametrosIniciais.get("p"), 10) || 1);
 // Ordenação escolhida clicando no título da coluna (null = relevância, a ordem da busca). Link: ?ord=preco.asc
 let ordemColuna = (() => {
-  const m = String(parametrosIniciais.get("ord") || "").match(/^(sku|descricao|saldo|preco|ref)\.(asc|desc)$/);
+  const m = String(parametrosIniciais.get("ord") || "").match(/^(sku|descricao|um|saldo|preco|ref)\.(asc|desc)$/);
   return m ? { col: m[1], dir: m[2] === "asc" ? 1 : -1 } : null;
 })();
 let modoExplorar = parametrosIniciais.get("ver") === "todos"; // catálogo completo, em ordem alfabética
 let paginaAtual = 1;
 let estadoLista = null; // resultado completo da última busca (trocar de página não refaz a busca)
-let indiceSinonimos = new Map(); // palavra -> palavras equivalentes (dicionário do painel)
-let frasesSinonimo = []; // sinônimos com mais de uma palavra ("soro fisiologico"), da maior para a menor
-const cacheParecidas = new Map();
 
 const input = document.getElementById("searchInput");
 const heroCards = document.getElementById("heroCards");
@@ -61,88 +60,8 @@ const PLACEHOLDER_PADRAO = input.placeholder;
 // URL do seu JSON
 const DATA_URL = "./db.json";
 const ITENS_POR_PAGINA = 50;
-const MAX_PARECIDOS = 50; // resultados "parecidos" (possível erro de digitação) mostrados depois dos exatos
 const MAX_LINHAS_APELIDOS_PC = 1; // "Também conhecido por": 1 linha no computador
 const MAX_LINHAS_APELIDOS_CELULAR = 2; // e até 2 no celular; o resto fica no "+N" (clique mostra todos)
-
-/* ---------- Utilitários ---------- */
-
-const ehLetraOuNumero = (c) => c !== undefined && /[a-z0-9]/.test(c);
-
-/* ---------- Alternativas de um termo ----------
-   Cada termo da busca vira um grupo de "alternativas"; o produto precisa casar com
-   pelo menos uma alternativa de cada grupo. Modos:
-     trecho  -> aparece em qualquer lugar (o que a pessoa digitou: "sond" acha "sonda")
-     palavra -> palavra inteira (sinônimos curtos: "cx" não acha "cxa")
-     inicio  -> começo de palavra (sinônimos longos: "caixa" acha "caixas")          */
-
-function alternativa(texto, modo = "trecho") {
-  const alt = { texto, modo };
-  if (modo !== "trecho") {
-    alt.re = new RegExp(`(^|[^a-z0-9])${escaparRegex(texto)}${modo === "palavra" ? "(?![a-z0-9])" : ""}`);
-  }
-  return alt;
-}
-
-function casaAlternativa(textoNormalizado, alt) {
-  return alt.modo === "trecho" ? textoNormalizado.includes(alt.texto) : alt.re.test(textoNormalizado);
-}
-
-// Escapa o texto e destaca os termos buscados (ignorando acentos/maiúsculas e espaços repetidos).
-// "deslocamento" = quantos caracteres do começo NÃO são exibidos (os zeros à esquerda
-// da Ref.): a busca é feita no texto completo, mas só a parte visível é mostrada.
-function destacar(texto, termos, deslocamento = 0) {
-  const original = String(texto ?? "");
-  if (!original) return "";
-
-  // Mapeia cada caractere normalizado de volta ao índice no texto original
-  let norm = "";
-  const mapa = [];
-  for (let i = 0; i < original.length; i++) {
-    let n = normalizar(original[i]);
-    if (/\s/.test(n)) {
-      if (norm.endsWith(" ")) continue; // espaços repetidos contam como um só
-      n = " ";
-    }
-    for (let k = 0; k < n.length; k++) mapa.push(i);
-    norm += n;
-  }
-
-  const faixas = [];
-  for (const termo of termos) {
-    const alt = typeof termo === "string" ? { texto: termo, modo: "trecho" } : termo;
-    const t = alt.texto;
-    if (!t) continue;
-    let pos = norm.indexOf(t);
-    while (pos !== -1) {
-      const inicioOk = alt.modo === "trecho" || !ehLetraOuNumero(norm[pos - 1]);
-      const fimOk = alt.modo !== "palavra" || !ehLetraOuNumero(norm[pos + t.length]);
-      if (inicioOk && fimOk) faixas.push([mapa[pos], mapa[pos + t.length - 1] + 1]);
-      pos = norm.indexOf(t, pos + 1);
-    }
-  }
-  if (faixas.length === 0) return escaparHtml(original.slice(deslocamento));
-
-  // Une faixas sobrepostas
-  faixas.sort((a, b) => a[0] - b[0]);
-  const unidas = [faixas[0]];
-  for (const [ini, fim] of faixas.slice(1)) {
-    const ultima = unidas[unidas.length - 1];
-    if (ini <= ultima[1]) ultima[1] = Math.max(ultima[1], fim);
-    else unidas.push([ini, fim]);
-  }
-
-  let html = "";
-  let cursor = deslocamento;
-  for (const [iniBruto, fim] of unidas) {
-    const ini = Math.max(iniBruto, deslocamento); // corta o que ficou nos zeros ocultos
-    if (fim <= ini) continue;
-    html += escaparHtml(original.slice(cursor, ini));
-    html += `<mark>${escaparHtml(original.slice(ini, fim))}</mark>`;
-    cursor = fim;
-  }
-  return html + escaparHtml(original.slice(cursor));
-}
 
 /* ---------- Carga dos dados ---------- */
 
@@ -207,26 +126,12 @@ const temFiltro = () => Boolean(categoriaAtual || areaAtual);
 // "Luvas · Hospitais" (para mensagens e nome do arquivo)
 const rotuloFiltro = () => [categoriaAtual, areaAtual].filter(Boolean).join(" · ");
 
-function montarSinonimos(grupos) {
-  indiceSinonimos = new Map();
-  for (const g of grupos || []) {
-    const palavras = [...new Set((g.palavras || []).map(normalizarEspacos).filter(Boolean))];
-    if (palavras.length < 2) continue;
-    for (const p of palavras) {
-      const equivalentes = indiceSinonimos.get(p) || new Set();
-      palavras.forEach((outra) => outra !== p && equivalentes.add(outra));
-      indiceSinonimos.set(p, equivalentes);
-    }
-  }
-  frasesSinonimo = [...indiceSinonimos.keys()].filter((p) => p.includes(" ")).sort((a, b) => b.length - a.length);
-}
-
 async function carregarDados() {
   const infoNumero = document.getElementById("infoBaseNumero");
   const infoTexto = document.getElementById("infoBaseTexto");
   try {
     const [{ dados: dadosBrutos, contingencia, salvoEm }, grupos, areasCadastradas] = await Promise.all([lerDb(), lerSinonimos(), lerAreas()]);
-    montarSinonimos(grupos);
+    motor.definirSinonimos(grupos);
 
     database = dadosBrutos
       .filter((item) => String(item.sku ?? "").trim() !== "")
@@ -250,25 +155,18 @@ async function carregarDados() {
           referencia,
           referenciaOriginal,
           categoria: String(item.categoria ?? "").trim() || "-", // "-" = sem categoria
+          unidade: String(item.unidade ?? "").trim().toUpperCase(), // UM; "" = não informada
           areas: Array.isArray(item.areas) ? item.areas.map((a) => String(a).trim()).filter(Boolean) : [],
           criadoEm: item.criado_em ? Date.parse(item.criado_em) : null,
           tags: tagsArray,
-          _sku: normalizar(sku),
-          _desc: normalizarEspacos(descricao),
-          _ref: normalizar(referencia),
-          _refOriginal: normalizar(referenciaOriginal), // a busca aceita as duas formas
-          _tags: tagsArray.map(normalizarEspacos),
-          _buscaFull: normalizarEspacos(
-            [sku, descricao, referencia, referenciaOriginal, tagsArray.join(" ")].join(" "),
-          ),
+          ...prepararItem({ sku, descricao, referencia: referenciaOriginal, tags: tagsArray }),
         };
       });
     // posição de cada produto em ordem alfabética (navegar pelo catálogo / por categoria)
     [...database]
       .sort((a, b) => ordemTexto.compare(a.descricao, b.descricao) || ordemTexto.compare(a.sku, b.sku))
       .forEach((item, i) => (item._alfa = i));
-    vocabulario = null;
-    cacheParecidas.clear();
+    motor.definirBase(database);
     carregado = true;
     console.log("Sistema CBS Online. Itens:", database.length);
     montarAreas(areasCadastradas);
@@ -380,176 +278,7 @@ botaoLimparBusca.addEventListener("click", () => {
   input.dispatchEvent(new Event("input", { bubbles: true })); // volta ao início (ou à categoria) e mostra as buscas recentes
 });
 
-/* ---------- Interpretação da busca ---------- */
-
-// Separa o texto digitado em: termos soltos, trechos exatos ("entre aspas") e excluídos (-palavra ou -"trecho").
-// Palavras de ligação ("cabo PARA bisturi", "aparelho DE pressão"): a busca ignora quando há
-// outras palavras, porque o cliente às vezes fala com e às vezes sem. Entre aspas continuam valendo.
-// "com"/"sem" e "c/" não entram: mudam o produto (luva com/sem pó, C/100).
-const CONECTIVOS = new Set(["de", "da", "do", "das", "dos", "para", "pra", "p/", "e", "a", "o", "as", "os", "em", "no", "na", "nos", "nas", "ao"]);
-
 let animarProximaTabela = true;
-
-function interpretarConsulta(texto) {
-  let resto = ` ${normalizar(texto).replace(/[“”„″«»]/g, '"').replace(/\s+/g, " ")} `;
-  const exatos = [];
-  const excluidos = [];
-
-  // trechos entre aspas; a aspa final pode faltar enquanto a pessoa ainda digita
-  resto = resto.replace(/(?:(\s)-)?"([^"]*)("|$)/g, (_, menos, frase) => {
-    const f = frase.replace(/\s+/g, " ").trim();
-    if (f) (menos !== undefined ? excluidos : exatos).push(f);
-    return " ";
-  });
-
-  // sinônimos de mais de uma palavra ("soro fisiologico") ficam juntos, como um termo só
-  const termos = [];
-  for (const frase of frasesSinonimo) {
-    const marca = ` ${frase} `;
-    while (resto.includes(marca)) {
-      termos.push(frase);
-      resto = resto.replace(marca, " ");
-    }
-  }
-
-  for (const t of resto.split(" ")) {
-    if (!t) continue;
-    if (t.startsWith("-")) {
-      if (t.length > 1) excluidos.push(t.slice(1)); // "-" sozinho é ignorado
-      continue;
-    }
-    termos.push(t);
-  }
-  // tira as palavras de ligação, desde que sobre alguma outra para buscar
-  const fortes = termos.filter((t) => !CONECTIVOS.has(t));
-  const ignorados = fortes.length && fortes.length < termos.length ? termos.filter((t) => CONECTIVOS.has(t)) : [];
-  return { termos: ignorados.length ? fortes : termos, exatos, excluidos, ignorados };
-}
-
-// Termo que pode ter erro de digitação: só letras, 4+ caracteres
-const podeTerErro = (t) => t.length >= 4 && /^[a-z]+$/.test(t);
-
-function montarGrupos(consulta) {
-  const grupos = consulta.termos.map((t) => {
-    const alternativas = [alternativa(t)];
-    for (const s of indiceSinonimos.get(t) || []) {
-      alternativas.push(alternativa(s, s.length <= 4 ? "palavra" : "inicio"));
-    }
-    return { termo: t, alternativas, tolerante: podeTerErro(t) };
-  });
-  for (const f of consulta.exatos) grupos.push({ termo: f, alternativas: [alternativa(f)], tolerante: false });
-  return grupos;
-}
-
-const casaGrupo = (item, g) => g.alternativas.some((alt) => casaAlternativa(item._buscaFull, alt));
-
-/* ---------- Relevância ---------- */
-
-// Quanto maior a pontuação, mais relevante o resultado
-function pontuarTermo(item, t) {
-  let pontos = 0;
-  if (item._sku === t) pontos += 100;
-  else if (item._sku.startsWith(t)) pontos += 60;
-  else if (item._sku.includes(t)) pontos += 5;
-
-  if (item._ref === t || item._refOriginal === t) pontos += 80;
-  else if (item._ref.includes(t) || item._refOriginal.includes(t)) pontos += 15;
-
-  if (item._tags.some((tag) => tag === t)) pontos += 50;
-  else if (item._tags.some((tag) => tag.includes(t))) pontos += 30;
-
-  if (new RegExp(`(^|[^a-z0-9])${escaparRegex(t)}`).test(item._desc)) {
-    pontos += 20; // começo de palavra na descrição
-  } else if (item._desc.includes(t)) {
-    pontos += 10;
-  }
-  return pontos;
-}
-
-// Cada grupo vale a melhor das suas alternativas (o termo digitado ou um sinônimo)
-function pontuar(item, grupos) {
-  let pontos = 0;
-  for (const g of grupos) {
-    let melhor = 0;
-    for (const alt of g.alternativas) {
-      if (casaAlternativa(item._buscaFull, alt)) melhor = Math.max(melhor, pontuarTermo(item, alt.texto));
-    }
-    pontos += melhor;
-  }
-  return pontos;
-}
-
-// Mais relevante primeiro; empate mantém a ordem original da base
-function ordenar(lista, grupos) {
-  return lista
-    .map((item, indice) => ({ item, indice, pontos: pontuar(item, grupos) }))
-    .sort((a, b) => b.pontos - a.pontos || a.indice - b.indice)
-    .map((r) => r.item);
-}
-
-/* ---------- Tolerância a erro de digitação ---------- */
-
-// Distância de edição (inclui troca de letras vizinhas: "sodna" -> "sonda" = 1).
-function distancia(a, b, max) {
-  if (Math.abs(a.length - b.length) > max) return max + 1;
-  const prev2 = new Array(b.length + 1);
-  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
-  for (let i = 1; i <= a.length; i++) {
-    const atual = [i];
-    let minimo = i;
-    for (let j = 1; j <= b.length; j++) {
-      const custo = a[i - 1] === b[j - 1] ? 0 : 1;
-      let v = Math.min(prev[j] + 1, atual[j - 1] + 1, prev[j - 1] + custo);
-      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
-        v = Math.min(v, prev2[j - 2] + 1);
-      }
-      atual[j] = v;
-      if (v < minimo) minimo = v;
-    }
-    if (minimo > max) return max + 1;
-    for (let j = 0; j <= b.length; j++) prev2[j] = prev[j];
-    prev = atual;
-  }
-  return prev[b.length];
-}
-
-function obterVocabulario() {
-  if (vocabulario) return vocabulario;
-  const contagem = new Map();
-  for (const item of database) {
-    const texto = `${item._desc} ${item._tags.join(" ")}`;
-    for (const palavra of texto.split(/[^a-z0-9]+/)) {
-      if (palavra.length >= 3 && /[a-z]/.test(palavra) && !/\d/.test(palavra)) {
-        contagem.set(palavra, (contagem.get(palavra) || 0) + 1);
-      }
-    }
-  }
-  vocabulario = [...contagem.entries()];
-  return vocabulario;
-}
-
-// Palavras da base parecidas com o termo digitado (as mais próximas e mais usadas primeiro).
-// estrito = usado com resultados exatos na tela: só 1 erro até 8 letras, 2 a partir de 9.
-function sugerirPalavras(termo, { estrito = false, limite = 3 } = {}) {
-  if (!podeTerErro(termo) || (estrito && termo.length < 5)) return [];
-  const chave = `${estrito ? 1 : 0}:${limite}:${termo}`;
-  if (cacheParecidas.has(chave)) return cacheParecidas.get(chave);
-  const max = estrito ? (termo.length <= 8 ? 1 : 2) : termo.length <= 5 ? 1 : 2;
-  const achadas = [];
-  for (const [palavra, usos] of obterVocabulario()) {
-    if (estrito && palavra.includes(termo)) continue; // essa já aparece nos resultados exatos
-    let d = distancia(termo, palavra, max);
-    // quem digita só o começo da palavra ("esfigmmo"): compara com o início dela
-    if (d > max && termo.length >= 5 && palavra.length > termo.length) {
-      d = distancia(termo, palavra.slice(0, termo.length), max);
-    }
-    if (d <= max) achadas.push({ palavra, d, usos });
-  }
-  achadas.sort((a, b) => a.d - b.d || b.usos - a.usos);
-  const resultado = achadas.slice(0, limite).map((x) => x.palavra);
-  cacheParecidas.set(chave, resultado);
-  return resultado;
-}
 
 /* ---------- Execução da busca ---------- */
 
@@ -572,74 +301,27 @@ function executarBusca(termoOriginal, pagina = 1) {
     return;
   }
 
-  const consulta = interpretarConsulta(termoOriginal);
-  const grupos = montarGrupos(consulta);
-
-  // com categoria escolhida, a busca acontece só dentro dela; "-palavra" tira produtos da base
+  // com categoria/área escolhida, a busca acontece só dentro dela
   let base = categoriaAtual ? database.filter((item) => item.categoria === categoriaAtual) : database;
   if (areaAtual) base = base.filter((item) => item.areas.includes(areaAtual));
-  if (consulta.excluidos.length) {
-    base = base.filter((item) => !consulta.excluidos.some((e) => item._buscaFull.includes(e)));
-  }
 
+  const r = motor.buscar(base, termoOriginal);
   const estado = {
     original: termoOriginal.trim(),
-    consulta,
-    itens: [],
-    nExatos: 0,
-    destaque: grupos.flatMap((g) => g.alternativas),
-    destaqueParecidos: [],
-    correcao: null,
+    consulta: r.consulta,
+    itens: r.itens,
+    nExatos: r.nExatos,
+    destaque: r.destaque,
+    destaqueParecidos: r.destaqueParecidos,
+    correcao: r.correcao,
     modo: "busca",
   };
 
-  if (grupos.length === 0) {
-    // sem termos: navega pela categoria (ou pelo catálogo inteiro) em ordem alfabética
-    estado.modo = temFiltro() ? "categoria" : modoExplorar && !consulta.excluidos.length ? "explorar" : "navegar";
-    estado.itens = [...base].sort((a, b) => a._alfa - b._alfa);
+  if (r.vazia) {
+    // sem termos: navega pela categoria (ou pelo catálogo inteiro) em ordem alfabética ("-palavra" tira produtos)
+    estado.modo = temFiltro() ? "categoria" : modoExplorar && !r.consulta.excluidos.length ? "explorar" : "navegar";
+    estado.itens = [...r.itens].sort((a, b) => a._alfa - b._alfa);
     estado.nExatos = estado.itens.length;
-  } else {
-    const exatos = ordenar(base.filter((item) => grupos.every((g) => casaGrupo(item, g))), grupos);
-    estado.itens = exatos;
-    estado.nExatos = exatos.length;
-
-    if (exatos.length === 0) {
-      // Nada encontrado: tenta corrigir erros de digitação nos termos que não existem na base
-      const corrigidos = grupos.map((g) => {
-        if (base.some((item) => casaGrupo(item, g))) return g;
-        if (!g.tolerante) return null;
-        const sugestoes = sugerirPalavras(g.termo);
-        return sugestoes.length ? { ...g, alternativas: sugestoes.map((s) => alternativa(s)), sugestoes } : null;
-      });
-      if (corrigidos.every(Boolean) && corrigidos.some((g) => g.sugestoes)) {
-        const filtrados = base.filter((item) => corrigidos.every((g) => casaGrupo(item, g)));
-        if (filtrados.length > 0) {
-          const principais = corrigidos.map((g) => ({ ...g, alternativas: [g.alternativas[0]] }));
-          estado.itens = ordenar(filtrados, principais);
-          estado.nExatos = estado.itens.length;
-          estado.destaque = corrigidos.flatMap((g) => g.alternativas);
-          estado.correcao = { original: estado.original, sugeridos: principais.map((g) => g.alternativas[0].texto) };
-        }
-      }
-    } else if (exatos.length < ITENS_POR_PAGINA) {
-      // Poucos resultados exatos: acrescenta, depois deles, os produtos com palavras PARECIDAS
-      // (o termo pode ter sido digitado errado). Ficam numa seção separada e com menos relevância.
-      const extras = grupos.map((g) => (g.tolerante ? sugerirPalavras(g.termo, { estrito: true, limite: 5 }) : []));
-      if (extras.some((e) => e.length)) {
-        const ampliados = grupos.map((g, i) =>
-          extras[i].length ? { ...g, alternativas: g.alternativas.concat(extras[i].map((p) => alternativa(p))) } : g,
-        );
-        const jaListados = new Set(exatos);
-        const parecidos = ordenar(
-          base.filter((item) => !jaListados.has(item) && ampliados.every((g) => casaGrupo(item, g))),
-          ampliados,
-        ).slice(0, MAX_PARECIDOS);
-        if (parecidos.length) {
-          estado.itens = exatos.concat(parecidos);
-          estado.destaqueParecidos = extras.flat().map((p) => alternativa(p));
-        }
-      }
-    }
   }
 
   estadoLista = estado;
@@ -648,9 +330,9 @@ function executarBusca(termoOriginal, pagina = 1) {
   renderizarPagina();
 }
 
-// 4 colunas normais; 6 quando há Lista Diária (Saldo e Preço campanha)
+// 6 colunas normais; 8 quando há Lista Diária (Saldo e Preço campanha)
 function numColunas() {
-  return window.ListaDiaria && window.ListaDiaria.ativa() ? 7 : 5; // cotação, SKU, descrição (+ saldo e preço), Ref., Site
+  return window.ListaDiaria && window.ListaDiaria.ativa() ? 8 : 6; // cotação, SKU, descrição, UM (+ saldo e preço), Ref., Site
 }
 
 /* ---------- Link para o site oficial (cbsmed.com.br) ---------- */
@@ -861,7 +543,8 @@ function linhaProduto(item, termos) {
         <tr>
           ${celulaCotacao(item)}
           <td class="col-sku"><button type="button" class="sku-copiar" data-sku="${escaparHtml(item.sku)}" title="Clique para copiar o código" aria-label="Copiar código ${escaparHtml(item.sku)}">${destacar(item.sku, termos)}</button></td>
-          <td class="col-desc"><span class="desc-texto">${destacar(item.descricao, termos)}</span>${htmlAreasDoItem(item)}${apelidosHtml}${lista.resumoMobile}</td>
+          <td class="col-desc"><span class="desc-texto">${destacar(item.descricao, termos)}</span>${htmlAreasDoItem(item)}${apelidosHtml}${item.unidade ? `<span class="desc-um">UM: ${escaparHtml(item.unidade)}</span>` : ""}${lista.resumoMobile}</td>
+          <td class="col-um">${item.unidade ? escaparHtml(item.unidade) : '<span class="lista-nd" title="Unidade não informada">—</span>'}</td>
           ${lista.colunas}
           <td class="col-ref">${destacar(item.referenciaOriginal, termos, item.referenciaOriginal.length - item.referencia.length)}</td>
           ${celulaSite(item)}
@@ -881,13 +564,14 @@ function textoExcluidos(consulta) {
 
 /* ---------- Ordenar pela coluna (clique no título) ---------- */
 
-const ROTULO_ORDEM = { sku: "SKU", descricao: "Descrição", saldo: "Saldo", preco: "Preço camp.", ref: "Ref." };
+const ROTULO_ORDEM = { sku: "SKU", descricao: "Descrição", um: "UM", saldo: "Saldo", preco: "Preço camp.", ref: "Ref." };
 const colunaDaLista = (col) => col === "saldo" || col === "preco";
 
 function valorParaOrdem(item, col) {
   if (col === "sku") return item.sku;
   if (col === "descricao") return item.descricao;
   if (col === "ref") return item.referenciaOriginal;
+  if (col === "um") return item.unidade || null;
   const v = window.ListaDiaria && window.ListaDiaria.ativa() ? window.ListaDiaria.obter(item.sku) : null;
   if (!v) return null;
   const n = col === "saldo" ? v.saldo : v.preco;
@@ -1250,7 +934,7 @@ if (cotacao) {
       // o preço campanha da Lista Diária (se carregada) entra como sugestão de valor unitário
       const v = window.ListaDiaria && window.ListaDiaria.ativa() ? window.ListaDiaria.obter(sku) : null;
       const copia = copiarTexto(sku); // adicionar também copia o código (para colar no Protheus, e-mail...)
-      cotacao.adicionar({ sku, descricao: item.descricao, referencia: item.referencia, preco: v ? v.preco : null });
+      cotacao.adicionar({ sku, descricao: item.descricao, referencia: item.referencia, um: item.unidade, preco: v ? v.preco : null });
       registrarBuscaAtual();
       const n = cotacao.quantidade();
       const copiou = await copia;
@@ -1299,12 +983,12 @@ async function exportarParaExcel() {
     await carregarLeitorExcel();
     const comLista = window.ListaDiaria && window.ListaDiaria.ativa();
     const temParecidos = estadoLista.itens.length > estadoLista.nExatos;
-    const cab = ["SKU", "Descrição", "Referência", "Categoria", "Áreas de atuação", "Também conhecido por"];
+    const cab = ["SKU", "Descrição", "UM", "Referência", "Categoria", "Áreas de atuação", "Também conhecido por"];
     if (comLista) cab.push("Saldo (Lista Diária)", "Preço campanha (Lista Diária)");
     cab.push("Página no site");
     if (temParecidos) cab.push("Observação");
     const linhas = itensNaOrdem(estadoLista).map((item, i) => {
-      const l = [item.sku, item.descricao, item.referencia, item.categoria === "-" ? "" : item.categoria, item.areas.join(", "), item.tags.join(", ")];
+      const l = [item.sku, item.descricao, item.unidade, item.referencia, item.categoria === "-" ? "" : item.categoria, item.areas.join(", "), item.tags.join(", ")];
       if (comLista) {
         const v = window.ListaDiaria.obter(item.sku);
         l.push(v && v.saldo !== null && v.saldo !== undefined ? v.saldo : "", v && v.preco ? v.preco : "");
@@ -1317,7 +1001,7 @@ async function exportarParaExcel() {
     // SKU e Referência como texto (o Excel não pode comer os zeros à esquerda); preço com 4 casas
     const ref = window.XLSX.utils.decode_range(ws["!ref"]);
     for (let r = 1; r <= ref.e.r; r++) {
-      for (const c of [0, 2]) {
+      for (const c of [0, cab.indexOf("Referência")]) {
         const cel = ws[window.XLSX.utils.encode_cell({ r, c })];
         if (cel) { cel.t = "s"; cel.v = String(cel.v); cel.z = "@"; }
       }

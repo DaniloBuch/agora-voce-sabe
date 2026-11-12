@@ -11,7 +11,7 @@
 
    Ao mudar a lista de arquivos abaixo, aumente a VERSAO.
    ========================================================================== */
-const VERSAO = "v18";
+const VERSAO = "v19";
 const CACHE = `agora-voce-sabe-${VERSAO}`;
 const ESPERA_REDE_MS = 4000; // rede lenta: depois disso usa o que está guardado (se houver)
 
@@ -32,6 +32,7 @@ const ESSENCIAIS = [
   "js/comum/numeros.js",
   "js/comum/copiar.js",
   "js/comum/base-offline.js",
+  "js/busca/motor.js",
   "novidades/",
   "novidades/index.html",
   "novidades/novidades.js",

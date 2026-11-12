@@ -1,7 +1,10 @@
-import { escaparHtml as esc, normalizarEspacos, formatarRef } from "../js/comum/texto.js";
+import { escaparHtml as esc, formatarRef } from "../js/comum/texto.js";
+import { criarMotor, prepararItem } from "../js/busca/motor.js";
 import { fmt2, fmt4, fmtQtd, fmtSaldo, lerNumeroBR } from "../js/comum/numeros.js";
 import { copiarTexto, copiarHtml } from "../js/comum/copiar.js";
 import * as baseOffline from "../js/comum/base-offline.js";
+
+const motor = criarMotor();
 
 /* ==========================================================================
    Página de cotação: monta a tabela dos produtos marcados na busca (cotacao-store.js),
@@ -40,8 +43,7 @@ import * as baseOffline from "../js/comum/base-offline.js";
      Aqui a base vem da cópia guardada pela busca neste aparelho; sem ela, do Supabase. */
   let skusCatalogo = [];
   window.CBS_skusCatalogo = () => skusCatalogo;
-  let catalogo = []; // [{sku, descricao, referencia, tags, _busca}] para a mini-busca
-  const normalizar = normalizarEspacos;
+  let catalogo = []; // [{sku, descricao, referencia, ...campos do motor de busca}] para a mini-busca
   function prepararCatalogo(dados) {
     catalogo = dados
       .filter((p) => String(p.sku ?? "").trim())
@@ -53,13 +55,22 @@ import * as baseOffline from "../js/comum/base-offline.js";
           sku: String(p.sku),
           descricao,
           referencia: formatarRef(refOriginal),
-          _sku: normalizar(p.sku),
-          _busca: normalizar(`${p.sku} ${descricao} ${refOriginal} ${formatarRef(refOriginal)} ${tags}`),
+          unidade: String(p.unidade ?? "").trim().toUpperCase(),
+          ...prepararItem({ sku: p.sku, descricao, referencia: refOriginal, tags }),
         };
       });
     skusCatalogo = catalogo.map((p) => p.sku);
+    motor.definirBase(catalogo);
+  }
+  // sinônimos do dicionário (os mesmos da busca); sem internet, os guardados pela busca neste aparelho
+  async function carregarSinonimos() {
+    try {
+      if (window.CBS_API && CBS_API.configurado && CBS_API.listarSinonimos) return await CBS_API.listarSinonimos();
+    } catch (_) {}
+    return (await baseOffline.ler("sinonimos")) || [];
   }
   (async function carregarCatalogo() {
+    carregarSinonimos().then((g) => motor.definirSinonimos(g));
     const salvo = await baseOffline.lerProdutos();
     try {
       if (salvo) prepararCatalogo(salvo);
@@ -86,15 +97,11 @@ import * as baseOffline from "../js/comum/base-offline.js";
     buscaInfo.textContent = "";
   }
 
-  // todos os termos precisam aparecer (código, descrição, referência ou apelido); código exato primeiro
+  // mesmo motor da busca do site: aspas, -palavra, sinônimos, relevância e erro de digitação
   function pesquisar(texto) {
-    const termos = normalizar(texto).split(" ").filter(Boolean);
-    if (!termos.length) return { itens: [], total: 0 };
-    const achados = catalogo.filter((p) => termos.every((t) => p._busca.includes(t)));
-    const q = normalizar(texto);
-    const peso = (p) => (p._sku === q ? 0 : p._sku.startsWith(q) ? 1 : p._busca.startsWith(termos[0]) ? 2 : 3);
-    achados.sort((a, b) => peso(a) - peso(b) || a.descricao.localeCompare(b.descricao, "pt-BR"));
-    return { itens: achados.slice(0, MAX_SUGESTOES), total: achados.length };
+    const r = motor.buscar(catalogo, texto);
+    if (r.vazia) return { itens: [], total: 0 };
+    return { itens: r.itens.slice(0, MAX_SUGESTOES), total: r.itens.length };
   }
 
   function desenharSugestoes() {
@@ -137,7 +144,7 @@ import * as baseOffline from "../js/comum/base-offline.js";
     const copia = copiarCodigo(sku); // igual ao + da busca: também copia o código
     const lista = lerListaDiaria();
     const info = lista ? lista.get(sku) : null;
-    cot.adicionar({ sku, descricao: p.descricao, referencia: p.referencia, preco: info && info.preco ? info.preco : null });
+    cot.adicionar({ sku, descricao: p.descricao, referencia: p.referencia, um: p.unidade, preco: info && info.preco ? info.preco : null });
     desenhar();
     desenharSugestoes();
     copia.then((ok) => mensagem(`${sku} adicionado à cotação${ok ? " e código copiado" : ""}.`));

@@ -12,6 +12,7 @@
 
   const PAGINA = 1000; // limite padrão de linhas por requisição no Supabase
   let semColunaAreas = false;
+  let semColunaUnidade = false; // sem a migração 013
   const COLUNAS = "sku,descricao_tecnica,referencia,tags,fixo";
   // Se a migração das categorias ainda não rodou, a coluna não existe: cai para COLUNAS.
   let semColunaCategoria = false;
@@ -171,6 +172,7 @@
   async function listarProdutos() {
     // tenta com as colunas mais novas; banco antigo (sem a migração) cai para as anteriores
     const tentativas = [];
+    if (!semColunaCategoria && !semColunaAreas && !semColunaUnidade) tentativas.push(`${COLUNAS},categoria,areas,criado_em,unidade`);
     if (!semColunaCategoria && !semColunaAreas) tentativas.push(`${COLUNAS},categoria,areas,criado_em`);
     if (!semColunaCategoria) tentativas.push(`${COLUNAS},categoria`);
     tentativas.push(COLUNAS);
@@ -179,7 +181,8 @@
         return await lerPaginas(tentativas[i]);
       } catch (erro) {
         if (erro.status !== 400 || i === tentativas.length - 1) throw erro;
-        if (tentativas[i].includes("areas")) semColunaAreas = true; // sem a migração 011
+        if (tentativas[i].includes("unidade")) semColunaUnidade = true; // sem a migração 013
+        else if (tentativas[i].includes("areas")) semColunaAreas = true; // sem a migração 011
         else semColunaCategoria = true; // sem a migração 005
       }
     }
@@ -476,8 +479,8 @@
   async function restaurarVarios(listaDados) {
     let produtos = listaDados.map(({ atualizado_em, ...produto }) => produto);
     // um envio em lote exige as mesmas colunas em todos: versões antigas do histórico
-    // não têm "areas"/"criado_em"; nesse caso essas colunas ficam de fora (o banco mantém as atuais)
-    for (const col of ["areas", "criado_em"]) {
+    // não têm "areas"/"criado_em"/"unidade"; nesse caso essas colunas ficam de fora (o banco mantém as atuais)
+    for (const col of ["areas", "criado_em", "unidade"]) {
       if (produtos.some((p) => !(col in p))) produtos = produtos.map(({ [col]: _, ...p }) => p);
     }
     await requisitar("produtos?on_conflict=sku", {
@@ -508,6 +511,7 @@
     renomearCategoria,
     categoriasDisponiveis: () => !semColunaCategoria,
     areasDisponiveis: () => !semColunaAreas && !semColunaCategoria,
+    unidadeDisponivel: () => !semColunaUnidade && !semColunaAreas && !semColunaCategoria,
     listarAreas,
     listarNovidades,
     listarNovidadesPainel,

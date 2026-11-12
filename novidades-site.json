@@ -1,5 +1,11 @@
 [
   {
+    "chave": "2026-11-12-unidade",
+    "data": "2026-11-12",
+    "titulo": "Unidade de medida (UM)",
+    "texto": "A tabela da busca ganhou a coluna UM (UN, CX, PC...), que também ordena pelo clique no título e vai junto no Excel. No celular, a UM aparece embaixo da descrição.\nNa cotação, o produto já entra com a unidade certa. E a busca da página de cotação agora entende o mesmo que a busca principal: abreviações (cx = caixa), \"trecho exato\" entre aspas, -palavra para excluir e erros de digitação."
+  },
+  {
     "chave": "2026-11-12-home",
     "data": "2026-11-12",
     "titulo": "Você sabia? 💡",

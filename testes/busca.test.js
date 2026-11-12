@@ -208,3 +208,18 @@ test("cotação: + adiciona, contador e página da cotação", async () => {
   assert.deepEqual(erros, []);
   await pagina.context().close();
 });
+
+test("UM: coluna na busca e a cotação já entra com a unidade do cadastro", async () => {
+  const { pagina, erros } = await amb.abrir();
+  await esperarBase(pagina);
+  await buscar(pagina, "luva nitrilica");
+  const um = await pagina.$$eval("#tableBody td.col-um", (t) => t.map((x) => x.innerText.trim()));
+  assert.ok(um.length > 0 && um.every((u) => u === "CX"), "luvas em CX");
+  await pagina.locator("#tableBody td.col-cot button").first().click();
+  await pagina.click('button.ordenar[data-ordem="um"]');
+  await pagina.goto(amb.base + "cotacao/");
+  await pagina.waitForSelector("#cotCorpo tr");
+  assert.equal(await pagina.locator("#cotCorpo input[data-campo=um]").first().inputValue(), "CX");
+  assert.deepEqual(erros, []);
+  await pagina.context().close();
+});

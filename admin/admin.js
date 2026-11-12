@@ -1,4 +1,5 @@
-import { normalizar, escaparHtml as esc, escaparRegex as escRegex } from "../js/comum/texto.js";
+import { normalizar, escaparHtml as esc } from "../js/comum/texto.js";
+import { criarMotor, prepararItem } from "../js/busca/motor.js";
 import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numeros.js";
 
 (() => {
@@ -9,7 +10,7 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
   const LIMITE_ALERTA_EXCLUSAO = 0.2; // pede confirmação extra se >20% da base sumir
 
   const estado = {
-    produtos: [], // {sku, descricao_tecnica, referencia, tags, fixo, categoria, _busca}
+    produtos: [], // {sku, descricao_tecnica, referencia, tags, fixo, categoria, areas, criado_em, + campos do motor de busca}
     filtro: "",
     semTags: false,
     categoria: "", // filtro: "" = todas, "-" = sem categoria, ou o nome da categoria
@@ -62,10 +63,12 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
       categoria,
       areas: Array.isArray(p.areas) ? p.areas.map(String) : [],
       criado_em: p.criado_em || null,
-      _busca: normalizar(`${p.sku} ${p.descricao_tecnica} ${p.referencia} ${String(p.referencia ?? "").trim().replace(/^0+(?=\d)/, "")} ${tags} ${categoria === "-" ? "" : categoria}`).replace(/\s+/g, " "),
-      _desc: normalizar(p.descricao_tecnica).replace(/\s+/g, " "),
+      unidade: String(p.unidade ?? "").trim().toUpperCase(), // UM (migração 013); "" = não informada
+      // campos do motor de busca; a categoria também é encontrada pelo filtro
+      ...prepararItem({ sku: p.sku, descricao: p.descricao_tecnica, referencia: p.referencia, tags, extra: categoria === "-" ? "" : categoria }),
     };
   }
+
 
   /* ---------------- carga inicial ---------------- */
 
@@ -194,84 +197,30 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
   }
   const ehRecente = (p, dias = 30) => Boolean(p.criado_em) && Date.parse(p.criado_em) >= inicioDoPeriodo(dias);
 
-  /* ---- Filtro da lista: mesma lógica da busca do site ----
+  /* ---- Filtro da lista: o MESMO motor da busca do site (js/busca/motor.js) ----
      "trecho exato" entre aspas, -palavra (ou -"trecho") para tirar, sinônimos do dicionário,
      palavras de ligação ignoradas (de, para...), referência com ou sem zeros à esquerda e
-     resultado em ordem de relevância (código exato primeiro). */
-  const CONECTIVOS = new Set(["de", "da", "do", "das", "dos", "para", "pra", "p/", "e", "a", "o", "as", "os", "em", "no", "na", "nos", "nas", "ao"]);
-  let indiceSinCache = { origem: null, mapa: new Map() };
-  function indiceSinonimos() {
-    if (indiceSinCache.origem === sinonimos) return indiceSinCache.mapa;
-    const mapa = new Map();
-    for (const g of sinonimos || []) {
-      const ps = [...new Set((g.palavras || []).map((x) => normalizar(x).replace(/\s+/g, " ").trim()).filter(Boolean))];
-      for (const pal of ps) mapa.set(pal, new Set([...(mapa.get(pal) || []), ...ps.filter((x) => x !== pal)]));
-    }
-    indiceSinCache = { origem: sinonimos, mapa };
-    return mapa;
-  }
-  // palavra curta (até 4 letras) vinda de sinônimo só vale como palavra inteira ("est" não pega "estilo")
-  function casaAlt(texto, alt) {
-    return alt.inteira ? alt.re.test(texto) : texto.includes(alt.t);
-  }
-  function montarConsulta(bruto) {
-    let resto = ` ${normalizar(bruto).replace(/[“”„″«»]/g, '"').replace(/\s+/g, " ")} `;
-    const exatos = [];
-    const excluidos = [];
-    resto = resto.replace(/(?:(\s)-)?"([^"]*)("|$)/g, (_, menos, frase) => {
-      const f = frase.replace(/\s+/g, " ").trim();
-      if (f) (menos !== undefined ? excluidos : exatos).push(f);
-      return " ";
-    });
-    let termos = [];
-    for (const t of resto.split(" ")) {
-      if (!t) continue;
-      if (t.startsWith("-")) { if (t.length > 1) excluidos.push(t.slice(1)); continue; }
-      termos.push(t);
-    }
-    const fortes = termos.filter((t) => !CONECTIVOS.has(t));
-    if (fortes.length && fortes.length < termos.length) termos = fortes;
-    const sin = indiceSinonimos();
-    const grupos = termos.map((t) => [{ t, inteira: false }, ...[...(sin.get(t) || [])].map((x) => ({ t: x, inteira: x.length <= 4, re: new RegExp(`(^|[^a-z0-9])${escRegex(x)}([^a-z0-9]|$)`) }))]);
-    return { termos, grupos, exatos, excluidos, vazia: !termos.length && !exatos.length && !excluidos.length };
-  }
-  function casaConsulta(p, c) {
-    return (
-      c.grupos.every((alts) => alts.some((a) => casaAlt(p._busca, a))) &&
-      c.exatos.every((f) => p._busca.includes(f)) &&
-      !c.excluidos.some((f) => p._busca.includes(f))
-    );
-  }
-  // relevância: código exato, código/referência começando, descrição começando, depois o resto
-  function pesoRelevancia(p, c) {
-    const q = c.termos.join(" ");
-    const sku = normalizar(p.sku);
-    const ref = normalizar(p.referencia);
-    if (sku === q) return 0;
-    if (ref === q || ref.replace(/^0+(?=\d)/, "") === q) return 1;
-    if (c.termos.some((t) => sku.startsWith(t) || ref.startsWith(t))) return 2;
-    if (c.termos.length && p._desc.startsWith(c.termos[0])) return 3;
-    if (c.exatos.some((f) => p._desc.includes(f))) return 3;
-    return 4;
-  }
+     resultado em ordem de relevância (código exato primeiro). Sem os "parecidos" por erro de
+     digitação: aqui a lista serve para editar em massa, então só entra o que casa de verdade. */
+  const motor = criarMotor();
+  let sinonimosNoMotor = null;
 
   function filtrados() {
-    const consulta = montarConsulta(estado.filtro);
+    if (sinonimosNoMotor !== sinonimos) {
+      motor.definirSinonimos(sinonimos);
+      sinonimosNoMotor = sinonimos;
+    }
     const desde = estado.recentes ? inicioDoPeriodo(estado.recentes) : 0;
-    const lista = estado.produtos.filter(
+    const r = motor.buscar(estado.produtos, estado.filtro, { tolerancia: false });
+    const lista = r.itens.filter(
       (p) =>
-        (consulta.vazia || casaConsulta(p, consulta)) &&
         (!estado.semTags || p.tags.trim() === "") &&
         (!estado.categoria || chaveCat(p.categoria) === chaveCat(estado.categoria)) &&
         (!estado.area || (estado.area === "-" ? p.areas.length === 0 : p.areas.some((a) => chaveCat(a) === chaveCat(estado.area)))) &&
         (!desde || (p.criado_em && Date.parse(p.criado_em) >= desde)),
     );
-    // filtrando por data: do mais novo para o mais antigo; com texto: por relevância
+    // filtrando por data: do mais novo para o mais antigo; com texto: por relevância (já vem do motor)
     if (desde) lista.sort((a, b) => Date.parse(b.criado_em) - Date.parse(a.criado_em));
-    else if (!consulta.vazia && consulta.termos.length) {
-      const peso = new Map(lista.map((p) => [p, pesoRelevancia(p, consulta)]));
-      lista.sort((a, b) => peso.get(a) - peso.get(b)); // sort estável: empates ficam em ordem alfabética
-    }
     return lista;
   }
 
@@ -301,7 +250,7 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
               return `<tr${marcado ? ' class="selecionada"' : ""}>
                 <td class="c-sel"><input type="checkbox" data-sel="${esc(p.sku)}" aria-label="Selecionar ${esc(p.sku)}"${marcado ? " checked" : ""} /></td>
                 <td class="c-sku">${esc(p.sku)}${p.fixo ? '<span class="selo" title="Fixo: nunca excluído pela importação">fixo</span>' : ""}${ehRecente(p) ? `<span class="selo selo--novo" title="Incluído em ${esc(fmtData.format(new Date(p.criado_em)))}">novo · ${esc(fmtDia.format(new Date(p.criado_em)))}</span>` : ""}</td>
-                <td class="c-ref">${esc(p.referencia)}</td>
+                <td class="c-ref">${esc(p.referencia)}${p.unidade ? `<span class="c-ref__um" title="Unidade de medida">UM ${esc(p.unidade)}</span>` : ""}</td>
                 <td class="c-desc">${esc(p.descricao_tecnica)}</td>
                 <td class="c-cat so-categorias">${p.categoria === "-" ? '<span class="sem-categoria">–</span>' : esc(p.categoria)}</td>
                 <td class="c-areas so-areas">${p.areas.length ? p.areas.map((a) => `<span class="area-ico-admin" title="${esc(a)}">${iconeArea(a, 16)}<span class="sr-only">${esc(a)}</span></span>`).join("") : '<span class="sem-categoria">–</span>'}</td>
@@ -503,6 +452,12 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
     $("#fSku").readOnly = Boolean(produto);
     $("#fDesc").value = produto ? produto.descricao_tecnica : "";
     $("#fRef").value = produto ? produto.referencia : "";
+    $("#campoUnidade").hidden = !api.unidadeDisponivel();
+    $("#fUnidade").value = produto ? produto.unidade : "";
+    // sugestões: as unidades que já existem na base, das mais usadas para as menos usadas
+    const usos = new Map();
+    for (const p of estado.produtos) if (p.unidade) usos.set(p.unidade, (usos.get(p.unidade) || 0) + 1);
+    $("#listaUnidades").innerHTML = [...usos].sort((a, b) => b[1] - a[1]).map(([u]) => `<option value="${esc(u)}"></option>`).join("");
     $("#fFixo").checked = produto ? produto.fixo : false;
     $("#fCategoria").value = produto ? produto.categoria : "-";
     if ($("#fCategoria").value !== (produto ? produto.categoria : "-")) $("#fCategoria").value = "-";
@@ -532,8 +487,7 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
     const comTags = estado.produtos.filter((p) => p.sku !== sku && p.tags.trim());
     const busca = $("#fCopiarBusca").value.trim();
     if (busca) {
-      const termos = normalizar(busca).split(/\s+/).filter(Boolean);
-      return { modo: "busca", lista: comTags.filter((p) => termos.every((t) => p._busca.includes(t))).slice(0, 6) };
+      return { modo: "busca", lista: motor.buscar(comTags, busca, { tolerancia: false }).itens.slice(0, 6) };
     }
     const minhas = palavrasChave($("#fDesc").value);
     if (minhas.size === 0) return { modo: "vazio", lista: [] };
@@ -620,6 +574,7 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
     };
     if (api.categoriasDisponiveis()) campos.categoria = $("#fCategoria").value || "-";
     if (api.areasDisponiveis()) campos.areas = [...$("#fAreas").querySelectorAll("input:checked")].map((c) => c.value);
+    if (api.unidadeDisponivel()) campos.unidade = $("#fUnidade").value.trim().toUpperCase();
 
     const btn = $("#btnSalvar");
     btn.disabled = true;
@@ -954,6 +909,7 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
   const ALIASES_OPCIONAIS = {
     categoria: ["categoria", "categorias"],
     tags: ["tags", "tag"],
+    unidade: ["um", "u m", "unidade", "unidade medida", "unidade de medida", "und", "un"],
   };
 
   function limparCabecalho(t) {
@@ -970,7 +926,7 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
     if (mapa.sku === undefined) return { erro: "sku", encontrados: cabecalho };
     // Descricao e Cod prd forn só são obrigatórias num CSV completo. Se o arquivo traz Categoria
     // e/ou Tags, dá para importar só isso (útil porque o Excel estraga a coluna de referência).
-    const soCategoriaTags = mapa.categoria !== undefined || mapa.tags !== undefined;
+    const soCategoriaTags = mapa.categoria !== undefined || mapa.tags !== undefined || mapa.unidade !== undefined;
     if (!soCategoriaTags) {
       for (const campo of ["descricao_tecnica", "referencia"]) {
         if (mapa[campo] === undefined) return { erro: campo, encontrados: cabecalho };
@@ -1033,6 +989,12 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
     const ignorarRef = Boolean(opcoes.ignorarRef) && temRef;
     const lerCat = mapa.categoria !== undefined;
     const lerTags = mapa.tags !== undefined;
+    const lerUm = mapa.unidade !== undefined;
+    if (lerUm && !api.unidadeDisponivel()) {
+      throw new Error(
+        "O CSV tem a coluna UM, mas o banco ainda não foi atualizado. Rode supabase/migracoes/013_unidade_medida.sql no SQL Editor (veja o SETUP-SUPABASE.md) e tente de novo.",
+      );
+    }
     if ((lerCat || lerTags) && !api.categoriasDisponiveis()) {
       throw new Error(
         "O CSV tem colunas de categoria/tags, mas o banco ainda não foi atualizado. Rode supabase/migracoes/005_categorias.sql no SQL Editor (veja o SETUP-SUPABASE.md) e tente de novo.",
@@ -1063,6 +1025,8 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
           .map((t) => t.toLocaleUpperCase("pt-BR"))
           .join(", ");
       }
+      // UM: célula vazia não apaga a unidade atual
+      if (lerUm) item.unidade = String(l[mapa.unidade] ?? "").trim().toUpperCase();
       itens.set(sku, item);
     }
     if (itens.size === 0) throw new Error("Nenhum SKU válido encontrado no arquivo.");
@@ -1095,6 +1059,7 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
     let iguais = 0;
     let comCategoria = 0; // produtos que terão categoria definida/alterada
     let comTagsNovas = 0; // produtos que receberão tags novas
+    let comUnidade = 0; // produtos que terão a UM definida/alterada
     const categoriasNovas = new Map();
     const canonica = (nome) => estado.categorias.find((c) => chaveCat(c) === chaveCat(nome)) || nome;
     const catDoCsv = (item) => (item.categoria && item.categoria !== "-" ? canonica(item.categoria) : null);
@@ -1107,6 +1072,7 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
         novos.push(item);
         if (cat) comCategoria++;
         if (item.tags) comTagsNovas++;
+        if (item.unidade) comUnidade++;
         continue;
       }
       const mudaCat = cat !== null && chaveCat(atual.categoria) !== chaveCat(cat);
@@ -1114,9 +1080,11 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
       const tagsAdd = separarTags(item.tags || "").filter((t) => !jaTem.has(chaveTag(t)));
       const mudaTexto =
         atual.descricao_tecnica !== item.descricao_tecnica || atual.referencia !== item.referencia;
-      if (mudaTexto || mudaCat || tagsAdd.length) {
-        alterados.push({ item, atual, mudaTexto, categoria: mudaCat ? cat : null, tagsAdd });
+      const unidade = item.unidade && item.unidade !== atual.unidade ? item.unidade : null;
+      if (mudaTexto || mudaCat || tagsAdd.length || unidade) {
+        alterados.push({ item, atual, mudaTexto, categoria: mudaCat ? cat : null, tagsAdd, unidade });
         if (mudaCat) comCategoria++;
+        if (unidade) comUnidade++;
         if (tagsAdd.length) comTagsNovas++;
       } else iguais++;
     }
@@ -1134,6 +1102,8 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
       duplicados,
       lerCat,
       lerTags,
+      lerUm,
+      comUnidade,
       comCategoria,
       comTagsNovas,
       categoriasNovas: [...categoriasNovas.values()],
@@ -1169,11 +1139,12 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
         <div class="item"><div class="num">${fmt.format(a.alterados.length)}</div><div class="rot">com alguma alteração</div></div>
         ${a.lerCat ? `<div class="item"><div class="num">${fmt.format(a.comCategoria)}</div><div class="rot">com categoria definida</div></div>` : ""}
         ${a.lerTags ? `<div class="item"><div class="num">${fmt.format(a.comTagsNovas)}</div><div class="rot">recebendo tags novas</div></div>` : ""}
+        ${a.lerUm ? `<div class="item"><div class="num">${fmt.format(a.comUnidade)}</div><div class="rot">com unidade (UM) definida</div></div>` : ""}
         <div class="item removidos"><div class="num">${fmt.format(a.removidos.length)}</div><div class="rot">descontinuados (não estão no CSV)</div></div>
         <div class="item"><div class="num">${fmt.format(a.iguais)}</div><div class="rot">sem mudança</div></div>
       </div>
       ${a.semSku || a.duplicados ? alerta("alerta", `Ignorados no CSV: ${fmt.format(a.semSku)} linha(s) sem código e ${fmt.format(a.duplicados)} código(s) repetido(s).`) : ""}
-      ${!a.catalogoCompleto ? alerta("info", "Este CSV não traz as colunas <strong>Descricao</strong> e <strong>Cod prd forn</strong>: só <strong>categoria e tags</strong> serão atualizadas, as referências e descrições ficam como estão e <strong>nada será excluído</strong>.") : ""}
+      ${!a.catalogoCompleto ? alerta("info", "Este CSV não traz as colunas <strong>Descricao</strong> e <strong>Cod prd forn</strong>: só <strong>categoria, tags e UM</strong> serão atualizadas, as referências e descrições ficam como estão e <strong>nada será excluído</strong>.") : ""}
       ${a.semCadastro ? alerta("alerta", `${fmt.format(a.semCadastro)} código(s) do CSV não existem no banco e foram ignorados (para cadastrar produto novo, o CSV precisa da coluna Descricao).`) : ""}
       ${a.refsPreservadas.length ? alerta("alerta", `<strong>${fmt.format(a.refsPreservadas.length)} referência(s) vieram alteradas pelo Excel</strong> (notação científica, pontos de milhar ou zeros perdidos) e <strong>não serão importadas</strong>: produtos que já existem mantêm a referência atual; produtos novos ficam sem referência.
         <details><summary>Ver quais</summary><div class="conteudo">${listaLimitada(a.refsPreservadas, (r) => `<div><strong>${esc(r.sku)}</strong> no CSV: <span class="de">${esc(r.csv)}</span> (${ROTULO_DANO[r.dano]}) → ${r.mantida ? `fica <span class="para">${esc(r.mantida)}</span>` : "fica sem referência"}</div>`)}</div></details>
@@ -1182,7 +1153,7 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
       ${a.lerCat && a.categoriasNovas.length ? alerta("info", `Categorias novas que serão criadas: <strong>${a.categoriasNovas.map(esc).join(", ")}</strong>.`) : ""}
       ${a.fixosFora ? alerta("info", `${fmt.format(a.fixosFora)} produto(s) marcado(s) como "fixo" não está(ão) no CSV e será(ão) mantido(s).`) : ""}
       ${a.novos.length ? `<details><summary>Novos (${fmt.format(a.novos.length)})</summary><div class="conteudo">${listaLimitada(a.novos, (n) => `<div><strong>${esc(n.sku)}</strong> ${esc(n.descricao_tecnica)}${n.categoria && n.categoria !== "-" ? ` <span class="dica">· ${esc(n.categoria)}</span>` : ""}</div>`)}</div></details>` : ""}
-      ${a.alterados.length ? `<details><summary>Alterados (${fmt.format(a.alterados.length)})</summary><div class="conteudo">${listaLimitada(a.alterados, ({ item, atual, categoria, tagsAdd }) => {
+      ${a.alterados.length ? `<details><summary>Alterados (${fmt.format(a.alterados.length)})</summary><div class="conteudo">${listaLimitada(a.alterados, ({ item, atual, categoria, tagsAdd, unidade }) => {
         const partes = [];
         if (atual.descricao_tecnica !== item.descricao_tecnica)
           partes.push(`<span class="de">${esc(atual.descricao_tecnica)}</span> → <span class="para">${esc(item.descricao_tecnica)}</span>`);
@@ -1191,6 +1162,7 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
         if (categoria)
           partes.push(`categoria: <span class="de">${esc(atual.categoria === "-" ? "(nenhuma)" : atual.categoria)}</span> → <span class="para">${esc(categoria)}</span>`);
         if (tagsAdd.length) partes.push(`tags: <span class="para">+ ${esc(tagsAdd.join(", + "))}</span>`);
+        if (unidade) partes.push(`UM: <span class="de">${esc(atual.unidade || "(vazio)")}</span> → <span class="para">${esc(unidade)}</span>`);
         return `<div><strong>${esc(item.sku)}</strong> ${partes.join(" · ")}</div>`;
       })}</div></details>` : ""}
       ${a.removidos.length ? `<details><summary>Descontinuados a excluir (${fmt.format(a.removidos.length)})</summary><div class="conteudo">${listaLimitada(a.removidos, (r) => `<div><strong>${esc(r.sku)}</strong> ${esc(r.descricao_tecnica)}</div>`)}</div></details>` : ""}
@@ -1244,7 +1216,7 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
         await carregarProdutos();
         estado.importacao = null;
         $("#arquivoCsv").value = "";
-        $("#resultadoImport").innerHTML = alerta("ok", `Importação concluída: ${fmt.format(r.inseridos)} incluído(s), ${fmt.format(r.atualizados)} atualizado(s), ${fmt.format(r.excluidos)} excluído(s)` + (a.lerTags ? `; tags novas em ${fmt.format(a.comTagsNovas)} produto(s)` : "") + (a.lerCat ? `; categoria definida em ${fmt.format(a.comCategoria)}` : "") + `. Os excluídos e alterados ficam no Histórico.`);
+        $("#resultadoImport").innerHTML = alerta("ok", `Importação concluída: ${fmt.format(r.inseridos)} incluído(s), ${fmt.format(r.atualizados)} atualizado(s), ${fmt.format(r.excluidos)} excluído(s)` + (a.lerTags ? `; tags novas em ${fmt.format(a.comTagsNovas)} produto(s)` : "") + (a.lerCat ? `; categoria definida em ${fmt.format(a.comCategoria)}` : "") + (a.lerUm ? `; UM definida em ${fmt.format(a.comUnidade)}` : "") + `. Os excluídos e alterados ficam no Histórico.`);
       } catch (err) {
         renderizarImportacao();
         $("#resultadoImport").insertAdjacentHTML(
@@ -1319,8 +1291,8 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
   $("#btnExportar").addEventListener("click", () =>
     exportarCsv(
       $("#btnExportar"),
-      "Codigo;Descricao;Cod prd forn;Categoria;Tags;Fixo;Areas",
-      (p) => [p.sku, p.descricao_tecnica, p.referencia, p.categoria, p.tags, p.fixo ? "sim" : "", p.areas.join(" | ")],
+      "Codigo;Descricao;Cod prd forn;Categoria;Tags;Fixo;Areas;UM",
+      (p) => [p.sku, p.descricao_tecnica, p.referencia, p.categoria, p.tags, p.fixo ? "sim" : "", p.areas.join(" | "), p.unidade],
       "cbs-produtos",
     ),
   );
@@ -1328,8 +1300,8 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
   $("#btnExportarLeve").addEventListener("click", () =>
     exportarCsv(
       $("#btnExportarLeve"),
-      "Codigo;Descricao;Categoria;Tags",
-      (p) => [p.sku, p.descricao_tecnica, p.categoria, p.tags],
+      "Codigo;Descricao;Categoria;Tags;UM",
+      (p) => [p.sku, p.descricao_tecnica, p.categoria, p.tags, p.unidade],
       "cbs-categorizar",
     ),
   );
@@ -1981,7 +1953,7 @@ import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numer
         for (const prod of estado.produtos) {
           let algum = false;
           res.forEach((re, i) => {
-            if (re.test(prod._busca)) { porPalavra[i]++; algum = true; }
+            if (re.test(prod._buscaFull)) { porPalavra[i]++; algum = true; }
           });
           if (algum) noGrupo++;
         }

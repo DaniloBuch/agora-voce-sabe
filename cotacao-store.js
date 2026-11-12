@@ -37,7 +37,7 @@
     listar: ler,
     quantidade: () => ler().length,
     tem: (sku) => ler().some((i) => i.sku === sku),
-    // item: { sku, descricao, referencia, preco (Lista Diária, opcional), saldo (opcional) }
+    // item: { sku, descricao, referencia, um (unidade do cadastro, opcional), preco (Lista Diária, opcional) }
     adicionar(item) {
       const itens = ler();
       if (itens.some((i) => i.sku === item.sku)) return;
@@ -45,7 +45,7 @@
         sku: String(item.sku),
         descricao: String(item.descricao || ""),
         referencia: String(item.referencia || ""),
-        um: "UN",
+        um: String(item.um || "").trim().toUpperCase() || "UN",
         qtd: 1,
         preco: typeof item.preco === "number" && item.preco > 0 ? item.preco : null,
         adicionadoEm: Date.now(),

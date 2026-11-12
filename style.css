@@ -1142,6 +1142,18 @@ tbody tr:hover {
   width: auto;
   color: var(--text-body);
 }
+/* Unidade de medida (UM). No celular a coluna some e a UM aparece sob a descrição. */
+.col-um {
+  width: 56px;
+  text-align: center;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-body);
+  white-space: nowrap;
+}
+th.col-um { padding-left: 4px; padding-right: 4px; }
+th.col-um .ordenar { justify-content: center; }
+.desc-um { display: none; }
 .desc-texto { display: block; }
 /* Computador: a descrição (até 60 caracteres) sempre em uma linha só; a coluna fica com todo o
    espaço que sobra (a de tags saiu: os nomes agora ficam sob a descrição) */
@@ -1482,6 +1494,13 @@ body.com-lista .col-lista { display: table-cell; }
   .col-ref {
     display: none;
   } /* esconde a referência no celular para caber a descrição */
+  .col-um { display: none; }
+  .desc-um {
+    display: block;
+    margin-top: 4px;
+    font-size: var(--fs-2xs);
+    color: var(--text-muted);
+  }
   .apelidos__rotulo { flex-basis: 100%; } /* rótulo em cima, nomes embaixo (até 2 linhas) */
   .apelidos .tag-pill { white-space: normal; text-overflow: clip; } /* nome comprido quebra entre palavras, sem cortar */
   .col-sku {

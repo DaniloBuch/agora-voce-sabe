@@ -12,7 +12,7 @@ const diasAtras = (n) => new Date(AGORA.getTime() - n * 86400000).toISOString();
 function produtosIniciais() {
   const p = [];
   const add = (sku, descricao_tecnica, referencia = "", tags = "", categoria = null, areas = [], criado = 200) =>
-    p.push({ sku, descricao_tecnica, referencia, tags, fixo: false, categoria, areas, criado_em: diasAtras(criado) });
+    p.push({ sku, descricao_tecnica, referencia, tags, fixo: false, categoria, areas, criado_em: diasAtras(criado), unidade: "" });
 
   add("000437", "SONDA URETRAL N 12", "SU12", "Sonda de alívio", "Sondas", ["Hospitais"]);
   add("000438", "SONDA FOLEY 2 VIAS N 14", "SF14", "", "Sondas", ["Hospitais"]);
@@ -31,6 +31,9 @@ function produtosIniciais() {
     const sku = String(100000 + i);
     add(sku, `LUVA PROCEDIMENTO ${material} TAM ${tam} CX C/100 LOTE ${String(i).padStart(2, "0")}`, `LV${i}`, i === 1 ? "Luva de látex" : "", "Luvas");
   }
+  // unidade de medida (migração 013): alguns com, outros ainda sem
+  const um = { "000437": "UN", "000438": "UN", "002000": "UN", "002001": "UN", "004000": "FR", "004001": "PC", "001200": "UN" };
+  for (const x of p) x.unidade = um[x.sku] || (x.descricao_tecnica.startsWith("LUVA") ? "CX" : "");
   return p;
 }
 

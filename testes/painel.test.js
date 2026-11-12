@@ -103,3 +103,27 @@ test("painel: novo produto, editar e edição em massa (prévia)", async () => {
   assert.deepEqual(erros, []);
   await pagina.context().close();
 });
+
+test("painel: CSV com a coluna UM e campo UM no cadastro", async () => {
+  const { pagina, banco, erros } = await entrar();
+  await pagina.click('.aba[data-aba="importar"]');
+  await pagina.setInputFiles("#arquivoCsv", { name: "um.csv", mimeType: "text/csv", buffer: Buffer.from("Codigo;UM\n000439;pc\n000437;\n") });
+  await pagina.waitForSelector("#btnAplicar");
+  const previa = await texto(pagina, "#resultadoImport");
+  assert.match(previa, /1 com unidade \(UM\) definida/i);
+  await pagina.click("#btnAplicar");
+  await pagina.waitForTimeout(400);
+  const chamada = banco.chamadas.find((c) => c.includes("importar_catalogo"));
+  assert.ok(chamada, "chamou a importação");
+  await pagina.click('.aba[data-aba="produtos"]');
+  await pagina.fill("#filtro", "000437");
+  await pagina.waitForTimeout(350);
+  await pagina.locator("#corpoTabela button:has-text('Editar')").first().click();
+  assert.equal(await pagina.inputValue("#fUnidade"), "UN");
+  await pagina.fill("#fUnidade", "cx");
+  await pagina.click("#btnSalvar");
+  await pagina.waitForTimeout(400);
+  assert.equal(banco.produtos.find((p) => p.sku === "000437").unidade, "CX");
+  assert.deepEqual(erros, []);
+  await pagina.context().close();
+});
