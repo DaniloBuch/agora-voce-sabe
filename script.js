@@ -2080,7 +2080,8 @@ function contarAte(el, alvo, ms = 700) {
 }
 
 // Campo de busca vazio: "digita" exemplos de busca no placeholder, bem rápido, e apaga.
-// Para na hora quando a pessoa clica/digita ou escolhe um filtro (e não roda com "reduzir movimento").
+// O foco automático ao abrir a página não conta: os exemplos continuam até a pessoa digitar, clicar
+// no campo ou voltar a ele depois de sair (foco proposital). Não roda com filtro nem com "reduzir movimento".
 (function exemplosNoCampo() {
   const EXEMPLOS = [
     "Jelco 22", "sonda uretral 12", "luva procedimento -latex", "Transofix", "000437",
@@ -2095,8 +2096,15 @@ function contarAte(el, alvo, ms = 700) {
   const DESCANSO_MS = 2600; // texto normal entre um exemplo e outro
   let timer = null;
   let ordem = [];
+  let interagiu = false; // a pessoa já clicou ou usou o teclado na página?
+  let focoAutomatico = false; // o campo está com o foco que o navegador deu ao abrir (autofocus)
+  const marcarInteracao = () => { interagiu = true; };
+  document.addEventListener("pointerdown", marcarInteracao, { capture: true, once: true });
+  document.addEventListener("keydown", marcarInteracao, { capture: true, once: true });
+  if (document.activeElement === input) focoAutomatico = true;
 
-  const podeAnimar = () => !semMovimento() && !document.hidden && !input.value && !temFiltro() && document.activeElement !== input;
+  const podeAnimar = () =>
+    !semMovimento() && !document.hidden && !input.value && !temFiltro() && (document.activeElement !== input || focoAutomatico);
   function proximo() {
     if (!ordem.length) ordem = [...EXEMPLOS].sort(() => Math.random() - 0.5); // embaralha a cada rodada
     return PREFIXO + ordem.pop();
@@ -2126,9 +2134,17 @@ function contarAte(el, alvo, ms = 700) {
   function comecar() {
     digitar(proximo(), PREFIXO.length);
   }
-  input.addEventListener("focus", parar);
-  input.addEventListener("input", parar);
-  input.addEventListener("blur", () => { if (!timer) agendar(comecar, DESCANSO_MS); }); // saiu do campo: volta a mostrar exemplos
+  input.addEventListener("focus", () => {
+    if (!interagiu) { focoAutomatico = true; return; } // foco do autofocus: segue digitando
+    focoAutomatico = false;
+    parar();
+  });
+  input.addEventListener("pointerdown", () => { focoAutomatico = false; parar(); }); // clicou no campo: para
+  input.addEventListener("input", () => { focoAutomatico = false; parar(); });
+  input.addEventListener("blur", () => {
+    focoAutomatico = false; // daqui em diante, voltar ao campo é proposital
+    if (!timer) agendar(comecar, DESCANSO_MS); // fora do campo: volta a mostrar exemplos
+  });
   agendar(comecar, DESCANSO_MS);
 })();
 
