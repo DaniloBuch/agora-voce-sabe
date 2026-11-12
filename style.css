@@ -946,7 +946,7 @@ th.col-site { padding-left: 4px; padding-right: 4px; }
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--dur-fast) var(--ease-standard);
-  z-index: 6;
+  z-index: 7;
 }
 .link-site:hover::after,
 .link-site:focus-visible::after { opacity: 1; }
@@ -1741,7 +1741,7 @@ td.col-preco .preco-var {
 @keyframes pulo { 0% { transform: scale(1); } 40% { transform: scale(1.22); } 70% { transform: scale(.94); } 100% { transform: scale(1); } }
 
 /* resultados entram em cascata (só as primeiras linhas; o resto entra junto) */
-#tableBody.entrando > tr { animation: linha-entra 260ms var(--ease-out) both; }
+#tableBody.entrando > tr { animation: linha-entra 260ms var(--ease-out) backwards; } /* backwards: depois de terminar não cria camada (as dicas ficam por cima do cabeçalho) */
 #tableBody.entrando > tr:nth-child(2) { animation-delay: 20ms; }
 #tableBody.entrando > tr:nth-child(3) { animation-delay: 40ms; }
 #tableBody.entrando > tr:nth-child(4) { animation-delay: 60ms; }
@@ -1777,11 +1777,11 @@ html.tema-trocando, html.tema-trocando *, html.tema-trocando *::before, html.tem
    Home: entrada do topo, grafismo que flutua, "Você sabia?" e "Nesta semana"
    ========================================================================== */
 /* o topo entra em sequência ao abrir a página */
-.hero > * { animation: linha-entra 480ms var(--ease-out) both; }
+.hero > * { animation: linha-entra 480ms var(--ease-out) backwards; }
 .hero > :nth-child(2) { animation-delay: 70ms; }
 .hero > :nth-child(3) { animation-delay: 140ms; }
 .hero > :nth-child(n+4) { animation-delay: 210ms; }
-.painel-info { animation: linha-entra 520ms var(--ease-out) 260ms both; }
+.painel-info { animation: linha-entra 520ms var(--ease-out) 260ms backwards; }
 
 /* o sorriso do fundo "respira" devagar (movimento da marca, quase imperceptível) */
 @keyframes flutuar {
