@@ -20,6 +20,7 @@ npm test
 | `busca.test.js` | busca (aspas, -palavra, sinônimos, conectivos, erro de digitação, ref. sem zeros), paginação, links `?q= ?cat= ?area= ?ver= ?ord=`, gaveta, histórico, atalhos, Lista Diária, cotação (+) |
 | `paginas.test.js` | cabeçalho, tema, sino, página de novidades, modo sem internet |
 | `painel.test.js` | painel /admin: login, lista, filtro, abas, novo produto, edição em massa |
+| `nomes.test.js` | checagem dos módulos de `js/`: nome usado sem import e import sobrando (usa o TypeScript só para ler o JS) |
 | `visual.test.js` | telas em 1366×768 e no celular (claro e escuro), comparadas pixel a pixel |
 | `supabase-simulado.js` | banco de mentira em memória (71 produtos, categorias, áreas, sinônimos, novidades) |
 | `referencias/` | o resultado "aprovado" de cada teste (JSON) e as telas (PNG) |

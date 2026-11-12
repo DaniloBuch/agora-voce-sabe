@@ -11,7 +11,7 @@
 
    Ao mudar a lista de arquivos abaixo, aumente a VERSAO.
    ========================================================================== */
-const VERSAO = "v20";
+const VERSAO = "v21";
 const CACHE = `agora-voce-sabe-${VERSAO}`;
 const ESPERA_REDE_MS = 4000; // rede lenta: depois disso usa o que está guardado (se houver)
 
@@ -19,7 +19,6 @@ const ESSENCIAIS = [
   "./",
   "index.html",
   "style.css",
-  "script.js",
   "api.js",
   "config.js",
   "lista-diaria.js",
@@ -33,6 +32,23 @@ const ESSENCIAIS = [
   "js/comum/copiar.js",
   "js/comum/base-offline.js",
   "js/busca/motor.js",
+  "js/busca/atalhos.js",
+  "js/busca/campo.js",
+  "js/busca/cotacao-busca.js",
+  "js/busca/dados.js",
+  "js/busca/dom.js",
+  "js/busca/endereco.js",
+  "js/busca/estado.js",
+  "js/busca/exportar.js",
+  "js/busca/gaveta.js",
+  "js/busca/historico.js",
+  "js/busca/home.js",
+  "js/busca/lista-diaria-busca.js",
+  "js/busca/principal.js",
+  "js/busca/pwa.js",
+  "js/busca/site.js",
+  "js/busca/tabela.js",
+  "js/busca/vista.js",
   "js/componentes/cabecalho.js",
   "novidades/",
   "novidades/index.html",
