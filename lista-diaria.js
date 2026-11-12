@@ -146,6 +146,10 @@
   }
 
   /** Lê o que está salvo, apaga se passou de 24 h e atualiza a tela. Devolve true se houve expiração. */
+  // "assinatura" da lista: só avisa a página (que redesenha a tabela) quando ela muda de verdade
+  let ultimaAssinatura;
+  const assinatura = () => (dados ? `${dados.atualizadoEm}|${dados.expiraEm}|${dados.mapa.size}|${dados.variacoes.size}` : "");
+
   function sincronizar() {
     const o = lerArmazenado();
     let expirou = false;
@@ -208,7 +212,13 @@
       el.status.innerHTML = `<span class="lista-status__ponto" aria-hidden="true"></span><span>Sem Lista Diária: <strong>carregue a de hoje</strong> para ver saldo e preço campanha</span>`;
       el.nota.hidden = true;
     }
-    window.dispatchEvent(new CustomEvent("listadiaria:mudou"));
+    // a conferência de validade (a cada 30 s) só atualiza o texto "apaga sozinha em...";
+    // a tabela só é redesenhada quando a lista entra, muda, sai ou vence
+    const a = assinatura();
+    if (a !== ultimaAssinatura) {
+      ultimaAssinatura = a;
+      window.dispatchEvent(new CustomEvent("listadiaria:mudou"));
+    }
   }
 
   let timerMsg = null;

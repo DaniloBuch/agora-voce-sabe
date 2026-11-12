@@ -456,6 +456,13 @@ botaoLimparBusca.addEventListener("click", () => {
 /* ---------- Interpretação da busca ---------- */
 
 // Separa o texto digitado em: termos soltos, trechos exatos ("entre aspas") e excluídos (-palavra ou -"trecho").
+// Palavras de ligação ("cabo PARA bisturi", "aparelho DE pressão"): a busca ignora quando há
+// outras palavras, porque o cliente às vezes fala com e às vezes sem. Entre aspas continuam valendo.
+// "com"/"sem" e "c/" não entram: mudam o produto (luva com/sem pó, C/100).
+const CONECTIVOS = new Set(["de", "da", "do", "das", "dos", "para", "pra", "p/", "e", "a", "o", "as", "os", "em", "no", "na", "nos", "nas", "ao"]);
+
+let animarProximaTabela = true;
+
 function interpretarConsulta(texto) {
   let resto = ` ${normalizar(texto).replace(/[“”„″«»]/g, '"').replace(/\s+/g, " ")} `;
   const exatos = [];
@@ -486,7 +493,10 @@ function interpretarConsulta(texto) {
     }
     termos.push(t);
   }
-  return { termos, exatos, excluidos };
+  // tira as palavras de ligação, desde que sobre alguma outra para buscar
+  const fortes = termos.filter((t) => !CONECTIVOS.has(t));
+  const ignorados = fortes.length && fortes.length < termos.length ? termos.filter((t) => CONECTIVOS.has(t)) : [];
+  return { termos: ignorados.length ? fortes : termos, exatos, excluidos, ignorados };
 }
 
 // Termo que pode ter erro de digitação: só letras, 4+ caracteres
@@ -707,6 +717,7 @@ function executarBusca(termoOriginal, pagina = 1) {
 
   estadoLista = estado;
   paginaAtual = pagina;
+  animarProximaTabela = true;
   renderizarPagina();
 }
 
@@ -1011,6 +1022,7 @@ function clicarOrdem(col) {
   else if (ordemColuna.dir === 1) ordemColuna = { col, dir: -1 };
   else ordemColuna = null;
   paginaAtual = 1;
+  animarProximaTabela = true;
   renderizarPagina();
   atualizarEndereco();
   const b = document.querySelector(`th[data-ordem-col="${col}"] button`);
@@ -1091,10 +1103,13 @@ function renderizarPagina() {
     html += linhaProduto(itens[i], i >= estado.nExatos ? destaqueParecidos : estado.destaque);
   }
   tbody.innerHTML = html;
-  // linhas entram em cascata (reinicia a animação a cada busca/página)
+  // linhas entram em cascata só numa busca, página ou ordem nova (redesenhos internos não piscam)
   tbody.classList.remove("entrando");
-  void tbody.offsetWidth;
-  tbody.classList.add("entrando");
+  if (animarProximaTabela) {
+    void tbody.offsetWidth;
+    tbody.classList.add("entrando");
+    animarProximaTabela = false;
+  }
   btnExportar.hidden = false;
   ajustarTags();
   carregarLinksDaPagina(estado.itens.slice(inicio, fim));
@@ -1204,6 +1219,7 @@ function renderizarPaginacao(totalPaginas) {
 function irParaPagina(pagina) {
   if (!estadoLista) return;
   paginaAtual = pagina;
+  animarProximaTabela = true;
   renderizarPagina();
   atualizarEndereco();
   // volta ao topo da lista (logo abaixo do cabeçalho fixo)
