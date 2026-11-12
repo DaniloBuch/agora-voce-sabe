@@ -253,7 +253,7 @@
                 <td class="c-sel"><input type="checkbox" data-sel="${esc(p.sku)}" aria-label="Selecionar ${esc(p.sku)}"${marcado ? " checked" : ""} /></td>
                 <td class="c-sku">${esc(p.sku)}${p.fixo ? '<span class="selo" title="Fixo: nunca excluído pela importação">fixo</span>' : ""}${ehRecente(p) ? `<span class="selo selo--novo" title="Incluído em ${esc(fmtData.format(new Date(p.criado_em)))}">novo · ${esc(fmtDia.format(new Date(p.criado_em)))}</span>` : ""}</td>
                 <td class="c-ref">${esc(p.referencia)}</td>
-                <td>${esc(p.descricao_tecnica)}</td>
+                <td class="c-desc">${esc(p.descricao_tecnica)}</td>
                 <td class="c-cat so-categorias">${p.categoria === "-" ? '<span class="sem-categoria">–</span>' : esc(p.categoria)}</td>
                 <td class="c-areas so-areas">${p.areas.length ? p.areas.map((a) => `<span class="area-ico-admin" title="${esc(a)}">${iconeArea(a, 16)}<span class="sr-only">${esc(a)}</span></span>`).join("") : '<span class="sem-categoria">–</span>'}</td>
                 <td class="c-tags">${tagsHtml}</td>

@@ -504,3 +504,13 @@ tr.linha-salva td { animation: linha-salva 1.6s var(--ease-out); }
 @keyframes surgir-item { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .copiar-item, .nov-sugestao, .massa-unir:not([hidden]) { animation: surgir-item 220ms var(--ease-out) both; }
 .btn--primario:hover:not(:disabled) { transform: translateY(-1px); }
+
+/* Lista de produtos: descrição mais larga (antes ficava espremida em 4-5 linhas) */
+.c-desc { width: 34%; min-width: 280px; }
+.c-tags { width: 22%; }
+.c-cat { width: 150px; }
+.c-ref { width: 110px; }
+.c-sku { width: 84px; }
+.c-acoes { width: 1%; } /* só o necessário para os dois botões */
+.c-ref { min-width: 96px; white-space: nowrap; overflow-wrap: normal; }
+.c-cat { min-width: 130px; }
