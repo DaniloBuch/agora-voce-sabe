@@ -158,7 +158,7 @@
       const mapa = new Map();
       for (const [sku, saldo, preco] of o.itens) mapa.set(String(sku), { saldo, preco });
       const variacoes = new Map((o.variacoes || []).map(([sku, a]) => [String(sku), a]));
-      dados = { nome: o.nome, atualizadoEm: o.atualizadoEm, expiraEm: o.expiraEm, mapa, variacoes, comparadaCom: o.comparadaCom || null };
+      dados = { nome: o.nome, atualizadoEm: o.atualizadoEm, expiraEm: o.expiraEm, dataLista: o.dataLista || null, mapa, variacoes, comparadaCom: o.comparadaCom || null };
     } else {
       dados = null;
     }
@@ -186,11 +186,15 @@
     el.botao.querySelector(".btn-lista__rotulo").textContent = ativa ? "Atualizar Lista Diária" : "Carregar Lista Diária";
     if (ativa) {
       const resta = dados.expiraEm - Date.now();
-      el.status.className = "lista-status lista-status--ativa" + (resta < 2 * 60 * 60 * 1000 ? " lista-status--acabando" : "");
+      // lista de um dia anterior (pelo nome do arquivo ou pelo dia do upload): lembra de carregar a de hoje
+      const diaDaLista = new Date(dados.dataLista || dados.atualizadoEm).setHours(0, 0, 0, 0);
+      const velha = diaDaLista < new Date().setHours(0, 0, 0, 0);
+      el.status.className = "lista-status lista-status--ativa" + (resta < 2 * 60 * 60 * 1000 || velha ? " lista-status--acabando" : "");
       el.status.innerHTML =
         `<span class="lista-status__ponto" aria-hidden="true"></span>` +
         `<span>Lista Diária atualizada em <strong>${textoData(dados.atualizadoEm)}</strong>` +
         `<span class="lista-status__resta"> · apaga sozinha em ${tempoRestante(resta)}</span>` +
+        (velha ? `<span class="lista-status__lembrete"> · é a lista de ${fmtData.format(new Date(diaDaLista))}: carregue a de hoje</span>` : "") +
         (dados.comparadaCom
           ? `<span class="lista-status__comp"> · preços comparados com a lista de ${fmtData.format(new Date(dados.comparadaCom))}</span>`
           : `<span class="lista-status__comp"> · sem lista anterior para comparar preços</span>`) +
@@ -200,8 +204,8 @@
         `Saldo e preço campanha da Lista Diária de ${textoData(dados.atualizadoEm)}. Valores meramente consultivos: ` +
         `para maior exatidão, consulte o Protheus (TOTVS).`;
     } else {
-      el.status.className = "lista-status";
-      el.status.innerHTML = `<span class="lista-status__ponto" aria-hidden="true"></span><span>Sem Lista Diária carregada</span>`;
+      el.status.className = "lista-status lista-status--lembrete";
+      el.status.innerHTML = `<span class="lista-status__ponto" aria-hidden="true"></span><span>Sem Lista Diária: <strong>carregue a de hoje</strong> para ver saldo e preço campanha</span>`;
       el.nota.hidden = true;
     }
     window.dispatchEvent(new CustomEvent("listadiaria:mudou"));

@@ -1,5 +1,11 @@
 [
   {
+    "chave": "2026-11-12-home",
+    "data": "2026-11-12",
+    "titulo": "Você sabia? 💡",
+    "texto": "A página inicial agora ensina um nome novo a cada visita: o \"Você sabia?\" mostra um produto e os outros nomes pelos quais ele é conhecido (clique em \"Outro nome\" para ver mais).\nAo lado, \"Nesta semana\" resume os produtos novos, os preços que mudaram e os removidos, com atalho para a página de Novidades. E se a Lista Diária não for a de hoje, o site avisa."
+  },
+  {
     "chave": "2026-11-12-animacoes",
     "data": "2026-11-12",
     "titulo": "Mais fluido",

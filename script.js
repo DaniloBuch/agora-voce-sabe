@@ -324,6 +324,7 @@ async function carregarDados() {
           referenciaOriginal,
           categoria: String(item.categoria ?? "").trim() || "-", // "-" = sem categoria
           areas: Array.isArray(item.areas) ? item.areas.map((a) => String(a).trim()).filter(Boolean) : [],
+          criadoEm: item.criado_em ? Date.parse(item.criado_em) : null,
           tags: tagsArray,
           _sku: normalizar(sku),
           _desc: normalizarEspacos(descricao),
@@ -347,7 +348,8 @@ async function carregarDados() {
     montarCategorias();
 
     // Atualiza o painel com o número real
-    infoNumero.textContent = fmtNum.format(database.length);
+    contarAte(infoNumero, database.length);
+    montarDestaques();
     infoTexto.textContent =
       contingencia === "offline"
         ? `produtos (sem internet: usando a base guardada neste aparelho em ${new Date(salvoEm).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}).`
@@ -2037,3 +2039,112 @@ if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
     }
   });
 })();
+
+
+/* ==========================================================================
+   Home: números que contam, exemplos no campo de busca, "Você sabia?" e
+   "Nesta semana". Tudo some/fica parado com "reduzir movimento".
+   ========================================================================== */
+const semMovimento = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// conta de 0 até o valor (desacelerando no fim)
+function contarAte(el, alvo, ms = 700) {
+  if (!el) return;
+  if (semMovimento() || !alvo) {
+    el.textContent = fmtNum.format(alvo);
+    return;
+  }
+  const ini = performance.now();
+  const passo = (agora) => {
+    const t = Math.min(1, (agora - ini) / ms);
+    el.textContent = fmtNum.format(Math.round(alvo * (1 - Math.pow(1 - t, 3))));
+    if (t < 1) requestAnimationFrame(passo);
+  };
+  requestAnimationFrame(passo);
+}
+
+// Campo de busca vazio: alterna exemplos de busca no placeholder (para quando a pessoa digita ou há filtro)
+(function exemplosNoCampo() {
+  const EXEMPLOS = ["Ex.: Jelco", "Ex.: sonda 12", "Ex.: luva procedimento -latex", "Ex.: Transofix", "Ex.: 000437", "Ex.: esfigmomanômetro"];
+  let i = 0;
+  setInterval(() => {
+    if (semMovimento() || document.hidden || input.value || temFiltro() || document.activeElement === input) {
+      if (!temFiltro() && input.placeholder !== PLACEHOLDER_PADRAO && (input.value || document.activeElement === input)) input.placeholder = PLACEHOLDER_PADRAO;
+      return;
+    }
+    input.placeholder = i % 2 === 0 ? EXEMPLOS[(i / 2) % EXEMPLOS.length] : PLACEHOLDER_PADRAO;
+    i++;
+  }, 3200);
+})();
+
+/* --- "Você sabia?": um produto e os outros nomes dele --- */
+let sabiaAtual = null;
+function sortearSabia() {
+  const comNomes = database.filter((p) => p.tags.length >= 2);
+  if (!comNomes.length) return null;
+  let p;
+  for (let t = 0; t < 5; t++) {
+    p = comNomes[Math.floor(Math.random() * comNomes.length)];
+    if (!sabiaAtual || p.sku !== sabiaAtual.sku) break;
+  }
+  return p;
+}
+function desenharSabia(animar) {
+  const caixa = document.getElementById("sabia");
+  const texto = document.getElementById("sabiaTexto");
+  sabiaAtual = sortearSabia();
+  if (!sabiaAtual) {
+    caixa.hidden = true;
+    return;
+  }
+  const nomes = sabiaAtual.tags.slice(0, 4).map((t) => `<strong>${escaparHtml(t)}</strong>`);
+  const lista = nomes.length > 1 ? `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}` : nomes[0];
+  const html = `O produto <span class="sabia__produto">${escaparHtml(sabiaAtual.descricao)}</span> <span class="sabia__sku">(${escaparHtml(sabiaAtual.sku)})</span> também é conhecido como ${lista}.`;
+  caixa.hidden = false;
+  if (!animar || semMovimento()) {
+    texto.innerHTML = html;
+    return;
+  }
+  texto.classList.add("sabia__texto--saindo");
+  setTimeout(() => {
+    texto.innerHTML = html;
+    texto.classList.remove("sabia__texto--saindo");
+  }, 180);
+}
+document.getElementById("sabiaOutro").addEventListener("click", () => desenharSabia(true));
+document.getElementById("sabiaVer").addEventListener("click", () => {
+  if (!sabiaAtual) return;
+  input.value = sabiaAtual.sku;
+  atualizarBotaoLimpar();
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.focus();
+});
+
+/* --- "Nesta semana": novos, preços que mudaram (Lista Diária deste navegador) e removidos --- */
+const SEMANA_MS = 7 * 24 * 60 * 60 * 1000;
+function desenharSemanaPrecos() {
+  const el = document.getElementById("semPrecos");
+  const rot = document.getElementById("semPrecosRotulo");
+  const l = window.ListaDiaria;
+  if (l && l.ativa() && l.comparadaCom && l.comparadaCom()) {
+    contarAte(el, l.variacoes().length);
+    rot.textContent = "preços mudaram";
+  } else {
+    el.textContent = "–";
+    rot.textContent = l && l.ativa() ? "preços (sem lista anterior)" : "preços (carregue a lista)";
+  }
+}
+async function montarDestaques() {
+  document.getElementById("destaques").hidden = false;
+  desenharSabia(false);
+  const desde = Date.now() - SEMANA_MS;
+  contarAte(document.getElementById("semNovos"), database.filter((p) => p.criadoEm && p.criadoEm >= desde).length);
+  desenharSemanaPrecos();
+  const rem = window.CBS_API && CBS_API.configurado && CBS_API.produtosRemovidos ? await CBS_API.produtosRemovidos(7) : null;
+  const elRem = document.getElementById("semRemovidos");
+  if (rem === null) elRem.textContent = "–";
+  else contarAte(elRem, rem.length);
+}
+window.addEventListener("listadiaria:mudou", () => {
+  if (carregado) desenharSemanaPrecos();
+});
