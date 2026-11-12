@@ -2079,18 +2079,57 @@ function contarAte(el, alvo, ms = 700) {
   requestAnimationFrame(passo);
 }
 
-// Campo de busca vazio: alterna exemplos de busca no placeholder (para quando a pessoa digita ou há filtro)
+// Campo de busca vazio: "digita" exemplos de busca no placeholder, bem rápido, e apaga.
+// Para na hora quando a pessoa clica/digita ou escolhe um filtro (e não roda com "reduzir movimento").
 (function exemplosNoCampo() {
-  const EXEMPLOS = ["Ex.: Jelco", "Ex.: sonda 12", "Ex.: luva procedimento -latex", "Ex.: Transofix", "Ex.: 000437", "Ex.: esfigmomanômetro"];
-  let i = 0;
-  setInterval(() => {
-    if (semMovimento() || document.hidden || input.value || temFiltro() || document.activeElement === input) {
-      if (!temFiltro() && input.placeholder !== PLACEHOLDER_PADRAO && (input.value || document.activeElement === input)) input.placeholder = PLACEHOLDER_PADRAO;
+  const EXEMPLOS = [
+    "Jelco 22", "sonda uretral 12", "luva procedimento -latex", "Transofix", "000437",
+    "esfigmomanômetro", "scalp 21", "seringa 10ml", "cabo bisturi n4", "Polifix",
+    "gaze estéril", "equipo macrogotas", "\"luva cirúrgica\" 7,5", "Aeropuff", "atadura crepe",
+    "abaixador de língua", "Zobec", "aparelho de pressão", "cateter 24", "fio nylon 3-0",
+  ];
+  const PREFIXO = "Ex.: ";
+  const DIGITA_MS = 38; // por letra
+  const APAGA_MS = 16;
+  const PAUSA_MS = 1600; // exemplo pronto na tela
+  const DESCANSO_MS = 2600; // texto normal entre um exemplo e outro
+  let timer = null;
+  let ordem = [];
+
+  const podeAnimar = () => !semMovimento() && !document.hidden && !input.value && !temFiltro() && document.activeElement !== input;
+  function proximo() {
+    if (!ordem.length) ordem = [...EXEMPLOS].sort(() => Math.random() - 0.5); // embaralha a cada rodada
+    return PREFIXO + ordem.pop();
+  }
+  function parar() {
+    clearTimeout(timer);
+    timer = null;
+    if (!temFiltro() && input.placeholder !== PLACEHOLDER_PADRAO) input.placeholder = PLACEHOLDER_PADRAO;
+  }
+  function agendar(fn, ms) {
+    timer = setTimeout(() => (podeAnimar() ? fn() : (parar(), agendar(comecar, DESCANSO_MS))), ms);
+  }
+  function digitar(texto, n) {
+    input.placeholder = texto.slice(0, n) + (n < texto.length ? "▏" : "");
+    if (n < texto.length) agendar(() => digitar(texto, n + 1), DIGITA_MS);
+    else agendar(() => apagar(texto, texto.length), PAUSA_MS);
+  }
+  function apagar(texto, n) {
+    if (n <= PREFIXO.length) {
+      input.placeholder = PLACEHOLDER_PADRAO;
+      agendar(comecar, DESCANSO_MS);
       return;
     }
-    input.placeholder = i % 2 === 0 ? EXEMPLOS[(i / 2) % EXEMPLOS.length] : PLACEHOLDER_PADRAO;
-    i++;
-  }, 3200);
+    input.placeholder = texto.slice(0, n - 1) + "▏";
+    agendar(() => apagar(texto, n - 1), APAGA_MS);
+  }
+  function comecar() {
+    digitar(proximo(), PREFIXO.length);
+  }
+  input.addEventListener("focus", parar);
+  input.addEventListener("input", parar);
+  input.addEventListener("blur", () => { if (!timer) agendar(comecar, DESCANSO_MS); }); // saiu do campo: volta a mostrar exemplos
+  agendar(comecar, DESCANSO_MS);
 })();
 
 /* --- "Você sabia?": um produto e os outros nomes dele --- */
