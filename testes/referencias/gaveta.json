@@ -1,0 +1,28 @@
+{
+  "categorias": [
+    "Todos os produtos 71",
+    "Luvas 60",
+    "Cateter 3",
+    "Sondas 3",
+    "Diagnóstico 2"
+  ],
+  "areas": [
+    "Hospitais 3",
+    "Laboratórios 1"
+  ],
+  "filtradas": [
+    "Sondas 3"
+  ],
+  "resultado": {
+    "info": "3 produtos em Sondas, em ordem alfabética.",
+    "linhas": [
+      "000438 SONDA FOLEY 2 VIAS N 14 Indicado para Hospitais SF14",
+      "000439 SONDA NASOGASTRICA LONGA N 12 SNG12",
+      "000437 SONDA URETRAL N 12 Indicado para Hospitais Também conhecido por SONDA DE ALÍVIO SU12"
+    ],
+    "total": 3,
+    "paginacao": null,
+    "marcados": []
+  },
+  "url": "?cat=Sondas"
+}

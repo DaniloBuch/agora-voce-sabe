@@ -1,0 +1,68 @@
+{
+  "categorias": {
+    "visivel": true,
+    "linhas": [
+      "Sem categoria (–) 3 Ver produtos",
+      "Cateter 3 Ver produtos Renomear Excluir",
+      "Diagnóstico 2 Ver produtos Renomear Excluir",
+      "Luvas 60 Ver produtos Renomear Excluir",
+      "Sondas 3 Ver produtos Renomear Excluir",
+      "Vazia 0 Ver produtos Renomear Excluir"
+    ]
+  },
+  "areas": {
+    "visivel": true,
+    "linhas": [
+      "Hospitais 3 Ver produtos Editar",
+      "Laboratórios 1 Ver produtos Editar"
+    ]
+  },
+  "tags": {
+    "visivel": true,
+    "linhas": [
+      "ABOCATH 1 Renomear Excluir",
+      "APARELHO DE PRESSÃO 1 Renomear Excluir",
+      "JELCO 2 Renomear Excluir",
+      "LUVA DE LÁTEX 1 Renomear Excluir",
+      "SONDA DE ALÍVIO 1 Renomear Excluir",
+      "SORO FISIOLÓGICO 1 Renomear Excluir",
+      "TRANSOFIX 1 Renomear Excluir"
+    ]
+  },
+  "sinonimos": {
+    "visivel": true,
+    "linhas": [
+      "cx 61 caixa 0 61 Editar Excluir",
+      "soro fisiologico 1 cloreto de sodio 1 1 Editar Excluir"
+    ]
+  },
+  "novidades": {
+    "visivel": true,
+    "linhas": [
+      "11/11/2026, 12:00 Lista de cotação Monte a cotação pelo +. Publicada Editar Excluir"
+    ]
+  },
+  "importar": {
+    "visivel": true,
+    "linhas": []
+  },
+  "historico": {
+    "visivel": true,
+    "linhas": [
+      "Nenhuma alteração registrada ainda."
+    ]
+  },
+  "produtos": {
+    "visivel": true,
+    "linhas": [
+      "001201 APD APARELHO DE PRESSAO DIGITAL DE PULSO Diagnóstico – sem tags Editar Excluir",
+      "005000 CB4 CABO PARA BISTURI N 4 – – sem tags Editar Excluir",
+      "002000NOVO · 09/11 000000000038833014 CATETER INTRAVENOSO PERIFERICO 20G Cateter Hospitais JELCOABOCATH Editar Excluir",
+      "002001NOVO · 10/11 000000000038833015 CATETER INTRAVENOSO PERIFERICO 22G Cateter – JELCO Editar Excluir",
+      "004000 CS500 CLORETO DE SODIO 0,9% 500ML – – SORO FISIOLÓGICO Editar Excluir",
+      "004001 GZ500 COMPRESSA DE GAZE CX C/500 – – sem tags Editar Excluir",
+      "001200 ESF-AD ESFIGMOMANOMETRO ANEROIDE ADULTO Diagnóstico Laboratórios APARELHO DE PRESSÃO Editar Excluir",
+      "003000 TFX FIXADOR DE CATETER TRANSPARENTE Cateter – TRANSOFIX Editar Excluir"
+    ]
+  }
+}

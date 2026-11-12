@@ -1,0 +1,35 @@
+{
+  "cartoes": [
+    "2 Adicionados últimos 30 dias",
+    "— Mudanças de preço carregue a Lista Diária",
+    "1 Removidos últimos 30 dias"
+  ],
+  "adicionados": {
+    "info": "2 produto(s) incluído(s) nos últimos 30 dias.",
+    "cab": "INCLUÍDO EM ↓ CÓDIGO ↕ DESCRIÇÃO DO PRODUTO ↕ CATEGORIA ↕ COTAÇÃO",
+    "linhas": [
+      "10/11/2026 002001 CATETER INTRAVENOSO PERIFERICO 22G Ref. 38833015 Cateter +",
+      "09/11/2026 002000 CATETER INTRAVENOSO PERIFERICO 20G Ref. 38833014 Cateter +"
+    ]
+  },
+  "removidos": {
+    "info": "1 produto(s) removido(s) do catálogo nos últimos 30 dias.",
+    "cab": "REMOVIDO EM ↓ CÓDIGO ↕ DESCRIÇÃO DO PRODUTO ↕ CATEGORIA ↕",
+    "linhas": [
+      "11/11/2026 009999 PRODUTO QUE SAIU Ref. X1 Sondas"
+    ]
+  },
+  "precos": {
+    "info": "Carregue a Lista Diária na busca para ver as mudanças de preço (a comparação é feita neste navegador).",
+    "cab": "Código↕Descrição do produto↕Antes↕Agora↕Variação↓Diferença↕Cotação",
+    "linhas": []
+  },
+  "filtroTexto": {
+    "info": "1 produto(s) incluído(s) nos últimos 30 dias.",
+    "cab": "INCLUÍDO EM ↓ CÓDIGO ↕ DESCRIÇÃO DO PRODUTO ↕ CATEGORIA ↕ COTAÇÃO",
+    "linhas": [
+      "10/11/2026 002001 CATETER INTRAVENOSO PERIFERICO 22G Ref. 38833015 Cateter +"
+    ]
+  },
+  "hash": "#adicionados"
+}

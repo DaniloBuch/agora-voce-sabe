@@ -1,3 +1,6 @@
+import { normalizar } from "./js/comum/texto.js";
+import { fmtSaldo, fmtPreco, fmtData, fmtHora, lerNumeroBR } from "./js/comum/numeros.js";
+
 /* ==========================================================================
    Lista Diária (saldo e preço campanha) — consulta LOCAL
    - O Excel é lido no próprio navegador (SheetJS, carregado só quando alguém envia um arquivo).
@@ -18,7 +21,7 @@
   const CHAVE_ANTERIOR = "cbs_lista_diaria_anterior_v1";
   const ANTERIOR_MS = 5 * 24 * 60 * 60 * 1000;
   // relativo a este arquivo (funciona na busca e na página /cotacao/)
-  const SHEETJS_URL = new URL("vendor/xlsx.full.min.js", (document.currentScript && document.currentScript.src) || location.href).href;
+  const SHEETJS_URL = new URL("vendor/xlsx.full.min.js", import.meta.url).href;
 
   const $ = (id) => document.getElementById(id);
   const el = {
@@ -37,10 +40,6 @@
   let memoriaApenas = null; // se o localStorage não estiver disponível, vale só nesta aba
   let timer = null;
 
-  const fmtSaldo = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 });
-  const fmtPreco = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 4, maximumFractionDigits: 4 });
-  const fmtData = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const fmtHora = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
   /* ---------- armazenamento (com validade) ---------- */
 
@@ -243,34 +242,13 @@
     });
   }
 
-  const limpar = (t) =>
-    String(t ?? "")
-      .normalize("NFD")
-      .replace(/\p{M}/gu, "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .trim();
+  const limpar = (t) => normalizar(t).replace(/[^a-z0-9]+/g, " ").trim();
 
   const ehSaldo = (n) => n === "saldo disponivel" || n.startsWith("saldo disp");
   const ehPreco = (n) => n === "preco campanha" || n.startsWith("preco camp") || n === "preco de campanha";
   const ALIASES_SKU = ["codigo", "cod", "sku", "produto", "cod produto", "codigo produto", "codigo do produto", "cod prod", "item", "b1 cod"];
 
-  /** "1.234,50" / "R$ 12,3" / 12.5 -> número; vazio ou inválido -> null.
-      pontoDecimal = CSV separado por vírgula (padrão americano): "4.798" é 4,798 e não 4798. */
-  function paraNumero(v, pontoDecimal = false) {
-    if (v === null || v === undefined || v === "") return null;
-    if (typeof v === "number") return Number.isFinite(v) ? v : null;
-    let t = String(v).replace(/R\$|\s|\u00a0/g, "");
-    if (!t) return null;
-    const virgula = t.includes(","), ponto = t.includes(".");
-    if (virgula && ponto) {
-      // o último separador é o decimal: "1.234,50" (Brasil) ou "1,234.50" (EUA)
-      t = t.lastIndexOf(",") > t.lastIndexOf(".") ? t.replace(/\./g, "").replace(",", ".") : t.replace(/,/g, "");
-    } else if (virgula) t = t.replace(",", ".");
-    else if (ponto && !pontoDecimal && /^-?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
-    const n = Number(t);
-    return Number.isFinite(n) ? n : null;
-  }
+  const paraNumero = lerNumeroBR; // "1.234,50" / "R$ 12,3" -> número (pontoDecimal = CSV no padrão americano)
 
   function normalizarSku(valor) {
     let s = String(valor ?? "").trim();

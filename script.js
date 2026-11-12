@@ -1,3 +1,8 @@
+import { normalizar, normalizarEspacos, formatarRef, escaparHtml, escaparRegex, ordemTexto } from "./js/comum/texto.js";
+import { fmtNum, fmtPct, formatarDifReais } from "./js/comum/numeros.js";
+import { copiarTexto } from "./js/comum/copiar.js";
+import * as baseOffline from "./js/comum/base-offline.js";
+
 let database = [];
 let carregado = false;
 let erroCarga = false;
@@ -59,44 +64,8 @@ const ITENS_POR_PAGINA = 50;
 const MAX_PARECIDOS = 50; // resultados "parecidos" (possível erro de digitação) mostrados depois dos exatos
 const MAX_LINHAS_APELIDOS_PC = 1; // "Também conhecido por": 1 linha no computador
 const MAX_LINHAS_APELIDOS_CELULAR = 2; // e até 2 no celular; o resto fica no "+N" (clique mostra todos)
-const fmtNum = new Intl.NumberFormat("pt-BR");
-const ordemAlfabetica = new Intl.Collator("pt-BR", { sensitivity: "base", numeric: true });
 
 /* ---------- Utilitários ---------- */
-
-// Minúsculas e sem acentos: "Esfigmomanômetro" -> "esfigmomanometro"
-function normalizar(texto) {
-  return String(texto ?? "")
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase();
-}
-
-// Igual ao normalizar, mas com os espaços repetidos reduzidos a um só
-function normalizarEspacos(texto) {
-  return normalizar(texto).replace(/\s+/g, " ").trim();
-}
-
-// Referência: se for só número, mostra o valor sem zeros à esquerda
-// ("000000000038833014" -> "38833014"); se tiver letras, mantém o texto ("AR420").
-function formatarRef(ref) {
-  const texto = String(ref ?? "").trim();
-  return /^\d+$/.test(texto) ? texto.replace(/^0+(?=\d)/, "") : texto;
-}
-
-// Evita que <, >, & ou aspas nos dados quebrem (ou injetem) HTML
-function escaparHtml(texto) {
-  return String(texto ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function escaparRegex(texto) {
-  return texto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 const ehLetraOuNumero = (c) => c !== undefined && /[a-z0-9]/.test(c);
 
@@ -177,57 +146,15 @@ function destacar(texto, termos, deslocamento = 0) {
 
 /* ---------- Carga dos dados ---------- */
 
-/* Cópia da base guardada neste aparelho (IndexedDB), para o app funcionar sem internet.
-   Guarda só o que já é público (a mesma lista que o site lê do Supabase). */
-const BaseOffline = (() => {
-  const NOME = "cbs_agora_voce_sabe", LOJA = "dados";
-  function abrir() {
-    return new Promise((resolver, rejeitar) => {
-      if (!window.indexedDB) return rejeitar(new Error("sem IndexedDB"));
-      const pedido = indexedDB.open(NOME, 1);
-      pedido.onupgradeneeded = () => pedido.result.createObjectStore(LOJA);
-      pedido.onsuccess = () => resolver(pedido.result);
-      pedido.onerror = () => rejeitar(pedido.error);
-    });
-  }
-  async function salvar(chave, valor) {
-    try {
-      const db = await abrir();
-      await new Promise((resolver, rejeitar) => {
-        const tx = db.transaction(LOJA, "readwrite");
-        tx.objectStore(LOJA).put(valor, chave);
-        tx.oncomplete = resolver;
-        tx.onerror = () => rejeitar(tx.error);
-      });
-      db.close();
-    } catch (_) {} // sem espaço ou navegação privada: só não fica disponível offline
-  }
-  async function ler(chave) {
-    try {
-      const db = await abrir();
-      const valor = await new Promise((resolver, rejeitar) => {
-        const pedido = db.transaction(LOJA, "readonly").objectStore(LOJA).get(chave);
-        pedido.onsuccess = () => resolver(pedido.result || null);
-        pedido.onerror = () => rejeitar(pedido.error);
-      });
-      db.close();
-      return valor;
-    } catch (_) {
-      return null;
-    }
-  }
-  return { salvar, ler };
-})();
-
 async function lerDb() {
   // 1) Banco (Supabase), se configurado; 2) cópia guardada neste aparelho; 3) db.json como plano B.
   if (window.CBS_API && CBS_API.configurado) {
     try {
       const dados = await CBS_API.listarProdutos();
-      BaseOffline.salvar("produtos", { em: Date.now(), dados }); // sem esperar: não atrasa a busca
+      baseOffline.salvar("produtos", { em: Date.now(), dados }); // sem esperar: não atrasa a busca
       return { dados, contingencia: false };
     } catch (erro) {
-      const salvo = await BaseOffline.ler("produtos");
+      const salvo = await baseOffline.ler("produtos");
       if (salvo && Array.isArray(salvo.dados) && salvo.dados.length) {
         console.warn("Sem conexão com o banco; usando a base guardada neste aparelho:", erro);
         return { dados: salvo.dados, contingencia: "offline", salvoEm: salvo.em };
@@ -257,10 +184,10 @@ async function lerSinonimos() {
   if (!window.CBS_API || !CBS_API.configurado || !CBS_API.listarSinonimos) return [];
   try {
     const grupos = await CBS_API.listarSinonimos();
-    BaseOffline.salvar("sinonimos", grupos);
+    baseOffline.salvar("sinonimos", grupos);
     return grupos;
   } catch (_) {
-    return (await BaseOffline.ler("sinonimos")) || []; // offline: os sinônimos da última vez
+    return (await baseOffline.ler("sinonimos")) || []; // offline: os sinônimos da última vez
   }
 }
 
@@ -269,10 +196,10 @@ async function lerAreas() {
   if (!window.CBS_API || !CBS_API.configurado || !CBS_API.listarAreas) return [];
   try {
     const areas = await CBS_API.listarAreas();
-    if (areas.length) BaseOffline.salvar("areas", areas);
+    if (areas.length) baseOffline.salvar("areas", areas);
     return areas;
   } catch (_) {
-    return (await BaseOffline.ler("areas")) || [];
+    return (await baseOffline.ler("areas")) || [];
   }
 }
 
@@ -338,7 +265,7 @@ async function carregarDados() {
       });
     // posição de cada produto em ordem alfabética (navegar pelo catálogo / por categoria)
     [...database]
-      .sort((a, b) => ordemAlfabetica.compare(a.descricao, b.descricao) || ordemAlfabetica.compare(a.sku, b.sku))
+      .sort((a, b) => ordemTexto.compare(a.descricao, b.descricao) || ordemTexto.compare(a.sku, b.sku))
       .forEach((item, i) => (item._alfa = i));
     vocabulario = null;
     cacheParecidas.clear();
@@ -880,12 +807,6 @@ window.addEventListener("scroll", esconderPrevia, { passive: true });
 
 // Células de saldo e preço vindas da Lista Diária (consulta local, nunca vão ao banco)
 // Variação do preço campanha desde a lista anterior: "▼ 10,0% · −R$ 0,10" (verde caiu, vermelho subiu)
-const fmtPct = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-function textoDifReais(dif) {
-  const abs = Math.abs(dif);
-  const casas = abs >= 0.01 ? 2 : 4;
-  return `${dif < 0 ? "−" : "+"}R$ ${abs.toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas })}`;
-}
 function htmlVariacao(sku) {
   const v = window.ListaDiaria && window.ListaDiaria.variacao ? window.ListaDiaria.variacao(sku) : null;
   if (!v) return "";
@@ -893,7 +814,7 @@ function htmlVariacao(sku) {
   const quando = window.ListaDiaria.comparadaCom() ? new Date(window.ListaDiaria.comparadaCom()).toLocaleDateString("pt-BR") : "";
   const pct = `${caiu ? "−" : "+"}${fmtPct.format(Math.abs(v.pct))}%`;
   // na tela só a seta e o %; o resto aparece ao passar o mouse (e é lido pelo leitor de tela)
-  const detalhe = `${caiu ? "Caiu" : "Subiu"} ${pct} (${textoDifReais(v.dif)}). Antes: ${window.ListaDiaria.formatarPreco(v.anterior)}${quando ? `, na lista de ${quando}` : ""}`;
+  const detalhe = `${caiu ? "Caiu" : "Subiu"} ${pct} (${formatarDifReais(v.dif)}). Antes: ${window.ListaDiaria.formatarPreco(v.anterior)}${quando ? `, na lista de ${quando}` : ""}`;
   return (
     `<span class="preco-var preco-var--${caiu ? "baixa" : "alta"}" title="${escaparHtml(detalhe)}">` +
     `<span aria-hidden="true">${caiu ? "▼" : "▲"} ${pct}</span><span class="sr-only">${escaparHtml(detalhe)}</span></span>`
@@ -961,7 +882,6 @@ function textoExcluidos(consulta) {
 /* ---------- Ordenar pela coluna (clique no título) ---------- */
 
 const ROTULO_ORDEM = { sku: "SKU", descricao: "Descrição", saldo: "Saldo", preco: "Preço camp.", ref: "Ref." };
-const ordemTexto = new Intl.Collator("pt-BR", { numeric: true, sensitivity: "base" });
 const colunaDaLista = (col) => col === "saldo" || col === "preco";
 
 function valorParaOrdem(item, col) {
@@ -1427,27 +1347,6 @@ async function exportarParaExcel() {
 btnExportar.addEventListener("click", exportarParaExcel);
 
 /* ---------- Copiar SKU e link da busca ---------- */
-
-async function copiarTexto(texto) {
-  try {
-    await navigator.clipboard.writeText(texto);
-    return true;
-  } catch (_) {
-    // plano B para navegadores/ambientes sem a API de área de transferência
-    const campo = document.createElement("textarea");
-    campo.value = texto;
-    campo.setAttribute("readonly", "");
-    campo.style.cssText = "position:fixed;opacity:0;top:0;left:0";
-    document.body.appendChild(campo);
-    campo.select();
-    let ok = false;
-    try {
-      ok = document.execCommand("copy");
-    } catch (_) {}
-    campo.remove();
-    return ok;
-  }
-}
 
 function sinalizarCopiado(el, textoOriginal) {
   el.classList.add("copiado");

@@ -1,3 +1,6 @@
+import { escaparHtml as esc } from "./js/comum/texto.js";
+import { fmtData } from "./js/comum/numeros.js";
+
 /* ==========================================================================
    Sino de novidades (cabeçalho da busca, da cotação e da página de novidades).
    As mensagens são publicadas na aba "Novidades" do painel (tabela novidades).
@@ -14,8 +17,6 @@
   const contador = document.getElementById("sinoContador");
   const fechar = document.getElementById("sinoFechar");
 
-  const fmtData = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const esc = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   let mensagens = [];
   let vistoAte = 0;
   try { vistoAte = Number(localStorage.getItem(CHAVE_VISTO)) || 0; } catch (_) {}

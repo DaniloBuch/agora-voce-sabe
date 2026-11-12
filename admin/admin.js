@@ -1,3 +1,6 @@
+import { normalizar, escaparHtml as esc, escaparRegex as escRegex } from "../js/comum/texto.js";
+import { fmtNum as fmt, fmtDia, fmtDataHora as fmtData } from "../js/comum/numeros.js";
+
 (() => {
   const api = window.CBS_API;
   const $ = (sel) => document.querySelector(sel);
@@ -23,29 +26,6 @@
 
   /* ---------------- utilitários ---------------- */
 
-  function normalizar(texto) {
-    return String(texto ?? "")
-      .normalize("NFD")
-      .replace(/\p{M}/gu, "")
-      .toLowerCase();
-  }
-
-  function esc(texto) {
-    return String(texto ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
-  const fmt = new Intl.NumberFormat("pt-BR");
-  const fmtDia = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
-  const fmtData = new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: "America/Sao_Paulo",
-  });
 
   let toastTimer = null;
   function aviso(msg, erro = false) {
@@ -230,7 +210,6 @@
     indiceSinCache = { origem: sinonimos, mapa };
     return mapa;
   }
-  const escRegex = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   // palavra curta (até 4 letras) vinda de sinônimo só vale como palavra inteira ("est" não pega "estilo")
   function casaAlt(texto, alt) {
     return alt.inteira ? alt.re.test(texto) : texto.includes(alt.t);

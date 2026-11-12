@@ -1,0 +1,56 @@
+{
+  "claro": {
+    "links": [
+      {
+        "texto": "",
+        "href": "../",
+        "visivel": true
+      },
+      {
+        "texto": "Novidades",
+        "href": "../novidades/",
+        "visivel": true
+      },
+      {
+        "texto": "Ver novidades do catálogo: entraram, saíram e preços →",
+        "href": "../novidades/",
+        "visivel": false
+      },
+      {
+        "texto": "Voltar à busca",
+        "href": "../",
+        "visivel": true
+      }
+    ],
+    "botoes": [
+      {
+        "id": "sinoBotao",
+        "rotulo": "Novidades: 1 não lida",
+        "visivel": true
+      },
+      {
+        "id": "sinoFechar",
+        "rotulo": "Fechar novidades",
+        "visivel": false
+      },
+      {
+        "id": "btn-tema",
+        "rotulo": "Usar tema escuro",
+        "visivel": true
+      }
+    ],
+    "logo": "../design-system/assets/brand/logo-completo-gentequemove-roxo-quadrado-laranja.svg",
+    "classes": "site-header"
+  },
+  "escuro": {
+    "tema": "escuro",
+    "logo": "../design-system/assets/brand/logo-completo-gentequemove-branco.svg"
+  },
+  "sino": {
+    "aberto": true,
+    "itens": [
+      "11/11/2026 NOVA Lista de cotação Monte a cotação pelo +."
+    ],
+    "fechouComEsc": true
+  }
+}

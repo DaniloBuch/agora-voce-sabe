@@ -1,3 +1,8 @@
+import { escaparHtml as esc, normalizarEspacos, formatarRef } from "../js/comum/texto.js";
+import { fmt2, fmt4, fmtQtd, fmtSaldo, lerNumeroBR } from "../js/comum/numeros.js";
+import { copiarTexto, copiarHtml } from "../js/comum/copiar.js";
+import * as baseOffline from "../js/comum/base-offline.js";
+
 /* ==========================================================================
    Página de cotação: monta a tabela dos produtos marcados na busca (cotacao-store.js),
    com quantidade, unidade e valor unitário editáveis, para copiar ao papel timbrado,
@@ -9,23 +14,10 @@
   const corpo = $("#cotCorpo");
   const CHAVE_LISTA = "cbs_lista_diaria_v1"; // Lista Diária carregada na busca (24 h)
 
-  const fmt2 = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const fmt4 = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-  const fmtQtd = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
-  const fmtSaldo = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 });
-
-  function esc(t) {
-    return String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-  }
-
-  // "1.234,5" / "10" / "2,5" / "R$ 4,79" -> número (padrão brasileiro); vazio -> null
+  // "1.234,5" / "10" / "2,5" / "R$ 4,79" -> número (padrão brasileiro); vazio ou negativo -> null
   function lerNumero(texto) {
-    let t = String(texto ?? "").replace(/R\$|\s/g, "");
-    if (!t) return null;
-    if (t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");
-    else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, "");
-    const n = Number(t);
-    return Number.isFinite(n) && n >= 0 ? n : null;
+    const n = lerNumeroBR(texto);
+    return n !== null && n >= 0 ? n : null;
   }
 
   const centavos = (n) => Math.round(n * 100) / 100;
@@ -48,26 +40,8 @@
      Aqui a base vem da cópia guardada pela busca neste aparelho; sem ela, do Supabase. */
   let skusCatalogo = [];
   window.CBS_skusCatalogo = () => skusCatalogo;
-  function lerBaseDoAparelho() {
-    return new Promise((resolver) => {
-      try {
-        const pedido = indexedDB.open("cbs_agora_voce_sabe", 1);
-        pedido.onupgradeneeded = () => pedido.result.createObjectStore("dados");
-        pedido.onerror = () => resolver(null);
-        pedido.onsuccess = () => {
-          const db = pedido.result;
-          try {
-            const get = db.transaction("dados", "readonly").objectStore("dados").get("produtos");
-            get.onsuccess = () => { db.close(); resolver(get.result || null); };
-            get.onerror = () => { db.close(); resolver(null); };
-          } catch (_) { db.close(); resolver(null); }
-        };
-      } catch (_) { resolver(null); }
-    });
-  }
   let catalogo = []; // [{sku, descricao, referencia, tags, _busca}] para a mini-busca
-  const normalizar = (t) => String(t ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
-  const formatarRef = (r) => { const t = String(r ?? "").trim(); return /^\d+$/.test(t) ? t.replace(/^0+(?=\d)/, "") : t; };
+  const normalizar = normalizarEspacos;
   function prepararCatalogo(dados) {
     catalogo = dados
       .filter((p) => String(p.sku ?? "").trim())
@@ -86,9 +60,9 @@
     skusCatalogo = catalogo.map((p) => p.sku);
   }
   (async function carregarCatalogo() {
-    const salvo = await lerBaseDoAparelho();
+    const salvo = await baseOffline.lerProdutos();
     try {
-      if (salvo && Array.isArray(salvo.dados) && salvo.dados.length) prepararCatalogo(salvo.dados);
+      if (salvo) prepararCatalogo(salvo);
       else if (window.CBS_API && CBS_API.configurado) prepararCatalogo(await CBS_API.listarProdutos());
       else prepararCatalogo(await (await fetch("../db.json")).json());
     } catch (_) {}
@@ -155,9 +129,7 @@
       : r.total > MAX_SUGESTOES ? `Mostrando ${MAX_SUGESTOES} de ${r.total.toLocaleString("pt-BR")}: digite mais para refinar.` : "";
   }
 
-  async function copiarCodigo(sku) {
-    try { await navigator.clipboard.writeText(sku); return true; } catch (_) { return false; }
-  }
+  const copiarCodigo = copiarTexto;
 
   function adicionarDaBusca(sku) {
     const p = catalogo.find((x) => x.sku === sku);
@@ -375,33 +347,7 @@
     const total = centavos(linhas.reduce((s, l) => s + (l.total || 0), 0));
     const html = htmlParaCopiar(linhas, total);
     const texto = textoParaCopiar(linhas, total);
-    let ok = false;
-    try {
-      if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            "text/html": new Blob([html], { type: "text/html" }),
-            "text/plain": new Blob([texto], { type: "text/plain" }),
-          }),
-        ]);
-        ok = true;
-      }
-    } catch (_) {}
-    if (!ok) {
-      // plano B: copia a tabela selecionando-a numa área escondida
-      const area = document.createElement("div");
-      area.innerHTML = html;
-      area.style.cssText = "position:fixed;left:-9999px;top:0;";
-      document.body.appendChild(area);
-      const faixa = document.createRange();
-      faixa.selectNodeContents(area);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(faixa);
-      try { ok = document.execCommand("copy"); } catch (_) {}
-      sel.removeAllRanges();
-      area.remove();
-    }
+    const ok = await copiarHtml(html, texto);
     const rotulo = $("#btnCopiar span");
     if (ok) {
       rotulo.textContent = "Tabela copiada!";

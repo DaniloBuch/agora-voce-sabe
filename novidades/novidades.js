@@ -1,3 +1,8 @@
+import { escaparHtml as esc, normalizar, formatarRef, ordemTexto } from "../js/comum/texto.js";
+import { fmtData, fmt4, fmtPct, fmtNum, formatarDifReais } from "../js/comum/numeros.js";
+import { copiarTexto } from "../js/comum/copiar.js";
+import * as baseOffline from "../js/comum/base-offline.js";
+
 /* ==========================================================================
    Novidades do catálogo: produtos adicionados (data de inclusão), mudanças de
    preço (Lista Diária deste navegador, comparada com a anterior) e produtos
@@ -11,14 +16,6 @@
   const POR_VEZ = 200; // linhas desenhadas por vez ("Mostrar mais")
   const DIA_MS = 24 * 60 * 60 * 1000;
 
-  const fmtData = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const fmt4 = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-  const fmtPct = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  const fmtNum = new Intl.NumberFormat("pt-BR");
-  const esc = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-  const normalizar = (t) => String(t ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-  const formatarRef = (r) => { const t = String(r ?? "").trim(); return /^\d+$/.test(t) ? t.replace(/^0+(?=\d)/, "") : t; };
-  const ordemTexto = new Intl.Collator("pt-BR", { numeric: true, sensitivity: "base" });
 
   const estado = {
     aba: ["adicionados", "precos", "removidos"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "adicionados",
@@ -35,30 +32,12 @@
 
   /* ---------- dados ---------- */
 
-  function lerBaseDoAparelho() {
-    return new Promise((resolver) => {
-      try {
-        const pedido = indexedDB.open("cbs_agora_voce_sabe", 1);
-        pedido.onupgradeneeded = () => pedido.result.createObjectStore("dados");
-        pedido.onerror = () => resolver(null);
-        pedido.onsuccess = () => {
-          const db = pedido.result;
-          try {
-            const get = db.transaction("dados", "readonly").objectStore("dados").get("produtos");
-            get.onsuccess = () => { db.close(); resolver(get.result ? get.result.dados : null); };
-            get.onerror = () => { db.close(); resolver(null); };
-          } catch (_) { db.close(); resolver(null); }
-        };
-      } catch (_) { resolver(null); }
-    });
-  }
-
   async function carregarCatalogo() {
     let dados = null;
     try {
       if (api && api.configurado) dados = await api.listarProdutos(); // o mais novo (com a data de inclusão)
     } catch (_) {}
-    if (!dados) dados = await lerBaseDoAparelho(); // sem internet: a base guardada pela busca
+    if (!dados) dados = await baseOffline.lerProdutos(); // sem internet: a base guardada pela busca
     if (!dados) {
       try { dados = await (await fetch("../db.json")).json(); } catch (_) { dados = []; }
     }
@@ -151,10 +130,8 @@
   }
   function celVar(p) {
     const caiu = p.dif < 0;
-    const reais = Math.abs(p.dif);
-    const casas = reais >= 0.01 ? 2 : 4;
     return `<td class="n-num n-var n-var--${caiu ? "baixa" : "alta"}">${caiu ? "▼ −" : "▲ +"}${fmtPct.format(Math.abs(p.pct))}%</td>` +
-      `<td class="n-num n-var n-var--${caiu ? "baixa" : "alta"}">${caiu ? "−" : "+"}R$ ${reais.toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas })}</td>`;
+      `<td class="n-num n-var n-var--${caiu ? "baixa" : "alta"}">${formatarDifReais(p.dif)}</td>`;
   }
 
   const COLUNAS = {
@@ -342,12 +319,11 @@
       cot.remover(sku);
       avisar(`<strong>${esc(sku)}</strong> saiu da cotação.`);
     } else {
-      let copiou = false;
-      const copia = navigator.clipboard ? navigator.clipboard.writeText(sku).then(() => (copiou = true), () => {}) : Promise.resolve();
+      const copia = copiarTexto(sku);
       const p = estado.catalogo.get(sku);
       const v = estado.lista ? estado.lista.itens.find((x) => x.sku === sku) : null;
       cot.adicionar({ sku, descricao: p.descricao, referencia: p.referencia, preco: v ? v.atual : null });
-      await copia;
+      const copiou = await copia;
       avisar(`<strong>${esc(sku)}</strong> adicionado à cotação${copiou ? " e código copiado" : ""} (${cot.quantidade()} ${cot.quantidade() === 1 ? "item" : "itens"}).`);
     }
     desenhar();

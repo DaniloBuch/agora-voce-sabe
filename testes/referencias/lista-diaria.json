@@ -1,0 +1,37 @@
+{
+  "status": "Lista Diária atualizada em 12/11/2026 às 12:00 · apaga sozinha em 24 h 00 min · sem lista anterior para comparar preços",
+  "msg": "Lista Diária carregada: saldo e preço de 3 produtos. Sem lista de data anterior neste navegador para comparar os preços: a variação aparece quando você carregar uma lista mais nova que esta.",
+  "sonda": {
+    "info": "1 resultado(s) encontrado(s).",
+    "linhas": [
+      "000437 SONDA URETRAL N 12 Indicado para Hospitais Também conhecido por SONDA DE ALÍVIO 120 R$ 4,7900 SU12"
+    ],
+    "total": 1,
+    "paginacao": null,
+    "marcados": [
+      "000437"
+    ]
+  },
+  "cateter": {
+    "info": "3 resultado(s) encontrado(s).",
+    "linhas": [
+      "002000 CATETER INTRAVENOSO PERIFERICO 20G Indicado para Hospitais Também conhecido por JELCO ABOCATH 0 R$ 1.234,5000 38833014",
+      "002001 CATETER INTRAVENOSO PERIFERICO 22G Também conhecido por JELCO — — 38833015",
+      "003000 FIXADOR DE CATETER TRANSPARENTE Também conhecido por TRANSOFIX — — TFX"
+    ],
+    "total": 3,
+    "paginacao": null,
+    "marcados": [
+      "cateter"
+    ]
+  },
+  "cabecalho": [
+    "ADICIONAR À COTAÇÃO",
+    "SKU\n↕",
+    "DESCRIÇÃO DO PRODUTO\n↕",
+    "SALDO\n↕",
+    "PREÇO CAMP.\n↕",
+    "REF.\n↕",
+    "SITE"
+  ]
+}

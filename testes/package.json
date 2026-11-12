@@ -1,0 +1,12 @@
+{
+  "name": "agora-voce-sabe-testes",
+  "private": true,
+  "description": "Testes automáticos do Agora Você Sabe (Playwright + Supabase simulado). Rodar: npm install && npx playwright install chromium && npm test",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 *.test.js",
+    "atualizar": "ATUALIZAR=1 node --test --test-concurrency=1 *.test.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.50.0"
+  }
+}

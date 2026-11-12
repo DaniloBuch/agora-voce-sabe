@@ -1,0 +1,105 @@
+{
+  "?q=sonda": {
+    "info": "3 resultado(s) encontrado(s).",
+    "linhas": [
+      "000437 SONDA URETRAL N 12 Indicado para Hospitais Também conhecido por SONDA DE ALÍVIO SU12",
+      "000438 SONDA FOLEY 2 VIAS N 14 Indicado para Hospitais SF14",
+      "000439 SONDA NASOGASTRICA LONGA N 12 SNG12"
+    ],
+    "total": 3,
+    "paginacao": null,
+    "marcados": [
+      "sonda"
+    ],
+    "filtro": null
+  },
+  "?cat=Sondas": {
+    "info": "3 produtos em Sondas, em ordem alfabética.",
+    "linhas": [
+      "000438 SONDA FOLEY 2 VIAS N 14 Indicado para Hospitais SF14",
+      "000439 SONDA NASOGASTRICA LONGA N 12 SNG12",
+      "000437 SONDA URETRAL N 12 Indicado para Hospitais Também conhecido por SONDA DE ALÍVIO SU12"
+    ],
+    "total": 3,
+    "paginacao": null,
+    "marcados": [],
+    "filtro": "Categoria:\nSondas"
+  },
+  "?area=Hospitais": {
+    "info": "3 produtos em Hospitais, em ordem alfabética.",
+    "linhas": [
+      "002000 CATETER INTRAVENOSO PERIFERICO 20G Indicado para Hospitais Também conhecido por JELCO ABOCATH 38833014",
+      "000438 SONDA FOLEY 2 VIAS N 14 Indicado para Hospitais SF14",
+      "000437 SONDA URETRAL N 12 Indicado para Hospitais Também conhecido por SONDA DE ALÍVIO SU12"
+    ],
+    "total": 3,
+    "paginacao": null,
+    "marcados": [],
+    "filtro": "Área:\nHospitais"
+  },
+  "?ver=todos": {
+    "info": "Catálogo completo: 71 produtos em ordem alfabética. Mostrando 1–50.",
+    "linhas": [
+      "001201 APARELHO DE PRESSAO DIGITAL DE PULSO APD",
+      "005000 CABO PARA BISTURI N 4 CB4",
+      "002000 CATETER INTRAVENOSO PERIFERICO 20G Indicado para Hospitais Também conhecido por JELCO ABOCATH 38833014",
+      "002001 CATETER INTRAVENOSO PERIFERICO 22G Também conhecido por JELCO 38833015",
+      "004000 CLORETO DE SODIO 0,9% 500ML Também conhecido por SORO FISIOLÓGICO CS500",
+      "004001 COMPRESSA DE GAZE CX C/500 GZ500",
+      "001200 ESFIGMOMANOMETRO ANEROIDE ADULTO Indicado para Laboratórios Também conhecido por APARELHO DE PRESSÃO ESF-AD",
+      "003000 FIXADOR DE CATETER TRANSPARENTE Também conhecido por TRANSOFIX TFX",
+      "100002 LUVA PROCEDIMENTO LATEX TAM G CX C/100 LOTE 02 LV2",
+      "100005 LUVA PROCEDIMENTO LATEX TAM G CX C/100 LOTE 05 LV5",
+      "100011 LUVA PROCEDIMENTO LATEX TAM G CX C/100 LOTE 11 LV11",
+      "100014 LUVA PROCEDIMENTO LATEX TAM G CX C/100 LOTE 14 LV14"
+    ],
+    "total": 50,
+    "paginacao": "‹ Anterior 1 2 Próxima ›",
+    "marcados": [],
+    "filtro": null
+  },
+  "?q=luva&ord=sku.desc&p=2": {
+    "info": "60 resultado(s) encontrado(s). Mostrando 51–60. Ordenado por SKU (Z→A). Voltar à relevância",
+    "linhas": [
+      "100010 LUVA PROCEDIMENTO LATEX TAM M CX C/100 LOTE 10 LV10",
+      "100009 LUVA PROCEDIMENTO LATEX TAM P CX C/100 LOTE 09 LV9",
+      "100008 LUVA PROCEDIMENTO NITRILICA TAM G CX C/100 LOTE 08 LV8",
+      "100007 LUVA PROCEDIMENTO LATEX TAM M CX C/100 LOTE 07 LV7",
+      "100006 LUVA PROCEDIMENTO LATEX TAM P CX C/100 LOTE 06 LV6",
+      "100005 LUVA PROCEDIMENTO LATEX TAM G CX C/100 LOTE 05 LV5",
+      "100004 LUVA PROCEDIMENTO NITRILICA TAM M CX C/100 LOTE 04 LV4",
+      "100003 LUVA PROCEDIMENTO LATEX TAM P CX C/100 LOTE 03 LV3",
+      "100002 LUVA PROCEDIMENTO LATEX TAM G CX C/100 LOTE 02 LV2",
+      "100001 LUVA PROCEDIMENTO LATEX TAM M CX C/100 LOTE 01 Também conhecido por LUVA DE LÁTEX LV1"
+    ],
+    "total": 10,
+    "paginacao": "‹ Anterior 1 2 Próxima ›",
+    "marcados": [
+      "luva"
+    ],
+    "filtro": null
+  },
+  "?cat=Luvas&q=nitrilica": {
+    "info": "15 resultado(s) encontrado(s) em Luvas.",
+    "linhas": [
+      "100008 LUVA PROCEDIMENTO NITRILICA TAM G CX C/100 LOTE 08 LV8",
+      "100020 LUVA PROCEDIMENTO NITRILICA TAM G CX C/100 LOTE 20 LV20",
+      "100032 LUVA PROCEDIMENTO NITRILICA TAM G CX C/100 LOTE 32 LV32",
+      "100044 LUVA PROCEDIMENTO NITRILICA TAM G CX C/100 LOTE 44 LV44",
+      "100056 LUVA PROCEDIMENTO NITRILICA TAM G CX C/100 LOTE 56 LV56",
+      "100004 LUVA PROCEDIMENTO NITRILICA TAM M CX C/100 LOTE 04 LV4",
+      "100016 LUVA PROCEDIMENTO NITRILICA TAM M CX C/100 LOTE 16 LV16",
+      "100028 LUVA PROCEDIMENTO NITRILICA TAM M CX C/100 LOTE 28 LV28",
+      "100040 LUVA PROCEDIMENTO NITRILICA TAM M CX C/100 LOTE 40 LV40",
+      "100052 LUVA PROCEDIMENTO NITRILICA TAM M CX C/100 LOTE 52 LV52",
+      "100012 LUVA PROCEDIMENTO NITRILICA TAM P CX C/100 LOTE 12 LV12",
+      "100024 LUVA PROCEDIMENTO NITRILICA TAM P CX C/100 LOTE 24 LV24"
+    ],
+    "total": 15,
+    "paginacao": null,
+    "marcados": [
+      "nitrilica"
+    ],
+    "filtro": "Categoria:\nLuvas"
+  }
+}

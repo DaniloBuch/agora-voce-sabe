@@ -7,11 +7,11 @@
      nova logo que os arquivos sobem no GitHub. O cache é só o plano B.
    - Não mexe nas chamadas ao Supabase nem ao site cbsmed.com.br (outros
      endereços passam direto). A base de produtos para uso offline é guardada
-     pelo próprio script.js (IndexedDB).
+     pelo próprio site (js/comum/base-offline.js, IndexedDB).
 
    Ao mudar a lista de arquivos abaixo, aumente a VERSAO.
    ========================================================================== */
-const VERSAO = "v17";
+const VERSAO = "v18";
 const CACHE = `agora-voce-sabe-${VERSAO}`;
 const ESPERA_REDE_MS = 4000; // rede lenta: depois disso usa o que está guardado (se houver)
 
@@ -28,6 +28,10 @@ const ESSENCIAIS = [
   "tema.js",
   "tema.css",
   "sino.js",
+  "js/comum/texto.js",
+  "js/comum/numeros.js",
+  "js/comum/copiar.js",
+  "js/comum/base-offline.js",
   "novidades/",
   "novidades/index.html",
   "novidades/novidades.js",
