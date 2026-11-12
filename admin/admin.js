@@ -591,6 +591,7 @@
       `<ul>${exemplos}</ul>` +
       (sel.length > 3 ? `<p class="dica">… e mais ${fmt.format(sel.length - 3)}</p>` : "");
     $("#massaErro").textContent = "";
+    desenharUnir(sel);
     editorAdd.definir([]);
     editorRem.definir([]);
     $("#fMassaCategoria").value = "";
@@ -604,6 +605,65 @@
   $("#btnTagsMassa").addEventListener("click", abrirMassa);
   $("#btnCancelarMassa").addEventListener("click", () => $("#dlgMassa").close());
   $("#btnFecharMassa").addEventListener("click", () => $("#dlgMassa").close());
+  /* "Unir tags da seleção": produtos parecidos ficam todos com o mesmo conjunto de tags
+     (e de áreas). Grafias que só mudam no acento (ACIDOS x ÁCIDOS) viram uma só: fica a
+     mais usada, e as outras entram em "remover" para não sobrar duplicada. */
+  function planoUnir(sel) {
+    const grupos = new Map(); // tag normalizada -> Map(grafia -> quantos produtos usam)
+    for (const p of sel)
+      for (const t of separarTags(p.tags)) {
+        const k = normalizar(t);
+        if (!grupos.has(k)) grupos.set(k, new Map());
+        grupos.get(k).set(t, (grupos.get(k).get(t) || 0) + 1);
+      }
+    const adicionar = [];
+    const remover = [];
+    let faltam = 0; // quantas tags algum produto ainda não tem
+    for (const grafias of grupos.values()) {
+      const [escolhida] = [...grafias.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"))[0];
+      adicionar.push(escolhida);
+      for (const g of grafias.keys()) if (g !== escolhida) remover.push(g);
+      faltam += sel.filter((p) => !separarTags(p.tags).some((t) => normalizar(t) === normalizar(escolhida))).length;
+    }
+    const areas = new Map();
+    for (const p of sel) for (const a of p.areas || []) areas.set(chaveCat(a), a);
+    return { adicionar, remover, areas: [...areas.values()], faltam };
+  }
+
+  function desenharUnir(sel) {
+    const caixa = $("#massaUnir");
+    const plano = sel.length > 1 ? planoUnir(sel) : null;
+    const util = plano && (plano.faltam > 0 || plano.remover.length > 0 || plano.areas.some((a) => sel.some((p) => !(p.areas || []).some((x) => chaveCat(x) === chaveCat(a)))));
+    caixa.hidden = !util;
+    if (!util) return;
+    caixa.innerHTML =
+      `<div><strong>Produtos parecidos?</strong> Juntos eles têm <strong>${fmt.format(plano.adicionar.length)}</strong> tag(s)` +
+      (plano.areas.length ? ` e <strong>${fmt.format(plano.areas.length)}</strong> área(s)` : "") +
+      `, mas nem todos têm todas. Una para que todos fiquem com o mesmo conjunto, sem repetir.` +
+      (plano.remover.length ? ` <span class="dica">Grafias que só mudam no acento viram uma só: ${plano.remover.map((t) => `<s>${esc(t)}</s>`).join(", ")}.</span>` : "") +
+      `</div><button type="button" class="btn btn--primario btn--sm" id="btnUnirTags">${window.CBSIcon("plus", 14)}Unir tags da seleção</button>`;
+  }
+
+  $("#massaUnir").addEventListener("click", (e) => {
+    if (!e.target.closest("#btnUnirTags")) return;
+    const plano = planoUnir(produtosSelecionados());
+    editorAdd.definir([]);
+    editorAdd.adicionar(plano.adicionar.join(","));
+    if (plano.remover.length) editorRem.adicionar(plano.remover.join(","));
+    // áreas: marca "+ adicionar" nas que algum produto da seleção já tem
+    const chaves = new Set(plano.areas.map(chaveCat));
+    $("#fMassaAreas").querySelectorAll("button[data-area]").forEach((b) => {
+      if (chaves.has(chaveCat(b.dataset.area))) {
+        b.dataset.estado = "add";
+        b.setAttribute("aria-label", `${b.dataset.area}: vai adicionar`);
+      }
+    });
+    atualizarMassa();
+    $("#massaUnir").hidden = true;
+    $("#massaPreview").scrollIntoView({ block: "nearest" });
+    aviso("Tags unidas na prévia. Confira e clique em Aplicar.");
+  });
+
   $("#massaPresentes").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-rem]");
     if (b) editorRem.adicionar(b.dataset.rem);

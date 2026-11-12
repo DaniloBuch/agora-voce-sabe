@@ -469,3 +469,13 @@ fieldset.campo legend { padding: 0; margin-bottom: 6px; font-size: var(--fs-xs);
   color: var(--text-body); background: var(--cbs-neutro-000); border: 1px solid var(--border-default); border-radius: var(--radius-control); outline: none;
 }
 #nTexto:focus { border-color: var(--cbs-azul); box-shadow: var(--ring-focus); }
+
+/* "Unir tags da seleção" (edição em massa de produtos parecidos) */
+.massa-unir {
+  display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
+  padding: var(--sp-3) var(--sp-4); font-size: var(--fs-xs); line-height: 1.5;
+  background: var(--cbs-roxo-050); border: 1px solid var(--cbs-roxo-200); border-radius: var(--radius-card);
+}
+.massa-unir[hidden] { display: none; }
+.massa-unir > div { flex: 1 1 280px; }
+.massa-unir s { color: var(--cbs-erro); }
