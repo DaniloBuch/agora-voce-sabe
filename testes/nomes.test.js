@@ -26,7 +26,7 @@ test("módulos: nenhum nome indefinido nem import sobrando", (t) => {
   });
   const GLOBAIS = /CBS_API|ListaDiaria|CBSCotacao|XLSX|CBS_AREAS_ICONES|CBSTema/; // vêm dos scripts comuns (window)
   const problemas = ts.getPreEmitDiagnostics(prog)
-    .filter((d) => [2304, 2305, 2307, 2552, 2724, 6133].includes(d.code))
+    .filter((d) => [2300, 2304, 2305, 2307, 2393, 2451, 2552, 2724, 6133].includes(d.code))
     .map((d) => `${path.relative(path.dirname(raiz), d.file.fileName)}:${d.file.getLineAndCharacterOfPosition(d.start).line + 1} ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`)
     .filter((m) => !GLOBAIS.test(m));
   assert.deepEqual(problemas, []);

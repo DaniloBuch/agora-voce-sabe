@@ -11,7 +11,7 @@
 
    Ao mudar a lista de arquivos abaixo, aumente a VERSAO.
    ========================================================================== */
-const VERSAO = "v22";
+const VERSAO = "v23";
 const CACHE = `agora-voce-sabe-${VERSAO}`;
 const ESPERA_REDE_MS = 4000; // rede lenta: depois disso usa o que está guardado (se houver)
 
@@ -19,6 +19,16 @@ const ESSENCIAIS = [
   "./",
   "index.html",
   "style.css",
+  "css/animacoes.css",
+  "css/base.css",
+  "css/cabecalho.css",
+  "css/campo.css",
+  "css/gaveta.css",
+  "css/home.css",
+  "css/lista-diaria.css",
+  "css/rodape.css",
+  "css/sino.css",
+  "css/tabela.css",
   "api.js",
   "config.js",
   "areas-icones.js",

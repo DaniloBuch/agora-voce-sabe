@@ -33,3 +33,14 @@ Confira (as telas novas ficam em `referencias/telas/*.ATUAL.png`) e, se estiver 
 ```bash
 npm run atualizar
 ```
+
+## Mexeu no CSS?
+
+`ferramentas/comparar-estilos.js` compara o estilo calculado de **todos os elementos** (busca, gaveta,
+histórico, sino, Lista Diária, cotação, novidades e as abas do painel, no computador e no celular, claro e
+escuro) entre duas cópias do site. Útil para reorganizar CSS sem mudar nada na tela:
+
+```bash
+git worktree add ../antes HEAD        # cópia da versão anterior
+node testes/ferramentas/comparar-estilos.js ../antes .
+```

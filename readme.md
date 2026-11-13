@@ -38,7 +38,8 @@ Uma aplicação web estática que carrega a base de produtos e filtra tudo local
 - **Paginação e catálogo completo:** os resultados vêm em páginas de 50 (antes a lista parava em 100). O botão **Explorar catálogo completo** (ou "Todos os produtos" na gaveta) lista a base inteira em ordem alfabética; categoria sem termo também fica em ordem alfabética. A página atual vai no link (`?q=luva&p=2`, `?ver=todos`).
 - **Buscas recentes:** as últimas 8 buscas que trouxeram resultado ficam **só neste navegador**. Aparecem ao clicar no campo vazio (ou com ↓), como no Google; o foco automático ao abrir a página não abre a lista. Uma busca entra no histórico com Enter, ao copiar um código ou o link, ou depois de 2,5 s parada; cada item pode ser removido, e há "Limpar histórico".
 - **Praticidade:** clique no código para copiar o SKU e use "Copiar link desta busca" para compartilhar (`?q=sonda`); a busca do link abre já executada.
-- **Exportar para Excel e atalhos:** o botão **Exportar para Excel** (acima da tabela) baixa **todos** os resultados da busca, não só a página: SKU (como texto, com os zeros), descrição, referência, categoria, "também conhecido por", link do site e, com a Lista Diária carregada, saldo e preço campanha. Atalhos: **/** vai para a busca de qualquer lugar da página e **Esc** limpa.
+- **Unidade de medida (UM):** coluna própria na tabela (clique no título ordena; vai no Excel); no celular aparece sob a descrição. Vem do cadastro (campo UM no painel ou coluna `UM` na importação de CSV) e já entra certa na cotação.
+- **Exportar para Excel e atalhos:** o botão **Exportar para Excel** (acima da tabela) baixa **todos** os resultados da busca, não só a página: SKU (como texto, com os zeros), descrição, UM, referência, categoria, "também conhecido por", link do site e, com a Lista Diária carregada, saldo e preço campanha. Atalhos: **/** vai para a busca de qualquer lugar da página e **Esc** limpa.
 - **Lista de cotação:** o botão **+** no começo de cada linha guarda o produto numa lista (como um carrinho), que fica **só neste navegador** até ser limpa; o botão **Cotação** no cabeçalho mostra quantos itens há. Na página **Cotação** (`/cotacao/`) a tabela tem as colunas do papel timbrado (Item, Código, Descrição, UM, Qtd., Vl. unit., Vl. total) e o total geral; quantidade, unidade e valor unitário são editáveis (o preço campanha da Lista Diária entra como sugestão e o saldo aparece como aviso). A Lista Diária também pode ser anexada direto na página da cotação, que mostra quando ela foi carregada e quanto tempo falta para vencer; ao anexar, só os valores unitários vazios são preenchidos (o que foi digitado não muda). O campo **Adicionar produto**, no topo da página, procura no catálogo (código, descrição, referência ou apelido) e põe o produto na cotação sem voltar para a busca: **Enter** adiciona o primeiro resultado, as setas andam pela lista, e cada sugestão mostra saldo e preço da Lista Diária. Adicionar (aqui ou pelo **+** da busca) também **copia o código** do produto. Dá para reordenar, tirar itens, **Copiar tabela** (cola formatada no Word/e-mail e em colunas no Excel), **Baixar Excel**, **Imprimir** e **Limpar cotação**.
 - **Página inicial:** o topo entra em sequência, o grafismo do fundo flutua devagar, o total de produtos conta até o número e o campo vazio "digita" exemplos de busca (20 exemplos, sorteados). O bloco **Você sabia?** sorteia um produto e mostra os outros nomes dele ("Outro nome" sorteia de novo; "Ver produto" busca); **Nesta semana** mostra produtos novos, preços que mudaram (Lista Diária deste navegador) e removidos, com atalho para a aba certa de Novidades. Sem a Lista Diária de hoje, o status ao lado do botão pede para carregá-la (inclusive quando a lista carregada é de outro dia).
 - **Microanimações:** resultados entram em cascata, o **+** da cotação e o contador do cabeçalho dão um pulinho ao adicionar, sino/buscas recentes abrem deslizando, o aviso sobe e a troca de tema é suave. Tudo curto (até ~0,4 s) e desligado quando o sistema pede "reduzir movimento".
@@ -80,26 +81,35 @@ GitHub Pages (HTML + CSS + JS, sem build)
 Supabase (PostgreSQL + PostgREST)
 ```
 
+Sem framework e sem etapa de build: o GitHub Pages serve os arquivos como estão. O JavaScript usa
+**módulos nativos do navegador** (`<script type="module">`, `import`/`export`); por isso o site precisa ser
+aberto por um endereço `http(s)://` (GitHub Pages ou Live Server), não com dois cliques no `index.html`.
+
 | Arquivo / pasta | Função |
 | --- | --- |
-| `index.html`, `script.js`, `style.css` | Site público de busca |
+| `index.html`, `cotacao/`, `novidades/`, `admin/` | As quatro páginas: busca, lista de cotação, novidades do catálogo e painel (`/admin/`) |
+| `js/comum/` | Peças usadas por várias páginas: `texto.js` (normalizar, escapar HTML), `numeros.js` (formatos pt-BR, ler "1.234,50"), `copiar.js` (área de transferência), `base-offline.js` (cópia da base no aparelho, IndexedDB), `catalogo.js` (produtos para cotação/novidades), `cotacao-store.js` (lista de cotação no navegador), `csv.js` e `excel.js` (planilhas) |
+| `js/busca/motor.js` | **Motor de busca único** (aspas, -palavra, sinônimos, palavras de ligação, ref. sem zeros, relevância, erro de digitação). Usado pela busca, pelo filtro do painel e pela mini-busca da cotação |
+| `js/busca/` | Página de busca em módulos: `principal.js` (entrada), `estado.js`, `dados.js`, `tabela.js`, `gaveta.js`, `historico.js`, `site.js`, `home.js`, `pwa.js`, `exportar.js`... (cada arquivo começa com um comentário dizendo o que faz) |
+| `js/painel/` | Painel em módulos, um por aba: `produtos.js`, `produto-dialogo.js`, `massa.js`, `importar.js`, `categorias.js`, `areas.js`, `tags.js`, `sinonimos.js`, `novidades.js`, `historico.js`, `login.js`... (entrada: `principal.js`) |
+| `js/lista-diaria/` | Lista Diária: `armazenamento.js` (24 h no navegador, variação de preço), `leitor.js` (Excel/CSV), `painel.js` (botão e status) |
+| `js/componentes/` | `cabecalho.js` (cabeçalho único da busca, cotação e novidades) e `sino.js` (sino de novidades) |
+| `style.css`, `css/` | Estilos do site: `style.css` só junta os arquivos de `css/` (base, cabeçalho, sino, home, campo, gaveta, tabela, lista-diaria, rodapé, animações), na ordem em que valem |
 | `tema.css`, `tema.js` | Tema escuro (redefine a paleta do Design System; a escolha fica no navegador) |
-| `sino.js`, `novidades/` | Sino de novidades no cabeçalho e página "Novidades do catálogo" (adicionados, removidos e mudanças de preço) |
 | `novidades-site.json` | Sugestões de mensagem do sino, uma por atualização do site (o painel oferece para publicar) |
 | `areas-icones.js` | Ícones das áreas de atuação (Lucide, ISC), usados pelo site e pelo painel |
-| `cotacao/`, `cotacao-store.js` | Lista de cotação: página com a tabela para o papel timbrado e a lista guardada no navegador |
-| `manifest.webmanifest`, `sw.js`, `icons/` | App instalável (PWA): nome, ícones e cores do app; service worker que guarda o site para abrir sem internet |
-| `lista-diaria.js`, `vendor/xlsx.full.min.js` | Lista Diária: leitura local do Excel (SheetJS 0.18.5, Apache-2.0, carregado só quando alguém envia uma planilha) e armazenamento de 24 h no navegador |
-| `admin/` | Painel de administração (`index.html`, `admin.js`, `admin.css`), acessado por `/admin/` |
+| `manifest.webmanifest`, `sw.js`, `icons/` | App instalável (PWA). O `sw.js` guarda a lista de arquivos do site para abrir sem internet: **ao criar, mover ou apagar um arquivo, atualize a lista e aumente a `VERSAO`** |
+| `vendor/xlsx.full.min.js` | SheetJS 0.18.5 (Apache-2.0), carregado só quando alguém lê ou gera uma planilha |
 | `api.js` | Camada de acesso ao Supabase (login, listar, CRUD, importar, histórico, tags) |
 | `config.js` | Endereço do projeto e chave pública (`anon`) do Supabase |
 | `supabase/schema.sql` | Tabelas, políticas, triggers e funções do banco |
-| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags, `005` categorias, `006` categorias iniciais, `007` correção de referências estragadas pelo Excel, `008` sinônimos da busca, `009` links do site oficial, `010` sincronização com o site pelo Supabase, `011` áreas de atuação e data de inclusão, `012` mensagens do sino e produtos removidos) |
+| `supabase/migracoes/` | Scripts incrementais para bancos já criados (`002` edição em massa, `003` login, `004` gerenciar tags, `005` categorias, `006` categorias iniciais, `007` correção de referências estragadas pelo Excel, `008` sinônimos da busca, `009` links do site oficial, `010` sincronização com o site pelo Supabase, `011` áreas de atuação e data de inclusão, `012` mensagens do sino e produtos removidos, `013` unidade de medida) |
 | `supabase/produtos_seed.csv` | Carga inicial dos produtos |
 | `db.json` | Cópia estática usada como contingência |
 | `design-system/` | CBS Design System vendorizado ([detalhes](design-system/README.md)) |
+| `testes/` | Testes automáticos (Playwright + Supabase simulado): comportamento, telas em 1366×768 e no celular, checagem dos módulos. Veja [`testes/LEIA-ME.md`](testes/LEIA-ME.md) |
 
-**Banco de dados:** tabela `produtos` (`sku`, `descricao_tecnica`, `referencia`, `tags`, `categoria`, `fixo`), tabela `categorias`, tabela `sinonimos` (grupos de palavras equivalentes) e `produtos_historico` (preenchida por trigger a cada edição/exclusão). A importação de CSV e a edição de tags em massa são funções SQL (RPC), então rodam de forma atômica: ou tudo é gravado ou nada. Produtos marcados como **fixo** nunca são excluídos pela importação.
+**Banco de dados:** tabela `produtos` (`sku`, `descricao_tecnica`, `referencia`, `tags`, `categoria`, `areas`, `unidade`, `fixo`, `criado_em`), tabela `categorias`, tabela `sinonimos` (grupos de palavras equivalentes) e `produtos_historico` (preenchida por trigger a cada edição/exclusão). A importação de CSV e a edição de tags em massa são funções SQL (RPC), então rodam de forma atômica: ou tudo é gravado ou nada. Produtos marcados como **fixo** nunca são excluídos pela importação.
 
 ## 🎨 Identidade visual
 
@@ -114,6 +124,8 @@ O front-end segue o **CBS Design System** (Manual de Identidade Visual CBS, out/
 1. `git clone https://github.com/DaniloBuch/agora-voce-sabe.git`
 2. Abra a pasta no VS Code e use a extensão **Live Server** em `index.html` (necessário para a Fetch API não ser bloqueada por CORS).
 3. Para usar o banco, preencha o `config.js` com o endereço do projeto Supabase (sem `/rest/v1`) e a chave pública.
+
+**Testes:** `cd testes && npm install && npx playwright install chromium && npm test` (rodam com um banco simulado; nada vai para o Supabase de verdade). Se uma mudança visual ou de comportamento for de propósito, `npm run atualizar` aceita o novo resultado.
 
 **Criar o banco do zero:** siga o passo a passo em [`SETUP-SUPABASE.md`](SETUP-SUPABASE.md) (criar o projeto, rodar o SQL, carregar os produtos e conectar o site). Para bancos já existentes, rode os scripts de `supabase/migracoes/` no SQL Editor.
 

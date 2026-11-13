@@ -1,0 +1,170 @@
+/* Cabeçalho fixo (js/componentes/cabecalho.js): logo, Novidades, Cotação, Instalar app, Login/Voltar, tema. */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: var(--border-width-hairline) solid var(--border-subtle);
+}
+.site-header__inner {
+  max-width: var(--max-content);
+  margin: 0 auto;
+  padding: 0 var(--gutter-page);
+  height: 76px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+}
+.brand {
+  display: inline-flex;
+  border: none;
+  border-radius: var(--radius-xs);
+}
+.brand img {
+  display: block;
+  height: auto;
+  margin-left: -16px; /* o SVG traz a área de proteção embutida; alinha a marca visível à grade */
+}
+.site-header__label {
+  margin-left: auto;
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-label);
+}
+.site-header__login {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 var(--sp-3);
+  background: var(--cbs-neutro-000);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--cbs-roxo);
+  text-decoration: none;
+  transition: var(--transition-control);
+}
+.site-header__login:hover {
+  background: var(--cbs-roxo-050);
+  border-color: var(--cbs-roxo-400);
+  color: var(--cbs-roxo);
+}
+.site-header__login:active { transform: translateY(1px); }
+.site-header__login svg { flex: 0 0 auto; }
+/* Link "Cotação" no cabeçalho, com o número de itens guardados */
+.site-header__cotacao {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--cbs-roxo);
+  text-decoration: none;
+  background: var(--cbs-neutro-000);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  transition: var(--transition-control);
+}
+.site-header__cotacao:hover { background: var(--cbs-roxo-050); border-color: var(--cbs-roxo-400); }
+.site-header__cotacao:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.contador-cotacao {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-bold);
+  line-height: 20px;
+  text-align: center;
+  color: var(--cbs-neutro-000);
+  background: var(--cbs-amarelo, #dc9c01);
+  border-radius: var(--radius-pill);
+  font-variant-numeric: tabular-nums;
+}
+.contador-cotacao[hidden] { display: none; }
+/* "Instalar app" (PWA): só aparece quando o navegador permite instalar */
+.site-header__instalar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 var(--sp-3);
+  font-family: var(--font-core);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text-on-brand);
+  background: var(--cbs-roxo);
+  border: 1px solid var(--cbs-roxo);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.site-header__instalar[hidden] { display: none; }
+.site-header__instalar:hover { background: var(--cbs-roxo-700, #281f6b); }
+.site-header__instalar:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.site-header__instalar svg { flex: 0 0 auto; }
+/* já instalado: "Abrir o app" em estilo secundário (não compete com a busca) */
+.site-header__instalar--abrir { color: var(--cbs-roxo); background: var(--cbs-roxo-050); border-color: var(--cbs-roxo-200); }
+.site-header__instalar--abrir:hover { background: var(--cbs-roxo-100, #e4e1f4); border-color: var(--cbs-roxo); }
+.instalar-wrap { position: relative; display: inline-flex; }
+.site-header__instalar .icone-abrir,
+.site-header__instalar--abrir .icone-instalar { display: none; }
+.site-header__instalar--abrir .icone-abrir { display: inline; }
+/* Firefox: ajuda para instalar pelo Edge */
+.instalar-ajuda {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 45;
+  width: 320px;
+  padding: var(--sp-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(20, 16, 50, 0.18));
+}
+.instalar-ajuda[hidden] { display: none; }
+.instalar-ajuda p { margin: 0 0 var(--sp-3); font-size: var(--fs-xs); line-height: var(--lh-normal); color: var(--text-muted); }
+.instalar-ajuda p strong { color: var(--text-body); }
+.instalar-ajuda__titulo { font-weight: var(--fw-semibold); color: var(--cbs-roxo) !important; }
+.instalar-ajuda .btn-explorar { width: 100%; justify-content: center; margin-bottom: var(--sp-3); text-decoration: none; }
+.instalar-ajuda__dica { margin-bottom: 0 !important; font-size: var(--fs-2xs) !important; }
+.instalar-ajuda__dica a { color: var(--cbs-azul-700); }
+@media (max-width: 768px) {
+  .site-header__label {
+    display: none;
+  }
+  .site-header__login {
+    margin-left: 0;
+  }
+
+  .site-header__instalar span { display: none; } /* celular: só o ícone */
+  .site-header__cotacao-rotulo { display: none; }
+  .site-header__cotacao { padding: 0 8px; margin-left: auto; }
+  .site-header__inner { gap: var(--sp-2); }
+  .instalar-ajuda { width: min(320px, calc(100vw - 32px)); right: -60px; }
+}
+/* botão Novidades ao lado de Cotação */
+.site-header__novidades[aria-current="page"] { background: var(--cbs-roxo-050); border-color: var(--cbs-roxo-200); }
+@media (max-width: 768px) {
+  /* Novidades + Cotação lado a lado: só o primeiro empurra para a direita */
+  .site-header__novidades { margin-left: auto; }
+  .site-header__novidades + .site-header__cotacao, .site-header__novidades ~ .site-header__cotacao { margin-left: 0; }
+}
+@media (max-width: 480px) {
+  /* celular estreito: logo menor e botões mais juntos para tudo caber na linha */
+  .site-header__inner { gap: 6px; }
+  .brand img { width: 100px; margin-left: -10px; }
+  .btn-tema, .btn-sino { width: 30px; height: 30px; }
+  /* "Login" vira só o ícone (o texto continua para leitores de tela) */
+  .site-header__login[href$="admin/"] { font-size: 0; gap: 0; padding: 0 8px; }
+  .instalar-wrap { display: none; } /* no celular o navegador já oferece "Instalar" no menu; aqui não cabe */
+}

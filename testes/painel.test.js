@@ -127,3 +127,65 @@ test("painel: CSV com a coluna UM e campo UM no cadastro", async () => {
   assert.deepEqual(erros, []);
   await pagina.context().close();
 });
+
+// Percorre as abas e abre os diálogos de cada uma (Renomear/Editar/Excluir/Ver produtos), guardando o
+// que aparece: garante que cada aba continua ligada depois da divisão do painel em módulos.
+test("painel: diálogos de todas as abas", async () => {
+  const { pagina, erros } = await entrar();
+  const textoDialogo = () => pagina.evaluate(() => (document.querySelector("dialog[open]")?.innerText || "").replace(/\s+/g, " ").trim());
+  const r = {};
+  for (const aba of ["categorias", "areas", "tags", "sinonimos", "novidades", "historico", "produtos"]) {
+    await pagina.click(`.aba[data-aba="${aba}"]`);
+    await pagina.waitForTimeout(400);
+    const linha = pagina.locator(`#aba-${aba} tbody tr`).nth(1);
+    const botoes = await linha.locator("button").allInnerTexts().catch(() => []);
+    r[aba] = { botoes: botoes.map((b) => b.trim()) };
+    for (const rotulo of ["Renomear", "Editar", "Excluir"]) {
+      const b = linha.locator(`button:has-text("${rotulo}")`).first();
+      if (!(await b.count())) continue;
+      await b.click();
+      await pagina.waitForTimeout(250);
+      const abriu = await textoDialogo();
+      let previa = null;
+      const campo = pagina.locator("dialog[open] input[type=text], dialog[open] input:not([type]), dialog[open] textarea").first();
+      if (rotulo !== "Excluir" && (await campo.count())) {
+        await campo.fill("NOVO NOME");
+        await pagina.waitForTimeout(250);
+        previa = await textoDialogo();
+      }
+      r[aba][rotulo] = { abriu, previa };
+      await pagina.keyboard.press("Escape");
+      await pagina.waitForTimeout(150);
+    }
+    const ver = linha.locator('button:has-text("Ver produtos")').first();
+    if (await ver.count()) {
+      await ver.click();
+      await pagina.waitForTimeout(400);
+      r[aba].ver = (await pagina.innerText("#infoLista")).replace(/\s+/g, " ").trim();
+    }
+  }
+  conferir("painel-dialogos", r);
+  assert.deepEqual(erros, []);
+  await pagina.context().close();
+});
+
+// Importação completa (descrição, referência, categoria e tags), com referência estragada pelo Excel,
+// produto novo, produto que some e aspas no meio do texto: a prévia tem que continuar igual.
+test("painel: prévia da importação de CSV completo", async () => {
+  const { pagina, erros } = await entrar();
+  await pagina.click('.aba[data-aba="importar"]');
+  const csv = [
+    "Codigo;Descricao;Cod prd forn;Categoria;Tags",
+    '437;"SONDA URETRAL N 12 ""ADULTO""";SU12;Sondas;sonda de alivio|nelaton',
+    "000438;SONDA FOLEY 2 VIAS N 14;SF14;;",
+    "002000;CATETER INTRAVENOSO PERIFERICO 20G;3,8833E+07;Cateter;",
+    "888888;PRODUTO NOVO DO CSV;NV1;Nova Categoria;NOVO",
+    ...Array.from({ length: 60 }, (_, i) => `${100001 + i};LUVA ${i + 1};LV${i + 1};Luvas;`),
+  ].join("\r\n");
+  await pagina.setInputFiles("#arquivoCsv", { name: "catalogo.csv", mimeType: "text/csv", buffer: Buffer.from(csv, "latin1") });
+  await pagina.waitForSelector("#resultadoImport .resumo");
+  await pagina.evaluate(() => document.querySelectorAll("#resultadoImport details").forEach((d) => (d.open = true)));
+  conferir("painel-importacao", (await pagina.innerText("#resultadoImport")).replace(/\s+/g, " ").trim());
+  assert.deepEqual(erros, []);
+  await pagina.context().close();
+});
