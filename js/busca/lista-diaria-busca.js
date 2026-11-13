@@ -1,5 +1,5 @@
 /* Lista Diária na tabela da busca: células de saldo e preço campanha e a variação de preço.
-   (O leitor da planilha fica em /lista-diaria.js.) */
+   (O leitor da planilha fica em js/lista-diaria/.) */
 import { fmtPct, formatarDifReais } from "../comum/numeros.js";
 import { escaparHtml } from "../comum/texto.js";
 

@@ -160,7 +160,7 @@ async function carregarDados() {
 export function iniciar() {
   carregarDados().then(() => E.carregado && verificarLinksSite());
 
-  // A Lista Diária (lista-diaria.js) precisa saber quais códigos existem no catálogo
+  // A Lista Diária (js/lista-diaria/) precisa saber quais códigos existem no catálogo
   window.CBS_skusCatalogo = () => E.database.map((item) => item.sku);
 
   // Quando a Lista Diária é carregada, atualizada, removida ou expira, redesenha a página atual

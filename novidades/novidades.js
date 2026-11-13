@@ -1,7 +1,9 @@
 import { escaparHtml as esc, normalizar, formatarRef, ordemTexto } from "../js/comum/texto.js";
 import { fmtData, fmt4, fmtPct, fmtNum, formatarDifReais } from "../js/comum/numeros.js";
 import { copiarTexto } from "../js/comum/copiar.js";
-import * as baseOffline from "../js/comum/base-offline.js";
+import { carregarProdutos } from "../js/comum/catalogo.js";
+import { cotacao } from "../js/comum/cotacao-store.js";
+import { CHAVE, lerVariacoes } from "../js/lista-diaria/armazenamento.js";
 
 /* ==========================================================================
    Novidades do catálogo: produtos adicionados (data de inclusão), mudanças de
@@ -11,8 +13,8 @@ import * as baseOffline from "../js/comum/base-offline.js";
 (function () {
   const $ = (s) => document.querySelector(s);
   const api = window.CBS_API;
-  const cot = window.CBSCotacao;
-  const CHAVE_LISTA = "cbs_lista_diaria_v1";
+  const cot = cotacao;
+  const CHAVE_LISTA = CHAVE; // Lista Diária deste navegador
   const POR_VEZ = 200; // linhas desenhadas por vez ("Mostrar mais")
   const DIA_MS = 24 * 60 * 60 * 1000;
 
@@ -33,14 +35,8 @@ import * as baseOffline from "../js/comum/base-offline.js";
   /* ---------- dados ---------- */
 
   async function carregarCatalogo() {
-    let dados = null;
-    try {
-      if (api && api.configurado) dados = await api.listarProdutos(); // o mais novo (com a data de inclusão)
-    } catch (_) {}
-    if (!dados) dados = await baseOffline.lerProdutos(); // sem internet: a base guardada pela busca
-    if (!dados) {
-      try { dados = await (await fetch("../db.json")).json(); } catch (_) { dados = []; }
-    }
+    // o mais novo (com a data de inclusão); sem internet, a base guardada pela busca
+    const dados = await carregarProdutos({ primeiro: "rede" });
     estado.catalogo = new Map(
       dados.map((p) => [String(p.sku), {
         sku: String(p.sku),
@@ -54,22 +50,7 @@ import * as baseOffline from "../js/comum/base-offline.js";
   }
 
   // Lista Diária deste navegador (só leitura; a variação já vem calculada ao carregar a lista)
-  function lerLista() {
-    try {
-      const o = JSON.parse(localStorage.getItem(CHAVE_LISTA) || "null");
-      if (!o || !Array.isArray(o.itens) || Date.now() > o.expiraEm) return null;
-      const atual = new Map(o.itens.map(([sku, , preco]) => [String(sku), preco]));
-      const itens = (o.variacoes || [])
-        .map(([sku, anterior]) => {
-          const a = atual.get(String(sku));
-          return a ? { sku: String(sku), anterior, atual: a, dif: a - anterior, pct: ((a - anterior) / anterior) * 100 } : null;
-        })
-        .filter(Boolean);
-      return { dataLista: o.dataLista || o.atualizadoEm, comparadaCom: o.comparadaCom || null, itens };
-    } catch (_) {
-      return null;
-    }
-  }
+  const lerLista = lerVariacoes;
 
   /* ---------- filtros e linhas ---------- */
 

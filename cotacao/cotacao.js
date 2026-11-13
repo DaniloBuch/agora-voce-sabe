@@ -2,7 +2,10 @@ import { escaparHtml as esc, formatarRef } from "../js/comum/texto.js";
 import { criarMotor, prepararItem } from "../js/busca/motor.js";
 import { fmt2, fmt4, fmtQtd, fmtSaldo, lerNumeroBR } from "../js/comum/numeros.js";
 import { copiarTexto, copiarHtml } from "../js/comum/copiar.js";
-import * as baseOffline from "../js/comum/base-offline.js";
+import { carregarSheetJs } from "../js/comum/excel.js";
+import { carregarProdutos, carregarSinonimos } from "../js/comum/catalogo.js";
+import { cotacao } from "../js/comum/cotacao-store.js";
+import { CHAVE, lerPrecosESaldos } from "../js/lista-diaria/armazenamento.js";
 
 const motor = criarMotor();
 
@@ -12,10 +15,10 @@ const motor = criarMotor();
    baixar em Excel ou imprimir. Tudo fica só neste navegador.
    ========================================================================== */
 (function () {
-  const cot = window.CBSCotacao;
+  const cot = cotacao;
   const $ = (s) => document.querySelector(s);
   const corpo = $("#cotCorpo");
-  const CHAVE_LISTA = "cbs_lista_diaria_v1"; // Lista Diária carregada na busca (24 h)
+  const CHAVE_LISTA = CHAVE; // Lista Diária carregada na busca (24 h)
 
   // "1.234,5" / "10" / "2,5" / "R$ 4,79" -> número (padrão brasileiro); vazio ou negativo -> null
   function lerNumero(texto) {
@@ -28,18 +31,10 @@ const motor = criarMotor();
 
   /* ---------- Lista Diária (só leitura: saldo e preço campanha) ---------- */
 
-  function lerListaDiaria() {
-    try {
-      const obj = JSON.parse(localStorage.getItem(CHAVE_LISTA));
-      if (!obj || !Array.isArray(obj.itens) || Date.now() > obj.expiraEm) return null;
-      return new Map(obj.itens.map(([sku, saldo, preco]) => [sku, { saldo, preco }]));
-    } catch (_) {
-      return null;
-    }
-  }
+  const lerListaDiaria = lerPrecosESaldos; // Map sku -> { saldo, preco } (null sem lista válida)
 
   /* ---------- Catálogo para a Lista Diária ----------
-     O leitor da Lista Diária (../lista-diaria.js) só guarda os códigos que existem no catálogo.
+     O leitor da Lista Diária (js/lista-diaria/) só guarda os códigos que existem no catálogo.
      Aqui a base vem da cópia guardada pela busca neste aparelho; sem ela, do Supabase. */
   let skusCatalogo = [];
   window.CBS_skusCatalogo = () => skusCatalogo;
@@ -62,21 +57,10 @@ const motor = criarMotor();
     skusCatalogo = catalogo.map((p) => p.sku);
     motor.definirBase(catalogo);
   }
-  // sinônimos do dicionário (os mesmos da busca); sem internet, os guardados pela busca neste aparelho
-  async function carregarSinonimos() {
-    try {
-      if (window.CBS_API && CBS_API.configurado && CBS_API.listarSinonimos) return await CBS_API.listarSinonimos();
-    } catch (_) {}
-    return (await baseOffline.ler("sinonimos")) || [];
-  }
   (async function carregarCatalogo() {
     carregarSinonimos().then((g) => motor.definirSinonimos(g));
-    const salvo = await baseOffline.lerProdutos();
-    try {
-      if (salvo) prepararCatalogo(salvo);
-      else if (window.CBS_API && CBS_API.configurado) prepararCatalogo(await CBS_API.listarProdutos());
-      else prepararCatalogo(await (await fetch("../db.json")).json());
-    } catch (_) {}
+    // a cópia do aparelho primeiro: a cotação abre na hora (e sem internet)
+    prepararCatalogo(await carregarProdutos({ primeiro: "aparelho" }));
     miniBuscaPronta();
   })();
 
@@ -367,22 +351,11 @@ const motor = criarMotor();
 
   /* ---------- Excel ---------- */
 
-  function carregarExcel() {
-    if (window.XLSX) return Promise.resolve();
-    return new Promise((resolver, rejeitar) => {
-      const s = document.createElement("script");
-      s.src = "../vendor/xlsx.full.min.js";
-      s.onload = () => resolver();
-      s.onerror = () => rejeitar(new Error("Não conseguimos carregar o gerador de Excel. Verifique a conexão."));
-      document.head.appendChild(s);
-    });
-  }
-
   async function baixarExcel() {
     const linhas = dadosDaTabela();
     if (!linhas.length) return;
     try {
-      await carregarExcel();
+      await carregarSheetJs();
     } catch (err) {
       mensagem(err.message, "erro");
       return;

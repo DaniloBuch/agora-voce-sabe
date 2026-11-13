@@ -67,3 +67,23 @@ test("motor de busca: aspas, exclusão, sinônimos, conectivos, relevância e er
   assert.equal(destacar("Sonda Uretral", ["sonda"]), "<mark>Sonda</mark> Uretral");
   assert.equal(destacar("000000000038833014", ["388"], 10), "<mark>388</mark>33014");
 });
+
+test("CSV e código do produto", async () => {
+  const { normalizarSku, detectarSeparador, lerCsv } = await import("../js/comum/csv.js");
+  assert.equal(normalizarSku(462), "000462");
+  assert.equal(normalizarSku("462.0"), "000462");
+  assert.equal(normalizarSku("AB12"), "AB12");
+  assert.equal(detectarSeparador("Codigo;UM\n1;CX"), ";");
+  assert.equal(detectarSeparador("a,b\n1,2"), ",");
+  assert.deepEqual(lerCsv('Codigo;Descricao\n000437;"SONDA ""12"";X"\n\n;\n', ";"), [["Codigo", "Descricao"], ["000437", 'SONDA "12";X']]);
+});
+
+test("Lista Diária: data pelo nome do arquivo e variação de preço", async () => {
+  const { dataDoNome, calcularVariacoes } = await import("../js/lista-diaria/armazenamento.js");
+  assert.equal(dataDoNome("LISTA DIÁRIA 10-11-2026.xlsx"), new Date(2026, 10, 10).getTime());
+  assert.equal(dataDoNome("lista_31_02_26.xlsx"), null, "data impossível");
+  assert.equal(dataDoNome("lista.xlsx"), null);
+  const itens = [["000437", 10, 4.79], ["000438", 5, 2], ["000439", 1, 0]];
+  assert.deepEqual(calcularVariacoes(itens, { precos: [["000437", 5], ["000438", 2], ["000439", 3]] }), [["000437", 5]]);
+  assert.deepEqual(calcularVariacoes(itens, null), []);
+});

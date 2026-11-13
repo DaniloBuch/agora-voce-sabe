@@ -1,4 +1,5 @@
 /* Botão + da cotação na tabela, contador no cabeçalho e aviso rápido (cotacao-store.js guarda a lista). */
+import { cotacao } from "../comum/cotacao-store.js";
 import { escaparHtml } from "../comum/texto.js";
 import { tbody } from "./dom.js";
 import { copiarTexto } from "../comum/copiar.js";
@@ -13,7 +14,7 @@ const ICONE_ADD_COTACAO =
 const ICONE_NA_COTACAO =
   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>';
 
-const cotacao = window.CBSCotacao;
+
 
 function htmlBotaoCotacao(item, marcado) {
   const acao = marcado ? "Tirar da cotação" : "Adicionar à cotação (e copiar o código)";

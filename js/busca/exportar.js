@@ -1,4 +1,5 @@
 /* Exportar o resultado da busca para Excel (SheetJS carregado só quando alguém pede). */
+import { carregarSheetJs } from "../comum/excel.js";
 import { input } from "./dom.js";
 import { slugProduto, linkDoProduto } from "./site.js";
 import { itensNaOrdem } from "./tabela.js";
@@ -8,17 +9,6 @@ import { E } from "./estado.js";
 /* ---------- Exportar o resultado da busca para Excel ---------- */
 
 export const btnExportar = document.getElementById("btnExportar");
-
-function carregarLeitorExcel() {
-  if (window.XLSX) return Promise.resolve();
-  return new Promise((resolver, rejeitar) => {
-    const s = document.createElement("script");
-    s.src = "vendor/xlsx.full.min.js";
-    s.onload = () => resolver();
-    s.onerror = () => rejeitar(new Error("Não conseguimos carregar o gerador de Excel. Verifique a conexão."));
-    document.head.appendChild(s);
-  });
-}
 
 function nomeArquivoExportacao() {
   const partes = [input.value.trim(), E.categoriaAtual, E.areaAtual, E.estadoLista && E.estadoLista.modo === "explorar" ? "catalogo-completo" : ""]
@@ -37,7 +27,7 @@ async function exportarParaExcel() {
   btnExportar.disabled = true;
   rotulo.textContent = "Gerando...";
   try {
-    await carregarLeitorExcel();
+    await carregarSheetJs();
     const comLista = window.ListaDiaria && window.ListaDiaria.ativa();
     const temParecidos = E.estadoLista.itens.length > E.estadoLista.nExatos;
     const cab = ["SKU", "Descrição", "UM", "Referência", "Categoria", "Áreas de atuação", "Também conhecido por"];

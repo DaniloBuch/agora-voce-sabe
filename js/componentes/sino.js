@@ -1,5 +1,5 @@
-import { escaparHtml as esc } from "./js/comum/texto.js";
-import { fmtData } from "./js/comum/numeros.js";
+import { escaparHtml as esc } from "../comum/texto.js";
+import { fmtData } from "../comum/numeros.js";
 
 /* ==========================================================================
    Sino de novidades (cabeçalho da busca, da cotação e da página de novidades).

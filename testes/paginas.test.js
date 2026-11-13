@@ -85,3 +85,29 @@ test("busca sem internet usa a base guardada no aparelho", async () => {
   conferir("offline", { texto: (await pagina.innerText("#infoBaseTexto")).replace(/\d{2}\/\d{2}\/\d{4}.*\)/, "DATA)"), numero: await pagina.innerText("#infoBaseNumero") });
   await pagina.context().close();
 });
+
+test("Lista Diária em duas datas: variação na busca, nas novidades e na cotação", async () => {
+  const path = require("node:path");
+  const { pagina, erros } = await amb.abrir();
+  await esperarBase(pagina);
+  for (const nome of ["Lista-Diaria-11-11-2026.csv", "Lista-Diaria-12-11-2026.csv"]) {
+    await pagina.setInputFiles("#listaArquivo", path.join(__dirname, "dados", nome));
+    await pagina.waitForTimeout(400);
+  }
+  const r = { msg: (await pagina.innerText("#listaMsg")).replace(/\s+/g, " ") };
+  await pagina.goto(amb.base + "novidades/#precos");
+  await pagina.waitForSelector("#novCorpo tr");
+  await pagina.waitForTimeout(300);
+  r.novidades = await pagina.$$eval("#novCorpo tr", (t) => t.map((x) => x.innerText.replace(/\s+/g, " ").trim()));
+  await pagina.locator("#novCorpo button[data-cot]").first().click();
+  await pagina.goto(amb.base + "cotacao/");
+  await pagina.waitForSelector("#cotCorpo tr");
+  await pagina.fill("#cotBuscaInput", "luva latex m");
+  await pagina.waitForTimeout(300);
+  r.miniBusca = (await pagina.$$eval("#cotBuscaResultados li", (l) => l.map((x) => x.innerText.replace(/\s+/g, " ").trim()))).slice(0, 2);
+  r.cotacao = await pagina.$$eval("#cotCorpo tr", (t) => t.map((x) => x.innerText.replace(/\s+/g, " ").trim()));
+  r.status = (await pagina.innerText("#listaStatus")).replace(/\s+/g, " ");
+  conferir("lista-duas-datas", r);
+  assert.deepEqual(erros, []);
+  await pagina.context().close();
+});
