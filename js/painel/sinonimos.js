@@ -75,6 +75,10 @@ function renderizarSinonimos() {
 
 // Lê "cx, caixa" -> ["cx", "caixa"] e confere as regras. Devolve { palavras } ou { erro }.
 function validarSinonimos(texto, idIgnorar = null) {
+  // "2%, 2,0%": a vírgula do número quebraria a palavra; e a busca já trata isso sozinha
+  if (/\d,\d/.test(String(texto ?? ""))) {
+    return { erro: 'Números com vírgula não entram nos sinônimos (a vírgula separa as palavras). E nem precisa: a busca já acha "2%" = "2,0%" = "2,00%" = "2 %" (vale para %, ml, mg, g, cm, mm...).' };
+  }
   const palavras = [];
   for (const bruta of String(texto ?? "").split(/[,;\n]/)) {
     const p = limparPalavraSin(bruta);

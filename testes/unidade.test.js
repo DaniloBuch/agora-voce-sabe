@@ -87,3 +87,24 @@ test("Lista Diária: data pelo nome do arquivo e variação de preço", async ()
   assert.deepEqual(calcularVariacoes(itens, { precos: [["000437", 5], ["000438", 2], ["000439", 3]] }), [["000437", 5]]);
   assert.deepEqual(calcularVariacoes(itens, null), []);
 });
+
+test("motor de busca: 2% = 2,0% = 2,00% = 2 % (números com casas zeradas)", async () => {
+  const { criarMotor, prepararItem, formasDoNumero } = await import("../js/busca/motor.js");
+  const itens = [
+    ["1", "CLOREXIDINA ALCOOLICA 2,0% 100ML"], ["2", "CLOREXIDINA DEGERMANTE 2% 1L"], ["3", "CLOREXIDINA AQUOSA 0,2% 100ML"],
+    ["4", "CLOREXIDINA 1,0% SOLUCAO"], ["5", "CLOREXIDINA 12% TESTE"], ["6", "GLICOSE 2,5% 500ML"], ["7", "FRASCO 1.000ML"],
+    ["8", "CLOREXIDINA 2 % SPRAY"], ["9", "SERINGA 10ML"], ["10", "SERINGA 10,0 ML LUER"],
+  ].map(([sku, d]) => ({ sku, descricao: d, ...prepararItem({ sku, descricao: d, referencia: "" }) }));
+  const motor = criarMotor();
+  motor.definirBase(itens);
+  const skus = (t) => motor.buscar(itens, t).itens.map((i) => i.sku).sort();
+  assert.deepEqual(skus("clorexidina 2%"), ["1", "2", "8"]); // não traz 0,2% nem 12%
+  assert.deepEqual(skus("clorexidina 2,0%"), ["1", "2", "8"]);
+  assert.deepEqual(skus("clorexidina 1%"), ["4"]);
+  assert.deepEqual(skus("clorexidina 0,2%"), ["3"]);
+  assert.deepEqual(skus("2,5%"), ["6"]); // 2,5 continua 2,5
+  assert.deepEqual(skus("seringa 10ml"), ["10", "9"]);
+  assert.deepEqual(skus("seringa 10,0ml"), ["10", "9"]);
+  assert.deepEqual(formasDoNumero("1.000"), []); // milhar não vira 1
+  assert.deepEqual(formasDoNumero("2"), []); // número sozinho continua como trecho
+});

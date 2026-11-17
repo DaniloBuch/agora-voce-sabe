@@ -61,6 +61,34 @@ export function alternativa(texto, modo = "trecho") {
   return alt;
 }
 
+/* ---------- Números: "2%" = "2,0%" = "2,00%" = "2.0%" = "2 %" ----------
+   O cliente pede "clorexidina 2%" e o cadastro diz "2,0%" (ou o contrário). Um termo que é
+   número (com ou sem casas decimais zeradas) e, opcionalmente, uma unidade ganha as outras
+   formas como alternativas. Só zeros depois da vírgula contam ("2,5%" continua 2,5) e
+   "1.000" (milhar) não vira "1". */
+const UNIDADES = "%|ml|l|mg|g|kg|mcg|ui|cm|mm|m|cc|fr|un|und|unid";
+const RE_NUMERO_UNIDADE = new RegExp(`^(\\d+)(?:[.,](0{1,2}))?(${UNIDADES})?$`);
+export function formasDoNumero(termo) {
+  const m = RE_NUMERO_UNIDADE.exec(termo);
+  if (!m) return [];
+  const [, inteiro, zeros, unidade = ""] = m;
+  if (!zeros && !unidade) return []; // "2" sozinho já acha "2,0" (é um trecho dele)
+  const formas = new Set();
+  for (const num of [inteiro, `${inteiro},0`, `${inteiro},00`, `${inteiro}.0`, `${inteiro}.00`]) {
+    formas.add(`${num}${unidade}`);
+    if (unidade) formas.add(`${num} ${unidade}`); // "2 %", "10,0 ml"
+  }
+  formas.delete(termo);
+  return [...formas];
+}
+
+// Alternativa de número: não pode estar colado em outro número nem depois de vírgula/ponto
+// ("2%" não acha "12%" nem "0,2%").
+export function alternativaNumero(texto) {
+  const fim = /[a-z]$/.test(texto) ? "(?![a-z0-9])" : "(?![0-9])";
+  return { texto, modo: "numero", re: new RegExp(`(^|[^a-z0-9.,])${escaparRegex(texto)}${fim}`) };
+}
+
 export function casaAlternativa(textoNormalizado, alt) {
   return alt.modo === "trecho" ? textoNormalizado.includes(alt.texto) : alt.re.test(textoNormalizado);
 }
@@ -93,7 +121,7 @@ export function destacar(texto, termos, deslocamento = 0) {
     let pos = norm.indexOf(t);
     while (pos !== -1) {
       const inicioOk = alt.modo === "trecho" || !ehLetraOuNumero(norm[pos - 1]);
-      const fimOk = alt.modo !== "palavra" || !ehLetraOuNumero(norm[pos + t.length]);
+      const fimOk = (alt.modo !== "palavra" && alt.modo !== "numero") || !ehLetraOuNumero(norm[pos + t.length]);
       if (inicioOk && fimOk) faixas.push([mapa[pos], mapa[pos + t.length - 1] + 1]);
       pos = norm.indexOf(t, pos + 1);
     }
@@ -263,7 +291,9 @@ export function criarMotor() {
 
   function montarGrupos(consulta) {
     const grupos = consulta.termos.map((t) => {
-      const alternativas = [alternativa(t)];
+      // "2%" também acha "2,0%"/"2 %" (e vice-versa), mas não "12%" nem "0,2%"
+      const formas = formasDoNumero(t);
+      const alternativas = formas.length ? [t, ...formas].map(alternativaNumero) : [alternativa(t)];
       for (const s of indiceSinonimos.get(t) || []) {
         alternativas.push(alternativa(s, s.length <= 4 ? "palavra" : "inicio"));
       }
