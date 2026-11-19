@@ -1,0 +1,18 @@
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;font-family:var(--font-core);font-weight:var(--fw-light);font-size:var(--fs-md);line-height:var(--lh-relaxed);color:var(--text-body);background:var(--surface-page);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+h1,h2,h3,h4,h5,h6{font-family:var(--font-core);color:var(--text-heading);margin:0 0 var(--sp-3);line-height:var(--lh-snug);font-weight:var(--fw-bold);text-wrap:balance}
+h1{font-size:var(--fs-3xl);text-transform:uppercase;letter-spacing:var(--ls-caps)}
+h2{font-size:var(--fs-2xl);text-transform:uppercase;letter-spacing:var(--ls-wide)}
+h3{font-size:var(--fs-xl);font-weight:var(--fw-medium)}
+h4{font-size:var(--fs-lg);font-weight:var(--fw-medium)}
+h5,h6{font-size:var(--fs-md);font-weight:var(--fw-semibold)}
+p{margin:0 0 var(--sp-4);max-width:var(--max-prose)}
+strong{font-weight:var(--fw-semibold)}
+a{color:var(--text-link);text-decoration:none;border-bottom:1px solid color-mix(in oklab,var(--text-link) 35%,transparent);transition:var(--transition-control)}
+a:hover{color:var(--text-link-hover);border-bottom-color:var(--text-link-hover)}
+a:focus-visible{outline:none;box-shadow:var(--ring-focus);border-radius:var(--radius-xs)}
+small{font-size:var(--fs-sm)}
+code,kbd{font-family:var(--font-mono);font-size:.9em}
+hr{border:none;border-top:var(--border-width-hairline) solid var(--border-subtle);margin:var(--sp-8) 0}
+::selection{background:var(--cbs-azul-200);color:var(--cbs-roxo-900)}
+:focus-visible{outline:none;box-shadow:var(--ring-focus)}

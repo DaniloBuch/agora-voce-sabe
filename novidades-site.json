@@ -1,0 +1,50 @@
+[
+  {
+    "chave": "2026-11-17-numeros",
+    "data": "2026-11-17",
+    "titulo": "2% ou 2,0%? Tanto faz",
+    "texto": "A busca agora entende que 2% é o mesmo que 2,0%, 2,00% ou 2 %. Vale para outras unidades também: 10ml acha 10,0 ML, 1% acha 1,0%.\nE ficou mais esperta: clorexidina 2% não traz mais a de 0,2% nem a de 12%."
+  },
+  {
+    "chave": "2026-11-12-unidade",
+    "data": "2026-11-12",
+    "titulo": "Unidade de medida (UM)",
+    "texto": "A tabela da busca ganhou a coluna UM (UN, CX, PC...), que também ordena pelo clique no título e vai junto no Excel. No celular, a UM aparece embaixo da descrição.\nNa cotação, o produto já entra com a unidade certa. E a busca da página de cotação agora entende o mesmo que a busca principal: abreviações (cx = caixa), \"trecho exato\" entre aspas, -palavra para excluir e erros de digitação."
+  },
+  {
+    "chave": "2026-11-12-home",
+    "data": "2026-11-12",
+    "titulo": "Você sabia? 💡",
+    "texto": "A página inicial agora ensina um nome novo a cada visita: o \"Você sabia?\" mostra um produto e os outros nomes pelos quais ele é conhecido (clique em \"Outro nome\" para ver mais).\nAo lado, \"Nesta semana\" resume os produtos novos, os preços que mudaram e os removidos, com atalho para a página de Novidades. E se a Lista Diária não for a de hoje, o site avisa."
+  },
+  {
+    "chave": "2026-11-12-animacoes",
+    "data": "2026-11-12",
+    "titulo": "Mais fluido",
+    "texto": "O site ganhou pequenas animações: os resultados entram suavemente, o + da cotação dá um pulinho ao adicionar, os menus abrem deslizando e a troca de tema fica suave.\nSe preferir sem movimento, é só ligar \"reduzir movimento\" (ou \"mostrar animações\" desligado) nas configurações de acessibilidade do Windows: o site respeita."
+  },
+  {
+    "chave": "2026-11-10-ordenar-busca",
+    "data": "2026-11-10",
+    "titulo": "Ordene a busca do seu jeito",
+    "texto": "Clique no título de uma coluna (SKU, Descrição, Saldo, Preço camp. ou Ref.) para ordenar os resultados: o 1º clique ordena do menor para o maior, o 2º inverte e o 3º volta à ordem de relevância. Dá para ordenar pelo preço ou pelo saldo da Lista Diária, e o Excel sai na mesma ordem.\nE a página Novidades agora tem botão próprio no topo, ao lado da Cotação."
+  },
+  {
+    "chave": "2026-11-10-painel-novidades",
+    "data": "2026-11-10",
+    "titulo": "Chegou o sino de novidades 🔔",
+    "texto": "A partir de agora as novidades do Agora Você Sabe aparecem aqui no sino, sem precisar de mensagem no Teams.\nE tem página nova: Novidades do catálogo, com os produtos que entraram, os que saíram e as mudanças de preço da Lista Diária, tudo com filtro e ordenação."
+  },
+  {
+    "chave": "2026-11-10-variacao-preco",
+    "data": "2026-11-10",
+    "titulo": "Preço subiu ou caiu? Agora você vê",
+    "texto": "Ao carregar a Lista Diária, o preço campanha mostra a variação em relação à lista anterior: ▼ em verde quando caiu e ▲ em vermelho quando subiu. Passe o mouse para ver o preço antigo e a diferença em R$.\nNa Cotação, o campo Adicionar produto acha e inclui itens sem voltar para a busca, e o + agora também copia o código."
+  },
+  {
+    "chave": "2026-11-10-tema-areas",
+    "data": "2026-11-10",
+    "titulo": "Tema escuro e áreas de atuação",
+    "texto": "O botão de lua no canto do cabeçalho liga o tema escuro (e fica salvo no seu navegador).\nOs produtos começam a mostrar para quem servem: Hospitais, Clínicas, Laboratórios, Veterinária... É só filtrar pela área na gaveta de Categorias para montar o kit do cliente."
+  }
+]

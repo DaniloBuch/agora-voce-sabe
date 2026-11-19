@@ -1,0 +1,56 @@
+/* ============================================================
+   TIPOGRAFIA — Manual CBS p.21-23
+   · Logotipo: letras desenhadas à mão — NÃO é fonte. Use os SVGs.
+   · Tag line: Carbona — instalada e disponível ("Carbona"/"Carbona Static"),
+     porém em versão "Test" (trial). Por decisão do cliente, --font-tagline
+     usa QUICKSAND por enquanto. Para ativar a Carbona, troque a linha
+     --font-tagline abaixo. Ver readme.md > SUBSTITUIÇÕES.
+   · Auxiliar (todo o resto): Quicksand — Bold / Medium / Light.
+   · Preferir alinhamento à esquerda e entrelinha generosa.
+   ============================================================ */
+:root{
+  --font-core:"Quicksand","Quicksand Static",system-ui,sans-serif;
+  --font-tagline:var(--font-core);  /* Carbona disponível: "Carbona","Carbona Static" */
+  --font-mono:ui-monospace,"SFMono-Regular",Menlo,monospace; /* Carbona Mono disponível */
+
+  --fw-light:300; /* @kind font */
+  --fw-regular:400; /* @kind font */
+  --fw-medium:500; /* @kind font */
+  --fw-semibold:600; /* @kind font */
+  --fw-bold:700; /* @kind font */
+
+  /* escala 1.25 (major third) a partir de 16px */
+  --fs-3xs:11px;
+  --fs-2xs:12px;
+  --fs-xs:13px;
+  --fs-sm:14px;
+  --fs-md:16px;
+  --fs-lg:20px;
+  --fs-xl:25px;
+  --fs-2xl:31px;
+  --fs-3xl:39px;
+  --fs-4xl:49px;
+  --fs-5xl:61px;
+  --fs-6xl:76px;
+
+  --lh-tight:1.1; /* @kind other */
+  --lh-snug:1.25; /* @kind other */
+  --lh-normal:1.5; /* @kind other */
+  --lh-relaxed:1.7; /* @kind other */
+
+  --ls-tight:-0.01em; /* @kind other */
+  --ls-normal:0; /* @kind other */
+  --ls-wide:0.04em; /* @kind other */
+  --ls-caps:0.08em; /* @kind other */   /* títulos em caixa alta, como no manual */
+
+  /* --- papéis tipográficos --- */
+  --type-display-font:var(--font-core); /* @kind other */
+  --type-display-weight:var(--fw-bold); /* @kind other */
+  --type-display-case:uppercase; /* @kind other */
+  --type-display-ls:var(--ls-caps); /* @kind other */
+
+  --type-title-weight:var(--fw-bold); /* @kind other */
+  --type-subtitle-weight:var(--fw-medium); /* @kind other */
+  --type-body-weight:var(--fw-light); /* @kind other */
+  --type-ui-weight:var(--fw-medium); /* @kind other */
+}

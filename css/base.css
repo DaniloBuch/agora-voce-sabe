@@ -1,0 +1,58 @@
+/* Base da página: fundo, textos legíveis, .sr-only, largura da página. */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; font-weight: var(--fw-medium);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- Header fixo com blur (DS 5.11) ---------------------------------- */
+
+:root { --topo-h: 77px; --max-prose: 70ch;
+  --text-body: var(--cbs-neutro-900);
+  --text-muted: var(--cbs-neutro-700);
+  --text-faint: var(--cbs-neutro-600);
+  --text-label: var(--cbs-neutro-700); }
+
+/* --max-prose: largura máxima dos parágrafos (DS: 68ch) */
+
+/* altura do cabeçalho fixo: o cabeçalho da tabela encosta nele */
+
+/* --- Legibilidade: textos mais escuros e mais encorpados -----------------
+   Os tokens do DS passam o mínimo de contraste (4.5:1); aqui subimos um degrau
+   (≈ 8–12:1) e trocamos o peso Light (300) por Medium (500) no texto corrido. */
+
+/* --- Página ----------------------------------------------------------- */
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: var(--max-content);
+  margin: 0 auto;
+  padding: var(--sp-10) var(--gutter-page) var(--sp-16);
+}
+
+/* --- Responsivo --------------------------------------------------------- */
+
+@media (max-width: 1366px) {
+  .page {
+    padding-top: var(--sp-10);
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding-top: var(--sp-8);
+  }
+}

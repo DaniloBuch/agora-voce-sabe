@@ -1,0 +1,33 @@
+/* Rodapé institucional. */
+/* --- Rodapé institucional (DS: roxo + grafismo sorriso a 10%) ---------- */
+.site-footer {
+  position: relative;
+  overflow: hidden;
+  background: var(--cbs-roxo);
+  color: var(--text-on-brand-muted);
+}
+.site-footer__grafismo {
+  position: absolute;
+  right: -70px;
+  bottom: -120px;
+  height: 340px;
+  opacity: 0.1;
+  pointer-events: none;
+}
+.site-footer__inner {
+  position: relative;
+  max-width: var(--max-content);
+  margin: 0 auto;
+  padding: var(--sp-10) var(--gutter-page);
+}
+.site-footer__inner img {
+  display: block;
+  margin-left: -16px;
+}
+.site-footer__inner p {
+  margin: var(--sp-4) 0 0;
+  max-width: 340px;
+  font-size: var(--fs-xs);
+  line-height: 1.75;
+  color: var(--text-on-brand-muted);
+}

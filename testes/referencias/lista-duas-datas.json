@@ -1,0 +1,15 @@
+{
+  "msg": "Lista Diária carregada: saldo e preço de 3 produtos. 2 preço(s) mudaram desde a lista de 11/11/2026.",
+  "novidades": [
+    "100001 LUVA PROCEDIMENTO LATEX TAM M CX C/100 LOTE 01 Ref. LV1 R$ 0,4000 R$ 0,3500 ▼ −12,5% −R$ 0,05 +",
+    "000437 SONDA URETRAL N 12 Ref. SU12 R$ 5,0000 R$ 4,7900 ▼ −4,2% −R$ 0,21 +"
+  ],
+  "miniBusca": [
+    "100001 LUVA PROCEDIMENTO LATEX TAM M CX C/100 LOTE 01 Ref. LV1 Saldo: 3.500 · R$ 0,3500 ✓ Na cotação",
+    "100007 LUVA PROCEDIMENTO LATEX TAM M CX C/100 LOTE 07 Ref. LV7 + Adicionar"
+  ],
+  "cotacao": [
+    "01 100001 LUVA PROCEDIMENTO LATEX TAM M CX C/100 LOTE 01 Ref. LV1 Saldo: 3.500 0,35 ↑ ↓ ✕"
+  ],
+  "status": "Lista Diária atualizada em 12/11/2026 às 12:00 · apaga sozinha em 24 h 00 min · preços comparados com a lista de 11/11/2026"
+}

@@ -1,0 +1,239 @@
+# Passo a passo: colocar o banco de dados (Supabase) no ar
+
+Tempo estimado: 20–30 minutos. Não precisa instalar nada, tudo é feito pelo navegador.
+
+> Enquanto o `config.js` estiver vazio, o site continua funcionando normalmente
+> lendo o `db.json`. Ou seja: dá para fazer tudo com calma, sem derrubar nada.
+
+## 1. Criar a conta e o projeto
+
+1. Acesse <https://supabase.com> e clique em **Start your project** (pode entrar com o GitHub).
+2. Clique em **New project** e preencha:
+   - **Name:** `agora-voce-sabe`
+   - **Database Password:** crie uma senha forte e **guarde num lugar seguro** (você quase não vai usar, mas não dá para recuperar).
+   - **Region:** `South America (São Paulo)`.
+3. Clique em **Create new project** e espere 1–2 minutos até ficar pronto.
+
+## 2. Criar as tabelas (SQL)
+
+1. No menu da esquerda, abra **SQL Editor** → **New query**.
+2. Abra o arquivo `supabase/schema.sql` deste repositório, copie **todo** o conteúdo e cole no editor.
+3. Clique em **Run**. Deve aparecer "Success. No rows returned".
+
+Isso cria a tabela `produtos`, a tabela de histórico (para desfazer erros), a função de
+importação em massa e as permissões de acesso.
+
+## 3. Carregar os produtos atuais
+
+1. Menu da esquerda: **Table Editor** → tabela **produtos**.
+2. Clique em **Insert** → **Import data from CSV**.
+3. Escolha o arquivo `supabase/produtos_seed.csv` (5.751 produtos já com as tags atuais).
+4. Confira se as colunas foram reconhecidas (`sku`, `descricao_tecnica`, `referencia`, `tags`, `fixo`) e confirme.
+5. Ao terminar, a tabela deve mostrar 5.751 linhas.
+
+## 4. Conectar o site ao banco
+
+1. Menu da esquerda: **Project Settings** (engrenagem) → **API** (ou **API Keys**).
+2. Copie dois valores:
+   - **Project URL** (algo como `https://abcdefghijkl.supabase.co`)
+   - a chave **anon public** (ou **publishable**). **Não** copie a `service_role`/`secret`!
+3. Abra o `config.js` e cole:
+
+   ```js
+   window.CBS_CONFIG = {
+     SUPABASE_URL: "https://abcdefghijkl.supabase.co",
+     SUPABASE_ANON_KEY: "cole-a-chave-anon-aqui",
+   };
+   ```
+
+4. Faça commit e push. Em ~1 minuto o GitHub Pages atualiza.
+
+## 5. Testar
+
+- Site: abra a página inicial. O card deve dizer **"5751 produtos carregados"** (sem "modo contingência").
+- Admin: acesse `https://danilobuch.github.io/agora-voce-sabe/admin/`. Edite as tags de um produto,
+  salve, recarregue o site público e busque por ele.
+
+## 6. Proteger o painel com login (migrações 003 e 004)
+
+Sem este passo, qualquer pessoa que descubra o endereço do painel consegue editar a base.
+Faça **na ordem abaixo** (só uma vez):
+
+1. **Publique no GitHub** os arquivos novos do projeto (inclusive `api.js` e a pasta `admin/`) e
+   espere o GitHub Pages atualizar. Se rodar o SQL antes, o painel antigo para de gravar.
+2. **Crie o seu usuário:** no Supabase, **Authentication → Users → Add user → Create new user**.
+   Informe e-mail e senha e marque **Auto Confirm User**.
+3. **Desative o cadastro público:** em **Authentication → Sign In / Providers → Email**, desligue
+   **Allow new users to sign up** (o nome do menu pode variar um pouco). Sem isso, qualquer pessoa
+   poderia criar uma conta e entrar.
+4. **Rode o SQL:** no **SQL Editor**, cole e execute `supabase/migracoes/003_login_admin.sql`
+   (só quem está logado passa a poder gravar e ver o histórico) e depois
+   `supabase/migracoes/004_gerenciar_tags.sql` (aba **Tags**).
+5. **Teste:** abra o painel, entre com o e-mail e a senha e edite um produto. O site público
+   continua aberto para busca, sem login.
+
+Esqueceu a senha? No Supabase, em **Authentication → Users**, abra o usuário e envie a
+recuperação de senha ou defina uma nova.
+
+## 7. Categorias (migrações 005 e 006)
+
+Para bancos já criados. Em banco novo, o `schema.sql` já traz tudo.
+
+1. **Publique no GitHub** os arquivos novos e espere o GitHub Pages atualizar (o site e o painel
+   continuam funcionando antes do SQL, só sem as categorias).
+2. No **SQL Editor**, rode `supabase/migracoes/005_categorias.sql` (cria a coluna, a tabela de
+   categorias e atualiza importação, edição em massa e histórico).
+3. Depois rode `supabase/migracoes/006_categorias_iniciais.sql`: classifica os produtos atuais
+   em categorias sugeridas a partir da descrição. Só preenche quem ainda está com `-` (nunca
+   sobrescreve) e **não entra no Histórico**.
+4. Abra o painel, confira a aba **Categorias** e ajuste o que precisar (renomear, mesclar, mover
+   produtos pela edição em massa). Produtos sem categoria ficam com `-`.
+
+## 8. Sinônimos da busca (migração 008)
+
+Para bancos já criados. Em banco novo, o `schema.sql` já traz tudo.
+
+1. **Publique no GitHub** os arquivos novos (o site funciona antes do SQL, só sem os sinônimos;
+   a aba **Sinônimos** do painel avisa que falta a migração).
+2. No **SQL Editor**, rode `supabase/migracoes/008_sinonimos.sql`. Ele cria a tabela `sinonimos`
+   (o site lê; só quem tem login altera) e já cadastra alguns grupos tirados das abreviações da
+   base: `cx = caixa`, `pct = pacote`, `cir = cirurgico = cirurgica`, `hosp = hospitalar`,
+   `valv = valvula`, `desc = descart = descartavel` e `est = esteril`. Pode rodar de novo: os
+   grupos iniciais só entram se a tabela estiver vazia.
+3. Abra o painel, aba **Sinônimos**, e ajuste a lista.
+
+## 9. Links do site oficial, ficha técnica e foto (migrações 009 e 010)
+
+A coluna **Site** da busca tem dois ícones: a página do produto em cbsmed.com.br (com a foto em
+miniatura ao passar o mouse) e o PDF da **ficha técnica**. Antes de qualquer SQL, o endereço é
+montado pela descrição técnica (como o WordPress faz), sem ficha nem foto.
+
+O navegador não pode ler a lista de produtos do site (o site não libera CORS), então quem lê é o
+**próprio Supabase**, de servidor para servidor:
+
+1. No **SQL Editor**, rode `supabase/migracoes/010_sincronizar_site.sql` (ela já inclui a 009). Ela
+   ativa as extensões `http` (chamar o site) e `pg_cron` (agendar), cria a tabela `links_site` e
+   agenda a sincronização para **toda segunda-feira às 06:15** (horário de Brasília).
+2. No painel, aba **Importar CSV**, clique em **Sincronizar com o site** para a primeira carga
+   (e sempre que entrar produto novo no site e não quiser esperar a segunda-feira).
+3. Para conferir o agendamento: `select status, return_message, start_time from cron.job_run_details order by start_time desc limit 5;`
+   Para desligar: `select cron.unschedule('sincronizar-links-site');`
+
+**Consumo do plano gratuito:** a sincronização faz umas 60 chamadas ao site por semana e grava uns
+5 mil registros pequenos (menos de 2 MB no banco). A busca só pede os links dos 50 produtos da
+página que está na tela, então o tráfego por pesquisa é de poucos KB.
+
+## 10. Áreas de atuação e "adicionados recentemente" (migração 011)
+
+No **SQL Editor**, rode `supabase/migracoes/011_areas_atuacao.sql`. Ela:
+
+- cria a lista de **áreas de atuação** (tabela `areas`, com nome e ícone) já com 8 sugestões
+  (Hospitais, Clínicas, Laboratórios, Veterinária, Odontologia, Home Care, Emergência e APH,
+  Farmácias). **Nenhum produto é marcado**: isso é feito no painel;
+- acrescenta a coluna `areas` nos produtos (um produto pode ter várias);
+- acrescenta a coluna `criado_em` (data de inclusão no catálogo). Os produtos que já existem ficam
+  **sem data**; os novos (cadastro ou importação de CSV) ganham a data sozinhos. É ela que alimenta o
+  filtro "Adicionados recentemente" do painel;
+- faz o Histórico registrar também as mudanças de área.
+
+Antes de rodar, o site e o painel funcionam normalmente, só sem as áreas (o painel mostra um aviso).
+
+## 11. Sino de novidades e produtos removidos (migração 012)
+
+No **SQL Editor**, rode `supabase/migracoes/012_novidades.sql`. Ela cria:
+
+- a tabela `novidades` (mensagens do sino). O site lê só as publicadas com data até agora; o painel
+  vê e edita todas;
+- a função `produtos_removidos`, que a página **Novidades do catálogo** usa para listar os produtos
+  excluídos nos últimos dias (só código, descrição, referência, categoria e data; o histórico
+  completo continua restrito ao painel). Produtos que voltaram ao catálogo não aparecem.
+
+Antes de rodar, o site funciona normalmente: o sino fica sem mensagens e a aba "Removidos" avisa
+que não está disponível.
+
+## 12. Unidade de medida (migração 013)
+
+No **SQL Editor**, rode `supabase/migracoes/013_unidade_medida.sql`. Ela:
+
+- cria a coluna `unidade` em `produtos` (UN, CX, PC...; sempre em maiúsculas; vazio = não informada);
+- faz o Histórico registrar mudança de unidade;
+- atualiza a importação de CSV para aceitar a coluna `UM` (ou `Unidade`): célula vazia mantém a atual.
+
+Para preencher: importe um CSV com `Codigo;UM` (só essas duas colunas já bastam) ou edite no cadastro
+do produto. Antes de rodar, o site funciona normalmente: a coluna UM aparece com "—" e o campo some
+do cadastro.
+
+## Como usar o painel de administração
+
+| Aba | Para quê |
+| --- | --- |
+| **Produtos** | Buscar, criar, editar (inclusive tags) e excluir. O botão **Exportar CSV** baixa todos os produtos, com Categoria e Tags (use como backup). O filtro **"Só sem tags"** mostra o que falta etiquetar; o filtro **Adicionados** (hoje, 7, 30 ou 90 dias) mostra os produtos que entraram no catálogo, do mais novo ao mais antigo, com o selo "novo". |
+| **Novidades** | Mensagens do sino do site. As sugestões de cada atualização aparecem prontas (publicar, editar e publicar, ou ignorar); também dá para escrever, agendar, editar e excluir mensagens. O número no rótulo da aba é de sugestões esperando. |
+| **Áreas** | Áreas de atuação (Hospitais, Laboratórios...): criar, trocar nome e ícone, mesclar e excluir. Cada produto pode ter várias, marcadas no cadastro ou na edição em massa. |
+| **Tags** | Lista todas as tags com a contagem de produtos. **Renomear** troca a tag em todos os produtos; se o novo nome já existir, as duas viram uma só (mescla). **Excluir** tira a tag de todos. Marca possíveis duplicadas (acento, plural, maiúscula). Tudo vai para o Histórico. |
+| **Categorias** | Lista as categorias com a contagem de produtos. Permite **criar**, **renomear** (se o nome já existir, mescla) e **excluir** (os produtos voltam para `-`). "Ver produtos" abre a lista já filtrada. Categoria de um produto: no cadastro dele ou na **Edição em massa**. |
+| **Sinônimos** | Dicionário de abreviações e jargões da busca do site. Cada grupo (ex.: `cx, caixa`) faz a busca tratar as palavras como iguais, nos dois sentidos. Mostra quantos produtos têm cada palavra. Palavras de até 4 letras só valem como palavra inteira. Uma palavra só pode estar em um grupo. |
+| **Importar CSV** | Atualiza a base em massa (veja abaixo). |
+| **Histórico** | Mostra versões anteriores de qualquer edição/exclusão, com botão **Restaurar**. Alterações em massa aparecem agrupadas, com **Restaurar todos**; dá para filtrar por data (De/Até). |
+
+### Importação de CSV
+
+**Atalho para só categorizar/etiquetar (sem risco para as referências):** na aba **Produtos**, use
+**Exportar p/ categorizar** (colunas `Codigo;Descricao;Categoria;Tags;UM`, sem `Cod prd forn`). Edite no
+Excel e importe de volta. Um CSV sem `Descricao` e/ou `Cod prd forn` mas com `Categoria` e/ou `Tags`
+(pode ser só `Codigo;Categoria;Tags`, ou `Codigo;UM`) atualiza somente categoria, tags e UM: não mexe em descrição nem
+referência, não exclui nada e ignora códigos que não existem no banco. Na importação completa, a caixa
+**"Não alterar as referências dos produtos que já existem"** ignora a coluna `Cod prd forn`.
+
+O arquivo precisa ter as colunas **Codigo**, **Descricao** e **Cod prd forn** (qualquer ordem;
+aceita `;` ou `,` e acentos em UTF-8 ou Windows-1252). A importação:
+
+- **Inclui** os códigos que ainda não existem (com tags vazias).
+- **Atualiza** descrição/referência dos que mudaram.
+- **Colunas opcionais `Categoria` e `Tags`:** em produto novo, entram como informadas. Em produto existente, a categoria só muda se o CSV trouxer um valor diferente de vazio e de `-`; as tags do CSV (separadas por `,` ou `|`) são **somadas** às que já existem. **O importador nunca remove tags.** Categorias novas são criadas automaticamente.
+- **Exclui** (opcional) os códigos que não estão mais no CSV. Antes de gravar você vê o resumo e
+  as listas. Se a exclusão for grande (mais de 20% da base ou 200 itens) o sistema pede uma
+  confirmação extra, para evitar apagar tudo por engano com um CSV incompleto.
+- Zeros à esquerda perdidos pelo Excel são recuperados (`462` vira `000462`).
+- **Referências estragadas pelo Excel são protegidas.** O Excel costuma alterar a coluna `Cod prd forn`
+  ao abrir e salvar o CSV: `693879921078` vira `6,9388E+11` (notação científica, os dígitos se perdem),
+  `10.1112` vira `101.112` (ponto de milhar) e `000000000038833014` perde os zeros. A importação
+  reconhece esses casos, **não grava o valor alterado** (o produto mantém a referência do banco; um
+  produto novo fica sem referência) e lista tudo na prévia, em "Ver quais". Para editar o CSV sem
+  risco, abra por **Dados → De Texto/CSV** e marque a coluna `Cod prd forn` como **Texto**, ou
+  use o Google Planilhas/LibreOffice. Se uma importação antiga já gravou referências erradas, rode
+  `supabase/migracoes/007_corrigir_referencias_excel.sql` (restaura as 83 referências afetadas na
+  importação de 15/10/2026; só altera se o valor no banco ainda estiver estragado).
+- É **tudo ou nada**: se algo falhar, nada é alterado.
+
+Produtos marcados como **Fixo** (ex.: `999999 – NAO FAZ PARTE DO NOSSO PORTIFOLIO`) nunca são
+excluídos pela importação.
+
+### Edição de tags em massa
+
+Útil quando vários produtos de descrição parecida levam a mesma tag.
+
+1. Na aba **Produtos**, filtre (ex.: `aparelho pressao`) e marque os produtos: a caixa do cabeçalho
+   marca a página; **"Selecionar os N resultados do filtro"** marca todas as páginas.
+2. Clique em **Editar tags em massa**. Digite as tags a **adicionar** (Enter ou vírgula) e/ou a
+   **remover**; as tags já presentes na seleção aparecem para você clicar e remover.
+3. A prévia mostra quantos produtos mudam. Em **Aplicar**, as tags existentes são preservadas, sem
+   duplicar, e tudo é gravado de uma vez (tudo ou nada).
+4. Para desfazer: aba **Histórico** → **Restaurar todos** na linha "Edição em massa".
+
+> **Importante (uma vez só):** a edição em massa usa uma função no banco. Se ainda não rodou,
+> abra o **SQL Editor** do Supabase, cole o conteúdo de
+> `supabase/migracoes/002_edicao_tags_em_massa.sql` e clique em **Run**.
+
+## Pontos de atenção
+
+- **Login do painel:** só quem tem e-mail e senha cadastrados consegue gravar (passo 6). A chave
+  pública do site só consegue **ler** os produtos. Mantenha o cadastro público de usuários
+  desativado e faça um **Exportar CSV** de tempos em tempos como backup extra, além do Histórico.
+- **Plano gratuito do Supabase:** projetos sem uso por um período podem ser pausados. Se o banco
+  ficar fora do ar, o site entra em **modo contingência** (lê o `db.json`, com aviso em vermelho
+  no card inicial) e esse arquivo pode estar desatualizado. Para reativar, entre no painel e
+  clique em **Restore**.
+- **Referências numéricas:** no `db.json` antigo, algumas referências já tinham perdido zeros no
+  final (ex.: `231.04` em vez de `231.040`). Isso veio do Excel e foi migrado como estava; a
+  próxima importação do CSV corrige quando o CSV trouxer o valor certo.

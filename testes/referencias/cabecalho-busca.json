@@ -1,0 +1,81 @@
+{
+  "claro": {
+    "links": [
+      {
+        "texto": "",
+        "href": "./",
+        "visivel": true
+      },
+      {
+        "texto": "Novidades",
+        "href": "novidades/",
+        "visivel": true
+      },
+      {
+        "texto": "Cotação",
+        "href": "cotacao/",
+        "visivel": true
+      },
+      {
+        "texto": "Abrir no Edge",
+        "href": "microsoft-edge:https://danilobuch.github.io/agora-voce-sabe/",
+        "visivel": false
+      },
+      {
+        "texto": "Abrir o app",
+        "href": "web+agoravocesabe:",
+        "visivel": false
+      },
+      {
+        "texto": "Ver novidades do catálogo: entraram, saíram e preços →",
+        "href": "novidades/",
+        "visivel": false
+      },
+      {
+        "texto": "Login",
+        "href": "admin/",
+        "visivel": true
+      }
+    ],
+    "botoes": [
+      {
+        "id": "categoriasToggle",
+        "rotulo": "Abrir categorias",
+        "visivel": true
+      },
+      {
+        "id": "btnInstalar",
+        "rotulo": "Instalar app",
+        "visivel": false
+      },
+      {
+        "id": "sinoBotao",
+        "rotulo": "Novidades: 1 não lida",
+        "visivel": true
+      },
+      {
+        "id": "sinoFechar",
+        "rotulo": "Fechar novidades",
+        "visivel": false
+      },
+      {
+        "id": "btn-tema",
+        "rotulo": "Usar tema escuro",
+        "visivel": true
+      }
+    ],
+    "logo": "design-system/assets/brand/logo-completo-gentequemove-roxo-quadrado-laranja.svg",
+    "classes": "site-header"
+  },
+  "escuro": {
+    "tema": "escuro",
+    "logo": "design-system/assets/brand/logo-completo-gentequemove-branco.svg"
+  },
+  "sino": {
+    "aberto": true,
+    "itens": [
+      "11/11/2026 NOVA Lista de cotação Monte a cotação pelo +."
+    ],
+    "fechouComEsc": true
+  }
+}

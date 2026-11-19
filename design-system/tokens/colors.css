@@ -1,0 +1,106 @@
+/* ============================================================
+   CORES — Manual de Identidade Visual CBS, out/2025, p.25
+   3 principais + 2 secundárias. Os valores HEX são normativos.
+   ============================================================ */
+:root{
+  /* --- Principais (normativas) --- */
+  --cbs-roxo:#312783;          /* PRINCIPAL 1 · "azul escuro (roxo)" · CMYK 100 100 0 0 */
+  --cbs-azul:#009cb4;          /* PRINCIPAL 2 · azul claro · CMYK 100 0 30 0 */
+  --cbs-amarelo:#dc9c01;       /* PRINCIPAL 3 · o manual chama "amarelo"; os arquivos
+                                  oficiais chamam "laranja". Hex amostrado do PNG
+                                  oficial do cliente. CMYK 10 40 100 5 */
+  --cbs-laranja:#dc9c01;       /* alias de --cbs-amarelo, pelo nome usado nos arquivos */
+  /* --- Secundárias (normativas) --- */
+  --cbs-cinza-azulado:#84a0af; /* SECUNDÁRIA 1 · CMYK 30 0 0 40 */
+  --cbs-cinza-claro:#c8d3d9;   /* SECUNDÁRIA 2 · CMYK 10 0 0 20 */
+
+  /* --- Extensões de UI (NÃO estão no manual) ---
+     Derivadas por interpolação em oklch a partir das cores normativas,
+     apenas para estados de interface: hover, press, fundos, bordas. */
+  --cbs-roxo-900:#1d1750;
+  --cbs-roxo-800:#261f68;
+  --cbs-roxo-700:#2b2275;
+  --cbs-roxo-600:#312783;
+  --cbs-roxo-500:#463c95;
+  --cbs-roxo-400:#6a61ad;
+  --cbs-roxo-200:#b6b1d9;
+  --cbs-roxo-100:#dedcef;
+  --cbs-roxo-050:#f1f0f9;
+
+  --cbs-azul-700:#00707f;
+  --cbs-azul-600:#00889c;
+  --cbs-azul-500:#009cb4;
+  --cbs-azul-400:#3fb5c8;
+  --cbs-azul-200:#9ad9e3;
+  --cbs-azul-100:#cdecf1;
+  --cbs-azul-050:#e9f7f9;
+
+  --cbs-amarelo-700:#96690a;  /* escurecido p/ texto: 4,9:1 sobre branco, 4,6:1 sobre amarelo-050 */
+  --cbs-amarelo-600:#c68a00;
+  --cbs-amarelo-500:#dc9c01;
+  --cbs-amarelo-400:#eab53c;
+  --cbs-amarelo-200:#f5dc9b;
+  --cbs-amarelo-100:#faeecd;
+  --cbs-amarelo-050:#fdf8ea;
+
+  --cbs-neutro-000:#ffffff;
+  --cbs-neutro-025:#f7f9fa;
+  --cbs-neutro-050:#eef2f4;
+  --cbs-neutro-100:#e2e9ec;   /* tint de --cbs-cinza-claro */
+  --cbs-neutro-200:#c8d3d9;   /* = SECUNDÁRIA 2 */
+  --cbs-neutro-300:#a9bcc7;
+  --cbs-neutro-400:#84a0af;   /* = SECUNDÁRIA 1 */
+  --cbs-neutro-500:#5a7180;   /* escurecido p/ passar 4.5:1 sobre branco e sobre neutro-050 */
+  --cbs-neutro-600:#4e626e;
+  --cbs-neutro-700:#3a4a53;
+  --cbs-neutro-800:#263138;
+  --cbs-neutro-900:#141b1f;
+
+  /* --- Semânticas de estado (extensão, fora do manual) --- */
+  --cbs-sucesso:#0d7a54;      /* escurecido: 4,4:1 era insuficiente. Agora 5,3:1 sobre branco */
+  --cbs-sucesso-bg:#e6f4ee;
+  --cbs-atencao:#dc9c01;      /* reaproveita PRINCIPAL 3 */
+  --cbs-atencao-bg:#fdf8ea;
+  --cbs-erro:#c0392b;
+  --cbs-erro-bg:#fbeceb;
+  --cbs-info:#009cb4;         /* reaproveita PRINCIPAL 2 */
+  --cbs-info-bg:#e9f7f9;
+
+  /* ============ Aliases semânticos ============ */
+  --brand-primary:var(--cbs-roxo);
+  --brand-secondary:var(--cbs-azul);
+  --brand-accent:var(--cbs-amarelo);
+
+  --surface-page:var(--cbs-neutro-025);
+  --surface-card:var(--cbs-neutro-000);
+  --surface-raised:var(--cbs-neutro-000);
+  --surface-sunken:var(--cbs-neutro-050);
+  --surface-inverse:var(--cbs-roxo);
+  --surface-inverse-deep:var(--cbs-roxo-900);
+  --surface-subtle-brand:var(--cbs-roxo-050);
+  --surface-subtle-info:var(--cbs-azul-050);
+  /* Bloco azul que carrega TEXTO DE CORPO: --cbs-azul dá 3.3:1 com branco,
+     só serve para tipo em escala de título. Para corpo, use o -deep. */
+  --surface-info-deep:var(--cbs-azul-700);
+
+  --text-heading:var(--cbs-roxo);
+  --text-body:var(--cbs-neutro-800);
+  /* Os três níveis abaixo passam 4.5:1 sobre branco EM QUALQUER TAMANHO.
+     --cbs-neutro-400 (2.75:1) e --cbs-roxo-200 nunca são cor de texto sobre claro. */
+  --text-muted:var(--cbs-neutro-600);    /* 6.4:1 · texto secundário */
+  --text-faint:var(--cbs-neutro-500);    /* 5.1:1 · metadados, SKU, contagens */
+  --text-label:var(--cbs-neutro-600);    /* 6.4:1 · micro rótulo em caixa alta */
+  /* Texto sobre fundo roxo: neutro-400 dá só 4.4:1. Use estes. */
+  --text-on-brand-muted:var(--cbs-roxo-200);  /* 5.9:1 sobre --cbs-roxo */
+  --text-on-brand:var(--cbs-neutro-000);
+  --text-on-accent:var(--cbs-neutro-900);
+  --text-link:var(--cbs-azul-700);
+  --text-link-hover:var(--cbs-roxo);
+
+  --border-subtle:var(--cbs-neutro-100);
+  --border-default:var(--cbs-neutro-200);
+  --border-strong:var(--cbs-neutro-400);
+  --border-brand:var(--cbs-roxo);
+
+  --focus-ring:var(--cbs-azul);
+}

@@ -1,0 +1,152 @@
+/* Campo de busca, X para limpar e buscas recentes (histórico). */
+.search-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 760px;
+}
+/* X vermelho para limpar a busca (só aparece com algo digitado) */
+.limpar-busca {
+  position: absolute;
+  right: 10px;
+  top: 26px; /* meio do campo (52px), mesmo com o histórico aberto embaixo */
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--cbs-erro);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+.limpar-busca[hidden] { display: none; }
+.limpar-busca:hover { background: var(--cbs-erro-bg, #fdecec); border-color: var(--cbs-erro); }
+.limpar-busca:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.search-icon {
+  position: absolute;
+  left: var(--sp-4);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+#searchInput {
+  width: 100%;
+  height: 52px;
+  padding: 0 52px 0 var(--sp-12); /* à direita: espaço do X de limpar */
+  font-family: var(--font-core);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-md);
+  color: var(--text-body);
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-inset), var(--shadow-sm);
+  outline: none;
+  transition: var(--transition-control);
+}
+#searchInput:hover:not(:focus) {
+  border-color: var(--cbs-azul-400);
+}
+#searchInput:focus {
+  border-color: var(--cbs-azul);
+  box-shadow: var(--ring-focus);
+}
+#searchInput::placeholder {
+  color: var(--text-faint);
+  font-weight: var(--fw-regular);
+}
+/* --- Histórico de buscas (lista sob o campo) ------------------------------ */
+.historico {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding: var(--sp-2) 0;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(20, 16, 50, 0.18));
+}
+.historico[hidden] { display: none; }
+.historico__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px var(--sp-4) var(--sp-2);
+}
+.historico__titulo {
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  color: var(--text-label);
+}
+.historico__limpar {
+  padding: 2px 6px;
+  font-family: var(--font-core);
+  font-size: var(--fs-3xs);
+  font-weight: var(--fw-medium);
+  color: var(--cbs-azul-700);
+  background: none;
+  border: none;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.historico__limpar:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.historico__lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.historico__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 38px;
+  padding: 0 var(--sp-2) 0 var(--sp-4);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-body);
+  cursor: pointer;
+}
+.historico__item:hover,
+.historico__item[aria-selected="true"] { background: var(--cbs-azul-050); }
+.historico__icone { flex: 0 0 auto; color: var(--text-faint); }
+.historico__texto {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.historico__cat {
+  flex: 0 0 auto;
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+}
+.historico__remover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  opacity: 0;
+}
+.historico__item:hover .historico__remover,
+.historico__item[aria-selected="true"] .historico__remover { opacity: 1; }
+.historico__remover:hover { color: var(--cbs-erro); background: var(--cbs-neutro-100); }
+@media (hover: none) { .historico__remover { opacity: 1; } }

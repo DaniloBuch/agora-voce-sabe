@@ -1,0 +1,32 @@
+/* Painel (/admin): ponto de entrada. Liga cada aba na mesma ordem do antigo admin.js. */
+import { iniciar as iniciarAbas } from "./abas.js";
+import { iniciar as iniciarProdutos } from "./produtos.js";
+import { iniciar as iniciarProdutoDialogo } from "./produto-dialogo.js";
+import { iniciar as iniciarMassa } from "./massa.js";
+import { iniciar as iniciarImportar } from "./importar.js";
+import { iniciar as iniciarExportar } from "./exportar.js";
+import { iniciar as iniciarAreas } from "./areas.js";
+import { iniciar as iniciarNovidades } from "./novidades.js";
+import { iniciar as iniciarCategorias } from "./categorias.js";
+import { iniciar as iniciarLinksSite } from "./links-site.js";
+import { iniciar as iniciarSinonimos } from "./sinonimos.js";
+import { iniciar as iniciarTags } from "./tags.js";
+import { iniciar as iniciarHistorico } from "./historico.js";
+import { iniciar as iniciarLogin } from "./login.js";
+import { iniciar as iniciarInicio } from "./inicio.js";
+
+iniciarAbas();
+iniciarProdutos();
+iniciarProdutoDialogo();
+iniciarMassa();
+iniciarImportar();
+iniciarExportar();
+iniciarAreas();
+iniciarNovidades();
+iniciarCategorias();
+iniciarLinksSite();
+iniciarSinonimos();
+iniciarTags();
+iniciarHistorico();
+iniciarLogin();
+iniciarInicio();

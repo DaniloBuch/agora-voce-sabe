@@ -1,0 +1,18 @@
+{
+  "copiado": "000438",
+  "linhas": [
+    "01 000437 SONDA URETRAL N 12 Ref. SU12 — ↑ ↓ ✕",
+    "02 000438 SONDA FOLEY 2 VIAS N 14 Ref. SF14 — ↑ ↓ ✕"
+  ],
+  "total": "Valores consultivos: confirme preço e disponibilidade no Protheus (TOTVS) antes de enviar ao cliente.\n\nItens\n2\nTOTAL GERAL\nR$ 0,00",
+  "editado": {
+    "campos": [
+      "1.50",
+      "1,00",
+      "2,5000"
+    ],
+    "linha": "01 000437 SONDA URETRAL N 12 Ref. SU12 2,50 ↑ ↓ ✕",
+    "total": "Valores consultivos: confirme preço e disponibilidade no Protheus (TOTVS) antes de enviar ao cliente.\n\nItens\n2\nTOTAL GERAL\nR$ 2,50"
+  },
+  "depois": 3
+}

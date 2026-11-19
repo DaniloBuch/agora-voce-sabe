@@ -1,0 +1,66 @@
+{
+  "categorias": {
+    "botoes": [
+      "Ver produtos",
+      "Renomear",
+      "Excluir"
+    ],
+    "Renomear": {
+      "abriu": "Renomear categoria Categoria atual: Cateter (3 produtos) Novo nome O nome é igual ao atual; nada a mudar. Cancelar Aplicar",
+      "previa": "Renomear categoria Categoria atual: Cateter (3 produtos) Novo nome Vai trocar por NOVO NOME em 3 produto(s). Cancelar Aplicar"
+    },
+    "Excluir": {
+      "abriu": "Excluir categoria? Cateter (3 produtos) Os produtos continuam, só ficam sem categoria (\"-\"). Dá para desfazer no Histórico. Cancelar Excluir categoria",
+      "previa": null
+    },
+    "ver": "3 de 71 produtos · 64 sem tags"
+  },
+  "areas": {
+    "botoes": [
+      "Ver produtos",
+      "Editar"
+    ],
+    "Editar": {
+      "abriu": "Editar área: Laboratórios Nome Ícone Hospital Estetoscópio Tubo de amostra Patinha Sorriso (dente) Casa Ambulância Comprimido Seringa Coração Bebê Prédio Frasco Maleta médica Microscópio Leito Excluir área Cancelar Salvar",
+      "previa": "Editar área: Laboratórios Nome Ícone Hospital Estetoscópio Tubo de amostra Patinha Sorriso (dente) Casa Ambulância Comprimido Seringa Coração Bebê Prédio Frasco Maleta médica Microscópio Leito Vai trocar o nome em 1 produto(s). Excluir área Cancelar Salvar"
+    },
+    "ver": "0 de 71 produtos · 64 sem tags"
+  },
+  "tags": {
+    "botoes": [
+      "Renomear",
+      "Excluir"
+    ],
+    "Renomear": {
+      "abriu": "Renomear tag Tag atual: Aparelho de pressão (1 produtos) Novo nome Vai padronizar a grafia para APARELHO DE PRESSÃO em 1 produto(s). Cancelar Aplicar",
+      "previa": "Renomear tag Tag atual: Aparelho de pressão (1 produtos) Novo nome Vai trocar por NOVO NOME em 1 produto(s). Cancelar Aplicar"
+    },
+    "Excluir": {
+      "abriu": "Excluir tag? Aparelho de pressão (1 produtos) A tag sai de todos os produtos que a usam. Os produtos continuam; dá para desfazer no Histórico. Cancelar Excluir tag",
+      "previa": null
+    }
+  },
+  "sinonimos": {
+    "botoes": [
+      "Editar",
+      "Excluir"
+    ],
+    "Editar": {
+      "abriu": "Editar sinônimos Palavras equivalentes, separadas por vírgula A busca vai tratar como iguais: soro fisiologico = cloreto de sodio Cancelar Salvar",
+      "previa": "Editar sinônimos Palavras equivalentes, separadas por vírgula Digite pelo menos 2 palavras diferentes, separadas por vírgula. Ex.: cx, caixa Cancelar Salvar"
+    },
+    "Excluir": {
+      "abriu": "Excluir grupo? soro fisiologico, cloreto de sodio Os produtos não mudam; a busca só deixa de tratar essas palavras como iguais. Cancelar Excluir grupo",
+      "previa": null
+    }
+  },
+  "novidades": {
+    "botoes": []
+  },
+  "historico": {
+    "botoes": []
+  },
+  "produtos": {
+    "botoes": []
+  }
+}
